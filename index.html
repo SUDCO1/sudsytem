@@ -635,6 +635,10 @@ body.role-admin .sale-hint{display:none!important;}
     <div class="card">
       <div class="card-header">
         <div class="card-title">📋 ประวัติการผลิต</div>
+        <span style="margin-left:auto;font-size:11px;color:#94A3B8;" id="prodLogCount"></span>
+      </div>
+      <div class="toolbar">
+        <input type="search" class="search-inp" id="prodLogSearch" placeholder="🔍 ค้นหาเลข Order / ชื่อลูกค้า / ชนิดเสา..." oninput="renderProdLogHistory()" style="max-width:380px;"/>
       </div>
       <div class="table-wrap">
         <table class="data-table">
@@ -2348,14 +2352,37 @@ function addToSpecStock(pileName, specStr, qty) {
 function renderProdLogHistory() {
   const tbody = document.getElementById('prodLogBody');
   if (!tbody) return;
-  const logs = getProdLog();
+  const q = (document.getElementById('prodLogSearch')?.value || '').trim().toLowerCase();
+  const countEl = document.getElementById('prodLogCount');
+  let logs = getProdLog();
   if (!logs.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="6">ยังไม่มีประวัติการผลิต</td></tr>';
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="8">ยังไม่มีประวัติการผลิต</td></tr>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  // สร้าง map orderNum → customer เพื่อ search ชื่อลูกค้า
+  const orderMap = {};
+  getOrders().forEach(o => { orderMap[o.orderNum] = (o.customer || '').toLowerCase(); });
+  if (q) {
+    logs = logs.filter(l => {
+      const cust = orderMap[l.orderNum] || '';
+      return l.orderNum.toLowerCase().includes(q)
+          || (l.pileType || '').toLowerCase().includes(q)
+          || cust.includes(q);
+    });
+  }
+  if (countEl) countEl.textContent = q ? logs.length + ' รายการที่พบ' : logs.length + ' รายการ';
+  if (!logs.length) {
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="8">ไม่พบประวัติที่ค้นหา</td></tr>';
     return;
   }
   tbody.innerHTML = logs.map(l => {
     const net = l.qtyNet !== undefined ? l.qtyNet : l.qtyProduced || 0;
     const defect = l.qtyDefect || 0;
+    const custName = orderMap[l.orderNum] ? orderMap[l.orderNum] : '';
+    const custBadge = custName
+      ? '<br><span style="font-size:10px;color:#64748B;">'+getOrders().find(o=>o.orderNum===l.orderNum)?.customer+'</span>'
+      : '';
     const defectBadge = defect > 0
       ? '<span style="color:#DC2626;font-weight:700;">'+defect+' ต้น</span>'
       : '<span style="color:#94A3B8;">0</span>';
@@ -2367,7 +2394,7 @@ function renderProdLogHistory() {
       : '<span style="color:#94A3B8;">-</span>';
     return '<tr>'
       + '<td>'+l.date+'</td>'
-      + '<td><span class="order-id">'+l.orderNum+'</span></td>'
+      + '<td><span class="order-id">'+l.orderNum+'</span>'+custBadge+'</td>'
       + '<td style="font-weight:600;">'+l.pileType+'</td>'
       + '<td><strong style="color:#1E40AF;">'+l.qtyProduced+' ต้น</strong></td>'
       + '<td>'+defectBadge+'</td>'
