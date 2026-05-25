@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+a<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="utf-8"/>
@@ -1576,6 +1576,8 @@ function updateOrderValue() { renderOrderItemsDraft(); }
 // ── Submit Order ───────────────────────────────────────────────
 function submitOrder() {
   if (_currentRole === 'manager') { showToast('⛔ ผู้บริหารดูได้อย่างเดียว ไม่สามารถส่ง Order ได้'); return; }
+     const g = id => document.getElementById(id).value;
+  const customer = g('f_customer').trim(), tel = g('f_tel').trim(),
         sale = g('f_sale'),
         orderDateRaw = g('f_order_date'), note = '';
 
