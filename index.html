@@ -1,48 +1,3297 @@
-🏗️
-ระบบดิจิทัล — บริษัทเสาเข็ม
-Digital Order Management System · v5-Firebase · admin@gmail.com
-👑 Admin
-Orders
-0
-ออกจากระบบ
-🔥
-Firebase Mode
-— ข้อมูลซิงค์แบบ Real-time ข้ามทุกเครื่อง · v5-Firebase🗑 ล้างข้อมูลทดสอบ
-📱 ส่ง Order
-📋 สถานะ Order
-🏭 Error ผลิต
-🚛 Error ขนส่ง
-📊 สรุปภาพรวม
-📦 ระบบสต็อก
-👥 ลูกค้า
-⚙️ ตั้งค่า
-📱 ส่ง Order ใหม่
-กรอกข้อมูลทุกครั้งที่ลูกค้าสั่งซื้อ · ระบบจะบันทึกลูกค้าใหม่อัตโนมัติ
-📋 ข้อมูลลูกค้า
-🔍 เลือกจากฐานข้อมูลลูกค้า (ถ้ามี)
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title id="pageTitle">ระบบดิจิทัล</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-— หรือพิมพ์ข้อมูลใหม่ด้านล่าง —
-ชื่อบริษัท / ลูกค้า *
-เช่น บริษัท ABC จำกัด
-เบอร์โทรติดต่อ *
-081-xxx-xxxx
-Sale ผู้รับ Order *
+<!-- ══════════════════════════════════════════════════════════════
+     FIREBASE SDK
+     ══════════════════════════════════════════════════════════════ -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<style>
+/* ============================================================ BASE ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-height:100vh;font-size:14px;color:#1E293B;}
 
-— เลือก —
-ที่อยู่ / หมายเหตุลูกค้า
-เช่น ลำลูกกา ปทุมธานี
-วันที่สั่งซื้อ *
+/* ============================================================ HEADER ============================================================ */
+.app-header{background:linear-gradient(135deg,#1E40AF 0%,#1E3A8A 100%);padding:14px 24px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,0.2);position:sticky;top:0;z-index:100;}
+.hdr-logo{font-size:28px;line-height:1;}
+.hdr-info{flex:1;}
+.hdr-title{font-size:17px;font-weight:800;color:#fff;}
+.hdr-sub{font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;}
+.hdr-badge{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;}
+.badge-count{background:#EF4444;color:#fff;font-size:11px;font-weight:800;padding:1px 8px;border-radius:10px;}
 
-25/05/2026
-🏗️ รายการสั่งซื้อ (เพิ่มได้หลายรายการ)
-ชนิดเสาเข็ม *
+/* ============================================================ DEMO BAR ============================================================ */
+.demo-bar{background:#FEF9C3;border-bottom:2px solid #FDE047;padding:8px 24px;font-size:12px;color:#713F12;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.demo-bar b{font-weight:800;}
+.demo-bar-btn{margin-left:auto;padding:4px 12px;border-radius:6px;border:1px solid #FDE047;background:#fff;color:#713F12;cursor:pointer;font-size:11px;}
+.demo-bar-btn:hover{background:#FEF08A;}
 
-— เลือก —
-จำนวน (ต้น) *
-60
-รายละเอียดเสา
-เช่น 6ม.เสริมเหล็ก, 9ม.ไม่เสริม
-+ เพิ่มรายการ
-— ยังไม่มีรายการสั่งซื้อ
-✓ ส่ง Order
-🗑 ล้างฟอร์ม
+/* ============================================================ NAV ============================================================ */
+.app-nav{background:#1E3A8A;display:flex;overflow-x:auto;padding:0 12px;border-bottom:3px solid rgba(255,255,255,0.08);}
+.app-nav::-webkit-scrollbar{height:0;}
+.nav-tab{padding:11px 16px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.6);cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-3px;transition:all 0.15s;display:flex;align-items:center;gap:6px;}
+.nav-tab:hover{color:#fff;background:rgba(255,255,255,0.07);}
+.nav-tab.active{color:#fff;border-bottom-color:#60A5FA;background:rgba(255,255,255,0.08);}
+.nav-dot{width:7px;height:7px;background:#EF4444;border-radius:50%;display:none;flex-shrink:0;}
+.nav-tab.has-new .nav-dot{display:block;}
+
+/* ============================================================ LAYOUT ============================================================ */
+.app-content{padding:24px;max-width:1200px;margin:0 auto;}
+.section{display:none;}
+.section.active{display:block;}
+.stack{display:flex;flex-direction:column;gap:20px;}
+
+/* ============================================================ CARD ============================================================ */
+.card{background:#fff;border-radius:12px;border:1px solid #E2E8F0;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden;}
+.card-header{padding:16px 20px;border-bottom:1px solid #F1F5F9;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.card-title{font-size:15px;font-weight:700;color:#1E293B;}
+.card-sub{font-size:12px;color:#64748B;margin-top:2px;}
+.card-body{padding:20px;}
+
+/* ============================================================ FORMS ============================================================ */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr;}}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field-label{font-size:12px;font-weight:700;color:#374151;}
+.field-label .req{color:#EF4444;}
+.field input,.field select,.field textarea{padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;color:#111827;background:#F9FAFB;outline:none;transition:border-color 0.15s,box-shadow 0.15s;font-family:inherit;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#3B82F6;background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,0.12);}
+.field input::placeholder,.field textarea::placeholder{color:#9CA3AF;}
+.field textarea{resize:vertical;}
+.section-divider{grid-column:1/-1;font-size:11px;font-weight:800;color:#6B7280;letter-spacing:0.07em;text-transform:uppercase;padding-bottom:8px;border-bottom:1.5px solid #F1F5F9;margin-top:4px;}
+.full-col{grid-column:1/-1;}
+.order-value-box{padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;background:#F9FAFB;color:#94A3B8;font-weight:600;}
+.order-value-box.has-value{background:#F0FDF4;color:#166534;border-color:#86EFAC;}
+
+/* ============================================================ BUTTONS ============================================================ */
+.btn{padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:opacity 0.15s,transform 0.1s;font-family:inherit;}
+.btn:hover{opacity:0.88;transform:translateY(-1px);}
+.btn:active{transform:translateY(0);}
+.btn-primary{background:#1E40AF;color:#fff;}
+.btn-success{background:#166534;color:#fff;}
+.btn-danger{background:#DC2626;color:#fff;}
+.btn-ghost{background:#F1F5F9;color:#374151;border:1px solid #E5E7EB;}
+.btn-export{background:#059669;color:#fff;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.form-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
+
+/* ============================================================ SUCCESS ============================================================ */
+.success-card{text-align:center;padding:36px 24px;}
+.success-icon{font-size:52px;margin-bottom:16px;}
+.success-title{font-size:20px;font-weight:800;color:#166534;margin-bottom:12px;}
+.order-ref-box{background:#F0FDF4;border:2px solid #86EFAC;border-radius:12px;padding:14px;margin:16px auto;display:inline-block;min-width:200px;}
+.order-ref-label{font-size:11px;color:#6B7280;font-weight:700;}
+.order-ref-val{font-size:28px;font-weight:900;color:#1E40AF;letter-spacing:0.06em;}
+.success-detail{font-size:13px;color:#374151;line-height:2;}
+
+/* ============================================================ TABLE ============================================================ */
+.table-wrap{overflow-x:auto;}
+.data-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.data-table th{background:#F8FAFC;color:#475569;font-weight:700;font-size:11px;padding:10px 12px;text-align:left;border-bottom:2px solid #E2E8F0;white-space:nowrap;}
+.data-table td{padding:9px 12px;border-bottom:1px solid #F1F5F9;vertical-align:middle;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:#FAFBFF;}
+.data-table .new-row td{background:#F0FDF4 !important;}
+.data-table .overdue-row td{background:#FFF1F1 !important;}
+.data-table .soon-row td{background:#FFFBEB !important;}
+.table-empty td{text-align:center;color:#94A3B8;font-style:italic;padding:32px !important;}
+.order-id{font-weight:800;color:#1E40AF;font-size:13px;}
+.edit-cell{cursor:pointer;color:#1E40AF;font-weight:700;text-decoration:underline dotted;}
+.edit-cell:hover{color:#1D4ED8;}
+
+/* ============================================================ TOOLBAR ============================================================ */
+.toolbar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #F1F5F9;flex-wrap:wrap;}
+.toolbar-note{margin-left:auto;font-size:11px;color:#94A3B8;}
+.search-inp{padding:7px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;outline:none;font-family:inherit;background:#F9FAFB;min-width:180px;}
+.search-inp:focus{border-color:#3B82F6;background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,0.1);}
+.filter-sel{padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:12px;outline:none;background:#F9FAFB;font-family:inherit;cursor:pointer;}
+
+/* ============================================================ CHIPS ============================================================ */
+.chip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap;}
+.ch-done{background:#DCFCE7;color:#166534;}
+.ch-part{background:#DBEAFE;color:#1D4ED8;}
+.ch-wait{background:#FEF9C3;color:#854D0E;}
+.ch-err{background:#FEE2E2;color:#991B1B;}
+.ch-delay{background:#FEF3C7;color:#92400E;}
+.ch-prod{background:#F3E8FF;color:#6D28D9;}
+.ch-ship{background:#E0F2FE;color:#0369A1;}
+.ch-in{background:#DCFCE7;color:#166534;}
+.ch-out{background:#FEE2E2;color:#991B1B;}
+.ch-adj{background:#F3E8FF;color:#6D28D9;}
+
+/* STATUS SELECT */
+.status-sel{padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;border:none;cursor:pointer;outline:none;font-family:inherit;background:#FEF9C3;color:#854D0E;max-width:130px;}
+.status-sel.s-confirm{background:#FEF3C7;color:#92400E;}
+.status-sel.s-prod{background:#F3E8FF;color:#6D28D9;}
+.status-sel.s-ready{background:#DBEAFE;color:#1D4ED8;}
+.status-sel.s-ship{background:#E0F2FE;color:#0369A1;}
+.status-sel.s-done{background:#DCFCE7;color:#166534;}
+
+/* STEP TRACK */
+.status-cell{display:flex;flex-direction:column;gap:6px;min-width:148px;}
+.step-track{display:flex;align-items:flex-start;}
+.step-node{display:flex;flex-direction:column;align-items:center;flex:1;}
+.step-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;transition:all 0.2s;margin-bottom:3px;}
+.step-dot.s-done-dot{background:#22C55E;box-shadow:0 0 0 2px #DCFCE7;}
+.step-dot.s-active-dot{background:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,0.25);}
+.step-dot.s-pending-dot{background:#CBD5E1;}
+.step-connector{flex:1;height:2px;margin-top:4px;border-radius:1px;}
+.step-connector.done{background:#22C55E;}
+.step-connector.pending{background:#E2E8F0;}
+.step-lbl{font-size:7.5px;color:#94A3B8;text-align:center;margin-top:2px;max-width:32px;word-break:break-word;line-height:1.2;}
+.step-lbl.active{color:#1D4ED8;font-weight:800;}
+.step-lbl.done-lbl{color:#16A34A;}
+
+/* DEADLINE */
+.dl-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;margin-top:2px;}
+.dl-overdue{background:#FEE2E2;color:#991B1B;}
+.dl-today{background:#FEF2F2;color:#DC2626;}
+.dl-soon{background:#FEF9C3;color:#854D0E;}
+
+/* PROGRESS */
+.prog-wrap{display:flex;align-items:center;gap:6px;}
+.prog-bar{flex:1;height:7px;background:#E2E8F0;border-radius:4px;overflow:hidden;min-width:50px;}
+.prog-fill{height:100%;border-radius:4px;}
+.prog-pct{font-size:11px;font-weight:700;min-width:30px;}
+
+/* ERR GRID */
+.err-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.err-grid{grid-template-columns:1fr;}}
+
+/* ============================================================ SUMMARY ============================================================ */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:20px;}
+.sum-card{background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;border-left:4px solid;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.sum-card.blue{border-left-color:#3B82F6;}
+.sum-card.green{border-left-color:#22C55E;}
+.sum-card.red{border-left-color:#EF4444;}
+.sum-card.purple{border-left-color:#A855F7;}
+.sum-card.amber{border-left-color:#F59E0B;}
+.sum-label{font-size:11px;font-weight:700;color:#64748B;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;}
+.sum-val{font-size:32px;font-weight:900;color:#1E293B;line-height:1;}
+.sum-sub{font-size:12px;color:#64748B;margin-top:6px;}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.chart-row{grid-template-columns:1fr;}}
+.chart-card{background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px 18px;}
+.chart-title{font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;}
+
+/* ============================================================ STOCK ============================================================ */
+.stock-cards-wrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+.stock-card{background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.stock-name{font-size:13px;font-weight:700;color:#1E293B;margin-bottom:6px;}
+.stock-qty{font-size:30px;font-weight:900;color:#1E293B;line-height:1;}
+.stock-unit{font-size:12px;color:#64748B;margin-bottom:4px;}
+.stock-reserved{font-size:11px;color:#854D0E;font-weight:600;background:#FEF9C3;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:4px;}
+.stock-avail{font-size:12px;font-weight:700;margin-bottom:8px;}
+.stock-avail.ok{color:#166534;}
+.stock-avail.warn{color:#854D0E;}
+.stock-avail.low{color:#991B1B;}
+.stock-low{border-left:4px solid #EF4444;}
+.stock-warn{border-left:4px solid #F59E0B;}
+.stock-ok{border-left:4px solid #22C55E;}
+.log-table{width:100%;border-collapse:collapse;font-size:12px;}
+.stock-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid #F1F5F9;}
+.stock-ts{font-size:10px;color:#94A3B8;}
+.stock-quick-btn{padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px;border:1.5px solid #86EFAC;background:#F0FDF4;color:#166534;cursor:pointer;}
+.stock-quick-btn:hover{background:#DCFCE7;}
+.log-table th{background:#F8FAFC;color:#475569;font-weight:700;font-size:11px;padding:8px 12px;border-bottom:2px solid #E2E8F0;text-align:left;white-space:nowrap;}
+.log-table td{padding:8px 12px;border-bottom:1px solid #F1F5F9;vertical-align:middle;}
+.log-table tr:last-child td{border-bottom:none;}
+.stock-preview{padding:10px 14px;border-radius:8px;background:#EFF6FF;color:#1D4ED8;font-size:12.5px;font-weight:600;transition:background 0.2s,color 0.2s;}
+
+/* ============================================================ SETTINGS ============================================================ */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.settings-grid{grid-template-columns:1fr;}}
+.settings-block{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px;}
+.settings-block-title{font-size:12px;font-weight:800;color:#374151;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1.5px solid #E2E8F0;display:flex;align-items:center;gap:6px;}
+.tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:28px;}
+.tag-item{background:#DBEAFE;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;}
+.tag-remove{background:none;border:none;cursor:pointer;color:#93C5FD;font-size:14px;line-height:1;padding:0;}
+.tag-remove:hover{color:#EF4444;}
+.tag-add-row{display:flex;gap:6px;}
+.tag-add-inp{flex:1;padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:7px;font-size:12px;outline:none;font-family:inherit;background:#fff;}
+.tag-add-inp:focus{border-color:#3B82F6;}
+.tag-add-btn{padding:7px 14px;background:#1E40AF;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;}
+.tag-add-btn:hover{opacity:0.85;}
+.settings-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+.price-table{width:100%;border-collapse:collapse;margin-top:8px;}
+.price-table td{padding:7px 8px;border-bottom:1px solid #E2E8F0;font-size:12px;vertical-align:middle;}
+.price-table tr:last-child td{border-bottom:none;}
+.price-inp{padding:5px 8px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:12px;width:130px;outline:none;font-family:inherit;background:#fff;text-align:right;}
+.price-inp:focus{border-color:#3B82F6;}
+
+/* MULTI-ITEM ORDER FORM */
+.item-add-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:12px 14px;background:#F8FAFC;border-radius:8px;border:1.5px dashed #CBD5E1;margin-top:8px;}
+.item-add-row .field{margin:0;}
+.items-draft-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:8px;}
+.items-draft-table th{background:#F1F5F9;color:#475569;font-weight:700;font-size:11px;padding:7px 10px;text-align:left;border-bottom:2px solid #E2E8F0;}
+.items-draft-table td{padding:7px 10px;border-bottom:1px solid #F1F5F9;vertical-align:middle;}
+.items-draft-table tr:last-child td{border-bottom:none;}
+.item-del-btn{background:#FEE2E2;border:none;border-radius:5px;color:#DC2626;cursor:pointer;font-size:12px;padding:3px 8px;font-weight:700;}
+.item-del-btn:hover{background:#FCA5A5;}
+.sub-row td{background:#F8FAFC;border-bottom:1px solid #F1F5F9;}
+.order-first-row td{border-bottom:none;}
+.item-row-num{font-size:10px;font-weight:700;color:#94A3B8;display:block;margin-bottom:2px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;right:28px;z-index:9999;background:#1E293B;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.25);transform:translateY(80px);opacity:0;transition:all 0.3s;pointer-events:none;max-width:320px;}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* ============================================================ STOCK DETAIL MODAL ============================================================ */
+.sd-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;}
+.sd-modal{background:#fff;border-radius:16px;width:100%;max-width:860px;box-shadow:0 8px 40px rgba(0,0,0,0.18);overflow:hidden;margin:auto;}
+.sd-header{background:linear-gradient(135deg,#1E40AF 0%,#1E3A8A 100%);padding:18px 24px;display:flex;align-items:center;gap:12px;}
+.sd-header-info{flex:1;}
+.sd-header-title{font-size:18px;font-weight:800;color:#fff;}
+.sd-header-sub{font-size:12px;color:rgba(255,255,255,0.75);margin-top:3px;}
+.sd-close{background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);color:#fff;font-size:18px;font-weight:700;border-radius:8px;cursor:pointer;padding:4px 12px;line-height:1;}
+.sd-close:hover{background:rgba(255,255,255,0.25);}
+.sd-body{padding:0;}
+.sd-section{padding:18px 24px;border-bottom:1px solid #F1F5F9;}
+.sd-section-title{font-size:12px;font-weight:800;color:#374151;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+.sd-stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:4px;}
+.sd-stat{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;text-align:center;}
+.sd-stat-val{font-size:26px;font-weight:900;color:#1E293B;line-height:1;}
+.sd-stat-lbl{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-top:4px;}
+/* variant table */
+.var-table{width:100%;border-collapse:collapse;font-size:13px;}
+.var-table th{background:#F8FAFC;color:#475569;font-weight:700;font-size:11px;padding:8px 12px;text-align:left;border-bottom:2px solid #E2E8F0;white-space:nowrap;}
+.var-table td{padding:8px 12px;border-bottom:1px solid #F1F5F9;vertical-align:middle;}
+.var-table tr:last-child td{border-bottom:none;}
+.var-table tr:hover td{background:#FAFBFF;}
+.var-inp{padding:5px 8px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none;font-family:inherit;background:#fff;width:100%;}
+.var-inp:focus{border-color:#3B82F6;}
+.var-inp-num{text-align:right;width:80px;}
+.var-add-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;background:#F8FAFC;padding:12px 14px;border-radius:8px;border:1.5px dashed #CBD5E1;margin-top:10px;}
+.var-add-row .field{margin:0;}
+.var-del-btn{background:#FEE2E2;border:none;border-radius:5px;color:#DC2626;cursor:pointer;font-size:12px;padding:4px 8px;font-weight:700;white-space:nowrap;}
+.var-del-btn:hover{background:#FCA5A5;}
+.var-save-btn{background:#DBEAFE;border:none;border-radius:5px;color:#1D4ED8;cursor:pointer;font-size:12px;padding:4px 8px;font-weight:700;white-space:nowrap;}
+.var-save-btn:hover{background:#BFDBFE;}
+.sd-log-table{width:100%;border-collapse:collapse;font-size:12px;max-height:200px;overflow-y:auto;}
+.sd-log-table th{background:#F8FAFC;color:#475569;font-weight:700;font-size:11px;padding:7px 10px;border-bottom:2px solid #E2E8F0;text-align:left;white-space:nowrap;}
+.sd-log-table td{padding:7px 10px;border-bottom:1px solid #F1F5F9;}
+.sd-log-wrap{max-height:220px;overflow-y:auto;}
+.sd-footer{padding:14px 24px;display:flex;gap:10px;justify-content:flex-end;background:#F8FAFC;border-top:1px solid #E2E8F0;}
+.stock-card{cursor:pointer;transition:box-shadow .15s,transform .1s;}
+.stock-card:hover{box-shadow:0 4px 16px rgba(30,64,175,0.12);transform:translateY(-2px);}
+
+/* ============================================================ ACTION BUTTONS IN TABLE ============================================================ */
+.act-btn{padding:3px 9px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;white-space:nowrap;transition:opacity .15s;}
+.act-edit{background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;}
+.act-edit:hover{background:#DBEAFE;}
+.act-del{background:#FEF2F2;color:#DC2626;border:1.5px solid #FCA5A5;}
+.act-del:hover{background:#FEE2E2;}
+.act-row{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+
+/* ============================================================ EDIT ORDER MODAL ============================================================ */
+.edit-modal{background:#fff;border-radius:16px;width:100%;max-width:820px;box-shadow:0 8px 40px rgba(0,0,0,0.18);overflow:hidden;margin:auto;}
+.edit-items-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:8px;}
+.edit-items-table th{background:#F1F5F9;color:#475569;font-weight:700;font-size:11px;padding:7px 10px;text-align:left;border-bottom:2px solid #E2E8F0;}
+.edit-items-table td{padding:7px 10px;border-bottom:1px solid #F1F5F9;vertical-align:middle;}
+.edit-items-table tr:last-child td{border-bottom:none;}
+.edit-inp{padding:5px 8px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none;font-family:inherit;background:#fff;}
+.edit-inp:focus{border-color:#3B82F6;}
+
+/* ============================================================ LOGIN SCREEN ============================================================ */
+.login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#1E3A8A 0%,#1E40AF 60%,#1D4ED8 100%);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center;}
+.login-logo{font-size:52px;margin-bottom:8px;}
+.login-title{font-size:20px;font-weight:900;color:#1E293B;margin-bottom:4px;}
+.login-sub{font-size:12px;color:#64748B;margin-bottom:28px;}
+.login-field{text-align:left;margin-bottom:14px;}
+.login-field label{display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:5px;}
+.login-field input{width:100%;padding:11px 14px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:14px;outline:none;font-family:inherit;background:#F9FAFB;transition:border-color 0.15s;}
+.login-field input:focus{border-color:#3B82F6;background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,0.12);}
+.login-btn{width:100%;padding:13px;background:#1E40AF;color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:6px;transition:opacity 0.15s;}
+.login-btn:hover{opacity:0.88;}
+.login-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.login-err{background:#FEE2E2;color:#991B1B;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:600;margin-top:12px;display:none;}
+.login-err.show{display:block;}
+/* Role badge in header */
+.role-badge{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800;margin-left:8px;}
+.role-admin{background:#FEF3C7;color:#92400E;}
+.role-manager{background:#F3E8FF;color:#6D28D9;}
+.role-sale{background:#DBEAFE;color:#1D4ED8;}
+
+/* ── สิทธิ์แต่ละ Role ────────────────────────────────────────
+   admin-only   → เห็นเฉพาะ Admin
+   manager-up   → เห็น Admin + ผู้บริหาร (ไม่เห็น Sale)
+   sale-edit    → แก้ไขได้เฉพาะ Admin + Sale (ผู้บริหารดูอย่างเดียว)
+   no-manager   → ซ่อนจากผู้บริหาร
+───────────────────────────────────────────────────────────── */
+/* Sale ซ่อน: admin-only, manager-up */
+body.role-sale .admin-only { display:none!important; }
+body.role-sale .manager-up { display:none!important; }
+/* ผู้บริหาร ซ่อน: admin-only, sale-edit (ปุ่มแก้ไข/ลบ) */
+body.role-manager .admin-only { display:none!important; }
+body.role-manager .sale-edit  { display:none!important; }
+/* Manager read-only banner — show only for manager */
+body.role-manager .manager-notice { display:block!important; }
+body.role-admin   .manager-notice { display:none!important; }
+body.role-sale    .manager-notice { display:none!important; }
+</style>
+<body>
+
+<!-- ================================================================ LOGIN SCREEN ================================================================ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">🏗️</div>
+    <div class="login-title">ระบบดิจิทัลเสาเข็ม</div>
+    <div class="login-sub">กรุณาเข้าสู่ระบบเพื่อใช้งาน</div>
+    <div class="login-field">
+      <label>📧 อีเมล</label>
+      <input type="email" id="loginEmail" placeholder="email@example.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="login-field">
+      <label>🔒 รหัสผ่าน</label>
+      <input type="password" id="loginPass" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">🔑 เข้าสู่ระบบ</button>
+    <div class="login-err" id="loginErr">❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่</div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div class="hdr-logo" id="hdrEmoji">🏗️</div>
+  <div class="hdr-info">
+    <div class="hdr-title" id="hdrTitle">ระบบดิจิทัล — บริษัทเสาเข็ม</div>
+    <div class="hdr-sub">Digital Order Management System · v5-Firebase · <span id="hdrUserEmail" style="opacity:0.8;"></span></div>
+  </div>
+  <span class="role-badge" id="hdrRoleBadge" style="display:none;"></span>
+  <div class="hdr-badge">Orders <span class="badge-count" id="headerCount">0</span></div>
+  <button onclick="doLogout()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">ออกจากระบบ</button>
+</div>
+
+<!-- DEMO BAR -->
+<div class="demo-bar">
+  🔥 <b>Firebase Mode</b> — ข้อมูลซิงค์แบบ Real-time ข้ามทุกเครื่อง · v5-Firebase
+  <button class="demo-bar-btn admin-only" onclick="clearDemo()">🗑 ล้างข้อมูลทดสอบ</button>
+</div>
+
+<!-- NAV -->
+<div class="app-nav">
+  <div class="nav-tab active" data-tab="form" onclick="goTab('form',this)">📱 ส่ง Order</div>
+  <div class="nav-tab" id="tab-status" data-tab="status" onclick="goTab('status',this)">📋 สถานะ Order <span class="nav-dot"></span></div>
+  <div class="nav-tab" data-tab="proderr" onclick="goTab('proderr',this)">🏭 Error ผลิต</div>
+  <div class="nav-tab" data-tab="shiperr" onclick="goTab('shiperr',this)">🚛 Error ขนส่ง</div>
+  <div class="nav-tab manager-up" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
+  <div class="nav-tab manager-up" data-tab="stock" onclick="goTab('stock',this)">📦 ระบบสต็อก</div>
+  <div class="nav-tab" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
+  <div class="nav-tab admin-only" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
+</div>
+
+<!-- ================================================================ SECTION: ส่ง Order ================================================================ -->
+<div id="sec-form" class="section active">
+  <div class="app-content">
+    <!-- แจ้งเตือนผู้บริหาร -->
+    <div class="manager-notice" style="display:none;background:#F3E8FF;border:1.5px solid #C4B5FD;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#6D28D9;font-weight:600;">
+      👔 คุณเข้าสู่ระบบในฐานะ <b>ผู้บริหาร</b> — สามารถดูข้อมูลได้อย่างเดียว ไม่สามารถส่งหรือแก้ไข Order ได้
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📱 ส่ง Order ใหม่</div>
+          <div class="card-sub">กรอกข้อมูลทุกครั้งที่ลูกค้าสั่งซื้อ · ระบบจะบันทึกลูกค้าใหม่อัตโนมัติ</div>
+        </div>
+      </div>
+      <div class="card-body" id="formView">
+        <div class="form-grid">
+          <div class="section-divider">📋 ข้อมูลลูกค้า</div>
+          <div class="field full-col">
+            <label class="field-label">🔍 เลือกจากฐานข้อมูลลูกค้า (ถ้ามี)</label>
+            <select id="f_cust_lookup" onchange="fillCustomerFromDB()">
+              <option value="">— หรือพิมพ์ข้อมูลใหม่ด้านล่าง —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">ชื่อบริษัท / ลูกค้า <span class="req">*</span></label>
+            <input type="text" id="f_customer" placeholder="เช่น บริษัท ABC จำกัด"/>
+          </div>
+          <div class="field">
+            <label class="field-label">เบอร์โทรติดต่อ <span class="req">*</span></label>
+            <input type="tel" id="f_tel" placeholder="081-xxx-xxxx"/>
+          </div>
+          <div class="field">
+            <label class="field-label">Sale ผู้รับ Order <span class="req">*</span></label>
+            <select id="f_sale"><option value="">— เลือก —</option></select>
+          </div>
+          <div class="field">
+            <label class="field-label">ที่อยู่ / หมายเหตุลูกค้า</label>
+            <input type="text" id="f_cust_addr" placeholder="เช่น ลำลูกกา ปทุมธานี"/>
+          </div>
+          <div class="field">
+            <label class="field-label">วันที่สั่งซื้อ <span class="req">*</span></label>
+            <input type="date" id="f_order_date"/>
+          </div>
+
+          <div class="section-divider">🏗️ รายการสั่งซื้อ <span style="font-weight:400;color:#9CA3AF;">(เพิ่มได้หลายรายการ)</span></div>
+          <div class="full-col">
+            <div id="orderItemsList"></div>
+            <div class="item-add-row">
+              <div class="field" style="min-width:160px;flex:2;">
+                <label class="field-label">ชนิดเสาเข็ม <span class="req">*</span></label>
+                <select id="f_type"><option value="">— เลือก —</option></select>
+              </div>
+              <div class="field" style="min-width:90px;flex:1;">
+                <label class="field-label">จำนวน (ต้น) <span class="req">*</span></label>
+                <input type="number" id="f_qty" placeholder="60" min="1"/>
+              </div>
+              <div class="field" style="min-width:110px;flex:1;">
+                <label class="field-label">รายละเอียดเสา</label>
+                <input type="text" id="f_len" placeholder="เช่น 6ม.เสริมเหล็ก, 9ม.ไม่เสริม"/>
+              </div>
+              <div class="field" style="align-self:flex-end;">
+                <button class="btn btn-ghost btn-sm" onclick="addOrderItem()" style="white-space:nowrap;">+ เพิ่มรายการ</button>
+              </div>
+            </div>
+            <div id="orderValueBox" class="order-value-box" style="margin-top:8px;">— ยังไม่มีรายการสั่งซื้อ</div>
+          </div>
+
+
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" id="submitBtn" onclick="submitOrder()">✓ ส่ง Order</button>
+          <button class="btn btn-ghost" onclick="resetFormOnly()">🗑 ล้างฟอร์ม</button>
+        </div>
+      </div>
+      <div id="successView" style="display:none;">
+        <div class="success-card">
+          <div class="success-icon">✅</div>
+          <div class="success-title">Order สร้างเรียบร้อย!</div>
+          <div class="order-ref-box">
+            <div class="order-ref-label">เลข Order อ้างอิง</div>
+            <div class="order-ref-val" id="newOrderNum">—</div>
+          </div>
+          <div class="success-detail" id="successDetail"></div>
+          <div class="form-actions" style="justify-content:center;margin-top:20px;">
+            <button class="btn btn-ghost" onclick="resetForm()">+ Order ใหม่</button>
+            <button class="btn btn-success" onclick="goToTracker()">📋 ดูใน Tracker →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ SECTION: สถานะ Order ================================================================ -->
+<div id="sec-status" class="section">
+  <div class="app-content">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📋 ติดตามสถานะ Order</div>
+          <div class="card-sub">เปลี่ยนสถานะผ่าน dropdown · คลิกตัวเลข "ส่งแล้ว" เพื่ออัปเดตจำนวน</div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-danger btn-sm" onclick="goTab('proderr',document.querySelector('[data-tab=proderr]'))">🏭 Error ผลิต</button>
+        <button class="btn btn-danger btn-sm" onclick="goTab('shiperr',document.querySelector('[data-tab=shiperr]'))">🚛 Error ขนส่ง</button>
+        <input type="search" class="search-inp" id="orderSearch" placeholder="🔍 ค้นหาลูกค้า / เลข Order..." oninput="renderOrders()"/>
+        <select class="filter-sel" id="statusFilter" onchange="renderOrders()">
+          <option value="">สถานะ: ทั้งหมด</option>
+          <option>รับ Order แล้ว</option>
+          <option>ยืนยัน Order</option>
+          <option>กำลังผลิต</option>
+          <option>พร้อมส่ง</option>
+          <option>ระหว่างขนส่ง</option>
+          <option>ส่งครบ</option>
+        </select>
+        <button class="btn btn-export btn-sm" onclick="exportOrdersCSV()">📥 Export CSV</button>
+        <button class="btn btn-sm" style="background:#16A34A;color:#fff;" onclick="exportOrdersXLSX()">📊 Export Excel</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>เลข Order</th>
+              <th>ลูกค้า</th>
+              <th>ชนิด / จำนวน</th>
+              <th>ส่งแล้ว ✎</th>
+              <th>ความคืบหน้า</th>
+              <th>กำหนดส่ง</th>
+              <th>สถานะ Workflow</th>
+              <th>มูลค่า</th>
+              <th>Sale / หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ SECTION: Error ผลิต ================================================================ -->
+<div id="sec-proderr" class="section">
+  <div class="app-content stack">
+    <div class="card">
+      <div class="card-header"><div class="card-title">🏭 ประวัติ Error ผลิต</div></div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>วันที่</th><th>เลข Order/WO</th><th>ประเภท Error</th><th>เสีย (ต้น)</th><th>สาเหตุ</th><th>แนวทางแก้ไข</th><th>ผู้รายงาน</th></tr></thead>
+          <tbody id="prodErrBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📝 บันทึก Error ผลิตใหม่</div>
+          <div class="card-sub">กรอกเมื่อเกิดปัญหาในกระบวนการผลิต</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="err-grid">
+          <div class="field"><label class="field-label">วันที่เกิดเหตุ <span class="req">*</span></label><input type="date" id="pe_date"/></div>
+          <div class="field"><label class="field-label">เลข Order / WO <span class="req">*</span></label><input type="text" id="pe_order" placeholder="เช่น ORD-0523-001"/></div>
+          <div class="field">
+            <label class="field-label">ประเภท Error <span class="req">*</span></label>
+            <select id="pe_type">
+              <option value="">— เลือก —</option>
+              <option>💔 เสาแตก/ร้าว</option><option>📐 ขนาดไม่ได้มาตรฐาน</option>
+              <option>⏰ ผลิตล่าช้า</option><option>🔩 เครื่องจักรขัดข้อง</option>
+              <option>👷 แรงงานไม่พอ</option><option>🧱 วัตถุดิบไม่พอ</option>
+            </select>
+          </div>
+          <div class="field"><label class="field-label">จำนวนเสีย (ต้น)</label><input type="number" id="pe_qty" placeholder="0" min="0"/></div>
+          <div class="field"><label class="field-label">ผู้รายงาน <span class="req">*</span></label><select id="pe_staff"><option value="">— เลือก —</option></select></div>
+          <div class="field"><label class="field-label">สาเหตุ <span class="req">*</span></label><input type="text" id="pe_cause" placeholder="อธิบายสาเหตุที่เกิดขึ้น"/></div>
+          <div class="field full-col"><label class="field-label">แนวทางแก้ไข</label><input type="text" id="pe_fix" placeholder="วิธีแก้ไข / แผนทดแทน"/></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="submitProdErr()">💾 บันทึก Error ผลิต</button>
+          <button class="btn btn-ghost" onclick="clearProd()">🗑 ล้าง</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ SECTION: Error ขนส่ง ================================================================ -->
+<div id="sec-shiperr" class="section">
+  <div class="app-content stack">
+    <div class="card">
+      <div class="card-header"><div class="card-title">🚛 ประวัติ Error ขนส่ง</div></div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>วันที่</th><th>เลข Order/DO</th><th>ประเภท Error</th><th>เสีย (ต้น)</th><th>สาเหตุ</th><th>การแก้ไข</th><th>คนขับ/ผู้แจ้ง</th></tr></thead>
+          <tbody id="shipErrBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📝 บันทึก Error ขนส่งใหม่</div>
+          <div class="card-sub">กรอกเมื่อเกิดปัญหาในการขนส่ง</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="err-grid">
+          <div class="field"><label class="field-label">วันที่เกิดเหตุ <span class="req">*</span></label><input type="date" id="se_date"/></div>
+          <div class="field"><label class="field-label">เลข Order / DO <span class="req">*</span></label><input type="text" id="se_order" placeholder="เช่น ORD-0523-001"/></div>
+          <div class="field">
+            <label class="field-label">ประเภท Error <span class="req">*</span></label>
+            <select id="se_type">
+              <option value="">— เลือก —</option>
+              <option>⏰ ส่งล่าช้า</option><option>💥 สินค้าเสียหายระหว่างทาง</option>
+              <option>🚫 ส่งผิดที่ / ผิดไซต์</option><option>🔢 จำนวนไม่ครบ</option>
+              <option>🚗 รถเสีย / อุบัติเหตุ</option><option>⛽ ปัญหาเส้นทาง</option>
+            </select>
+          </div>
+          <div class="field"><label class="field-label">ต้นเสียหาย</label><input type="number" id="se_qty" placeholder="0" min="0"/></div>
+          <div class="field"><label class="field-label">คนขับ / ผู้แจ้ง <span class="req">*</span></label><select id="se_staff"><option value="">— เลือก —</option></select></div>
+          <div class="field"><label class="field-label">สาเหตุ <span class="req">*</span></label><input type="text" id="se_cause" placeholder="อธิบายสาเหตุ"/></div>
+          <div class="field full-col"><label class="field-label">การแก้ไข</label><input type="text" id="se_fix" placeholder="วิธีแก้ไข / แผนทดแทน"/></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-danger" onclick="submitShipErr()">💾 บันทึก Error ขนส่ง</button>
+          <button class="btn btn-ghost" onclick="clearShip()">🗑 ล้าง</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ SECTION: สรุปภาพรวม ================================================================ -->
+<div id="sec-summary" class="section">
+  <div class="app-content stack">
+    <div class="sum-grid" id="summaryGrid"></div>
+    <div class="chart-row" id="chartsRow"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📋 ประวัติ Order ที่จบบิลแล้ว</div>
+          <div class="card-sub" id="histSummarySub">รายการ Order ที่ส่งครบและปิดบิลเรียบร้อย</div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <button class="btn btn-export btn-sm" onclick="exportHistoryCSV()">📥 Export CSV</button>
+          <button class="btn btn-sm" style="background:#16A34A;color:#fff;" onclick="exportFullXLSX()">📊 Export Excel ทั้งหมด</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>เลข Order</th><th>วันที่จบ</th><th>ลูกค้า</th><th>รายการ</th><th>จำนวน</th><th>มูลค่า</th><th>Sale</th></tr></thead>
+          <tbody id="histSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ SECTION: ระบบสต็อก ================================================================ -->
+<div id="sec-stock" class="section">
+  <div class="app-content stack">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📦 สต็อกปัจจุบัน</div>
+        <div style="margin-left:auto;font-size:11px;color:#94A3B8;">🟡 จอง = ออเดอร์ที่ยังไม่ส่งครบ · ✅ คงเหลือจริง = สต็อก − จอง</div>
+      </div>
+      <div class="card-body">
+        <div class="stock-cards-wrap" id="stockCardsGrid"></div>
+        <p style="font-size:11px;color:#94A3B8;margin-top:14px;">💡 สีแดง = ต่ำมาก · สีเหลือง = ใกล้หมด · สีเขียว = ปกติ (ปรับเกณฑ์ได้ที่ ⚙️ ตั้งค่า)</p>
+      </div>
+    </div>
+
+    <div class="card" style="background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border-color:#BFDBFE;">
+      <div class="card-body" style="display:flex;align-items:center;gap:16px;padding:16px 20px;">
+        <div style="font-size:32px;">👆</div>
+        <div>
+          <div style="font-size:14px;font-weight:800;color:#1E40AF;">คลิกที่การ์ดสต็อกด้านบนเพื่อบันทึก</div>
+          <div style="font-size:12px;color:#3B82F6;margin-top:3px;">รับเข้า · เบิกออก · ปรับแก้ · จัดการแยกตามขนาด — ทำได้ในหน้าเดียว</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📋 ประวัติการเคลื่อนไหวสต็อก</div>
+        <button class="btn btn-export btn-sm" style="margin-left:auto;" onclick="exportStockCSV()">📥 Export CSV</button>
+      </div>
+      <div class="toolbar">
+        <input type="search" class="search-inp" id="logSearch" placeholder="🔍 ค้นหาชนิดเสา / อ้างอิง..." oninput="renderStockLog()"/>
+        <select class="filter-sel" id="logTypeFilter" onchange="renderStockLog()">
+          <option value="">ทุกประเภท</option>
+          <option value="รับเข้า">📥 รับเข้า</option>
+          <option value="เบิกออก">📤 เบิกออก</option>
+          <option value="ปรับแก้">🔧 ปรับแก้</option>
+        </select>
+        <select class="filter-sel" id="logPileFilter" onchange="renderStockLog()">
+          <option value="">ทุกชนิดเสา</option>
+        </select>
+        <span class="toolbar-note" id="logCount"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="log-table">
+          <thead><tr><th>วันเวลา</th><th>ประเภท</th><th>ชนิดเสา</th><th>จำนวน</th><th>สต็อกหลัง</th><th>อ้างอิง</th><th>ผู้บันทึก</th><th>หมายเหตุ</th></tr></thead>
+          <tbody id="stockLogBody"></tbody>
+        </table>
+      </div>
+      <div id="logPagination" style="display:flex;gap:8px;align-items:center;padding:10px 16px;border-top:1px solid #F1F5F9;flex-wrap:wrap;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ SECTION: ลูกค้า (NEW) ================================================================ -->
+<div id="sec-customers" class="section">
+  <div class="app-content stack">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">👥 ฐานข้อมูลลูกค้า</div>
+          <div class="card-sub">ลูกค้าที่สั่งซื้อจะถูกบันทึกอัตโนมัติ · เพิ่มเองได้ด้านล่าง</div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <input type="search" class="search-inp" id="custSearch" placeholder="🔍 ค้นหาชื่อ / เบอร์..." oninput="renderCustomers()"/>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>ชื่อบริษัท / ลูกค้า</th><th>เบอร์โทร</th><th>ที่อยู่ / หมายเหตุ</th><th>Order ทั้งหมด</th><th>ยอดรวม</th><th></th></tr></thead>
+          <tbody id="custBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- History card -->
+    <div class="card" id="histCard" style="display:none;">
+      <div class="card-header">
+        <div>
+          <div class="card-title" id="histCardTitle">📋 ประวัติการซื้อขาย</div>
+          <div class="card-sub">Order ที่จบบิลแล้ว</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('histCard').style.display='none'">✕ ปิด</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>เลข Order</th><th>วันที่จบ</th><th>รายการ</th><th>ส่งแล้ว</th><th>มูลค่า</th><th>Sale</th></tr></thead>
+          <tbody id="histBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Add new customer -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">➕ เพิ่มลูกค้าใหม่</div>
+          <div class="card-sub">เพิ่มข้อมูลลูกค้าล่วงหน้าก่อนรับ Order</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="err-grid">
+          <div class="field"><label class="field-label">ชื่อบริษัท / ลูกค้า <span class="req">*</span></label><input type="text" id="c_name" placeholder="บริษัท ABC จำกัด"/></div>
+          <div class="field"><label class="field-label">เบอร์โทร <span class="req">*</span></label><input type="tel" id="c_tel" placeholder="081-xxx-xxxx"/></div>
+          <div class="field full-col"><label class="field-label">ที่อยู่ / หมายเหตุ</label><input type="text" id="c_addr" placeholder="เช่น ลำลูกกา ปทุมธานี"/></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="submitCustomer()">💾 บันทึกลูกค้า</button>
+          <button class="btn btn-ghost" onclick="clearCustomerForm()">🗑 ล้าง</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ SECTION: ตั้งค่า ================================================================ -->
+<div id="sec-settings" class="section">
+  <div class="app-content">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">⚙️ ตั้งค่าระบบ</div>
+          <div class="card-sub">ปรับแต่งข้อมูลบริษัท พนักงาน ประเภทสินค้า ราคา และเกณฑ์แจ้งเตือนสต็อก</div>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <!-- Company -->
+        <div class="settings-block" style="margin-bottom:16px;">
+          <div class="settings-block-title">🏢 ข้อมูลบริษัท</div>
+          <div class="form-grid">
+            <div class="field"><label class="field-label">ชื่อบริษัท</label><input type="text" id="cfg_companyName" placeholder="บริษัทเสาเข็ม"/></div>
+            <div class="field"><label class="field-label">Emoji โลโก้</label><input type="text" id="cfg_companyEmoji" placeholder="🏗️" style="font-size:18px;max-width:120px;"/></div>
+          </div>
+        </div>
+
+        <!-- Staff -->
+        <div class="settings-grid" style="margin-bottom:16px;">
+          <div class="settings-block">
+            <div class="settings-block-title">👔 ทีม Sale</div>
+            <div class="tag-list" id="tagsSale"></div>
+            <div class="tag-add-row"><input class="tag-add-inp" id="inp_sale" placeholder="เพิ่มชื่อ Sale..." onkeydown="if(event.key==='Enter') addTag('sale')"/><button class="tag-add-btn" onclick="addTag('sale')">+ เพิ่ม</button></div>
+          </div>
+          <div class="settings-block">
+            <div class="settings-block-title">🏭 ทีมผลิต</div>
+            <div class="tag-list" id="tagsProd"></div>
+            <div class="tag-add-row"><input class="tag-add-inp" id="inp_prod" placeholder="เพิ่มชื่อพนักงาน..." onkeydown="if(event.key==='Enter') addTag('prod')"/><button class="tag-add-btn" onclick="addTag('prod')">+ เพิ่ม</button></div>
+          </div>
+          <div class="settings-block">
+            <div class="settings-block-title">🚛 คนขับ / ขนส่ง</div>
+            <div class="tag-list" id="tagsShip"></div>
+            <div class="tag-add-row"><input class="tag-add-inp" id="inp_ship" placeholder="เพิ่มชื่อคนขับ..." onkeydown="if(event.key==='Enter') addTag('ship')"/><button class="tag-add-btn" onclick="addTag('ship')">+ เพิ่ม</button></div>
+          </div>
+          <div class="settings-block">
+            <div class="settings-block-title">📦 ทีมคลังสินค้า</div>
+            <div class="tag-list" id="tagsStockStaff"></div>
+            <div class="tag-add-row"><input class="tag-add-inp" id="inp_stockStaff" placeholder="เพิ่มชื่อพนักงาน..." onkeydown="if(event.key==='Enter') addTag('stockStaff')"/><button class="tag-add-btn" onclick="addTag('stockStaff')">+ เพิ่ม</button></div>
+          </div>
+        </div>
+
+        <!-- Pile types + Prices -->
+        <div class="settings-block" style="margin-bottom:16px;">
+          <div class="settings-block-title">🏗️ ประเภทเสาเข็ม</div>
+          <div class="tag-list" id="tagsPile"></div>
+          <div class="tag-add-row">
+            <input class="tag-add-inp" id="inp_pile" placeholder="เพิ่มประเภท เช่น เสาตัน 0.30m..." onkeydown="if(event.key==='Enter') addTag('pile')"/>
+            <button class="tag-add-btn" onclick="addTag('pile')">+ เพิ่ม</button>
+          </div>
+        </div>
+
+        <!-- Pile Prices -->
+        <div class="settings-block" style="margin-bottom:16px;">
+          <div class="settings-block-title">💰 ราคาต่อต้น (บาท)</div>
+          <p style="font-size:11px;color:#64748B;margin-bottom:10px;">กรอกราคาต่อต้นเพื่อให้ระบบคำนวณมูลค่า Order อัตโนมัติ (ไม่บังคับ)</p>
+          <table class="price-table" id="priceTable">
+            <tbody id="priceTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Stock thresholds -->
+        <div class="settings-block" style="margin-bottom:16px;">
+          <div class="settings-block-title">⚠️ เกณฑ์แจ้งเตือนสต็อก</div>
+          <div class="form-grid">
+            <div class="field"><label class="field-label">🔴 ต่ำมาก — น้อยกว่า (ต้น)</label><input type="number" id="cfg_stockLow" min="0" placeholder="15"/></div>
+            <div class="field"><label class="field-label">🟡 ใกล้หมด — น้อยกว่า (ต้น)</label><input type="number" id="cfg_stockWarn" min="0" placeholder="50"/></div>
+          </div>
+        </div>
+
+        <div class="settings-footer">
+          <button class="btn btn-ghost" onclick="loadSettingsUI()">↺ ยกเลิก</button>
+          <button class="btn btn-primary" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================================================================ STOCK DETAIL MODAL ================================================================ -->
+<div id="sdOverlay" class="sd-overlay" style="display:none;" onclick="sdOverlayClick(event)">
+  <div class="sd-modal" id="sdModal">
+    <div class="sd-header">
+      <div style="font-size:28px;" id="sdEmoji">📦</div>
+      <div class="sd-header-info">
+        <div class="sd-header-title" id="sdTitle">ชนิดเสา</div>
+        <div class="sd-header-sub" id="sdSub">รายละเอียดสต็อก</div>
+      </div>
+      <button class="sd-close" onclick="closeStockDetail()">✕</button>
+    </div>
+    <div class="sd-body">
+
+      <!-- Stats -->
+      <div class="sd-section">
+        <div class="sd-stat-row" id="sdStats"></div>
+      </div>
+
+      <!-- Spec inventory -->
+      <div class="sd-section">
+        <div class="sd-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>📊 สต็อกแยกตามสเปค</span>
+          <span id="sdSpecCount" style="font-size:11px;color:#94A3B8;font-weight:400;text-transform:none;letter-spacing:0;"></span>
+        </div>
+        <div id="sdSpecGrid" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <!-- History for this pile type -->
+      <div class="sd-section">
+        <div class="sd-section-title">🕑 ประวัติการเคลื่อนไหว</div>
+        <div class="sd-log-wrap">
+          <table class="sd-log-table">
+            <thead><tr><th>วันเวลา</th><th>ประเภท</th><th>จำนวน</th><th>สต็อกหลัง</th><th>อ้างอิง</th><th>ผู้บันทึก</th><th>หมายเหตุ</th></tr></thead>
+            <tbody id="sdLogBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+      <!-- Inline stock-log form -->
+      <div class="sd-section" id="sdLogForm">
+        <div class="sd-section-title">📝 บันทึกรับเข้า / เบิกออก</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field">
+            <label class="field-label">ประเภท <span class="req">*</span></label>
+            <select id="sd_logtype" onchange="sdPreview()">
+              <option value="">— เลือก —</option>
+              <option value="in">📥 รับเข้า (ผลิตเสร็จ)</option>
+              <option value="out">📤 เบิกออก (ส่งของ)</option>
+              <option value="adj">🔧 ปรับแก้สเปคนี้</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">สเปค <span class="req">*</span> <span style="font-size:10px;color:#94A3B8;font-weight:400;">สเปคเดิม = รวมสต็อก · สเปคใหม่ = แยก</span></label>
+            <input type="text" id="sd_logspec" list="sdSpecList" placeholder="เช่น 8.00ม, 10.00ช, พิเศษ" oninput="sdPreview()" autocomplete="off"/>
+            <datalist id="sdSpecList"></datalist>
+          </div>
+          <div class="field">
+            <label class="field-label">จำนวน (ต้น) <span class="req">*</span></label>
+            <input type="number" id="sd_logqty" min="1" placeholder="0" oninput="sdPreview()"/>
+          </div>
+          <div class="field">
+            <label class="field-label">ผู้บันทึก <span class="req">*</span></label>
+            <select id="sd_logstaff"><option value="">— เลือก —</option></select>
+          </div>
+          <div class="field" style="grid-column:1/-1;">
+            <label class="field-label">หมายเหตุ</label>
+            <input type="text" id="sd_lognote" placeholder="เช่น ผลิต batch 3, ส่งลูกค้า ABC"/>
+          </div>
+        </div>
+        <div id="sdLogPreview" style="margin-top:10px;padding:10px 14px;border-radius:8px;background:#EFF6FF;color:#1D4ED8;font-size:12.5px;font-weight:600;">👆 เลือกประเภท กรอกสเปค และจำนวน</div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="submitSdLog()">💾 บันทึก</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearSdLog()">ล้าง</button>
+        </div>
+      </div>
+
+    <div class="sd-footer">
+      <button class="btn btn-ghost" onclick="closeStockDetail()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ EDIT ORDER MODAL ================================================================ -->
+<div id="editOrderOverlay" class="sd-overlay" style="display:none;" onclick="editOrderOverlayClick(event)">
+  <div class="edit-modal">
+    <div class="sd-header">
+      <div style="font-size:26px;">✏️</div>
+      <div class="sd-header-info">
+        <div class="sd-header-title" id="editOrderTitle">แก้ไข Order</div>
+        <div class="sd-header-sub" id="editOrderSub">ปรับข้อมูล Order</div>
+      </div>
+      <button class="sd-close" onclick="closeEditOrder()">✕</button>
+    </div>
+    <div style="padding:20px 24px;overflow-y:auto;max-height:72vh;">
+      <div class="form-grid">
+        <div class="section-divider">📋 ข้อมูลลูกค้า</div>
+        <div class="field">
+          <label class="field-label">ชื่อบริษัท / ลูกค้า <span class="req">*</span></label>
+          <input type="text" id="edit_customer" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#F9FAFB;"/>
+        </div>
+        <div class="field">
+          <label class="field-label">เบอร์โทร <span class="req">*</span></label>
+          <input type="tel" id="edit_tel" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#F9FAFB;"/>
+        </div>
+        <div class="field">
+          <label class="field-label">Sale <span class="req">*</span></label>
+          <select id="edit_sale" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#F9FAFB;"></select>
+        </div>
+        <div class="field">
+          <label class="field-label">ที่อยู่ / หมายเหตุลูกค้า</label>
+          <input type="text" id="edit_cust_addr" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#F9FAFB;"/>
+        </div>
+        <div class="section-divider">🏗️ รายการสั่งซื้อ</div>
+        <div class="full-col">
+          <div id="editItemsList"></div>
+          <div class="item-add-row" style="margin-top:8px;">
+            <div class="field" style="min-width:160px;flex:2;">
+              <label class="field-label">เพิ่มชนิดเสา</label>
+              <select id="edit_f_type"><option value="">— เลือก —</option></select>
+            </div>
+            <div class="field" style="min-width:80px;flex:1;">
+              <label class="field-label">จำนวน (ต้น)</label>
+              <input type="number" id="edit_f_qty" min="1" placeholder="0" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/>
+            </div>
+            <div class="field" style="min-width:100px;flex:1;">
+              <label class="field-label">รายละเอียดเสา</label>
+              <input type="text" id="edit_f_len" placeholder="เช่น 6ม.เสริมเหล็ก, 9ม.ไม่เสริม" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/>
+            </div>
+            <div class="field" style="align-self:flex-end;">
+              <button class="btn btn-ghost btn-sm" onclick="editAddItem()" style="white-space:nowrap;">+ เพิ่มรายการ</button>
+            </div>
+          </div>
+          <div id="editOrderValueBox" class="order-value-box" style="margin-top:8px;">—</div>
+        </div>
+<div class="field full-col">
+          <label class="field-label">ที่อยู่ไซต์งาน <span class="req">*</span></label>
+          <input type="text" id="edit_site" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#F9FAFB;"/>
+        </div>
+        <div class="field">
+          <label class="field-label">วันที่ต้องการ <span class="req">*</span></label>
+          <input type="date" id="edit_date" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#F9FAFB;"/>
+        </div>
+        <div class="field full-col">
+          <label class="field-label">หมายเหตุ</label>
+          <textarea id="edit_note" rows="2" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#F9FAFB;resize:vertical;"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="sd-footer">
+      <button class="btn btn-ghost" onclick="closeEditOrder()">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="submitEditOrder()">💾 บันทึกการแก้ไข</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ================================================================ JAVASCRIPT ================================================================ -->
+<script>
+// ══════════════════════════════════════════════════════════════
+// ── FIREBASE CONFIG ───────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyAFUHGfFrVqgLErFmP5HHTudg6NQbI_c3Y",
+  authDomain:        "sud-demo-eb117.firebaseapp.com",
+  databaseURL:       "https://sud-demo-eb117-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "sud-demo-eb117",
+  storageBucket:     "sud-demo-eb117.firebasestorage.app",
+  messagingSenderId: "617606554251",
+  appId:             "1:617606554251:web:2f9cdf210b4460900baa8e"
+};
+
+// Init Firebase
+firebase.initializeApp(firebaseConfig);
+const db   = firebase.database();
+const auth = firebase.auth();
+
+// ══════════════════════════════════════════════════════════════
+// ── ROLE SYSTEM — 3 ระดับสิทธิ์
+// ══════════════════════════════════════════════════════════════
+
+// 👑 Admin — ทำได้ทุกอย่าง (ตั้งค่า, ลบ, แก้ไขทุกอย่าง)
+const ADMIN_EMAILS = [
+  'admin@gmail.com',
+  // เพิ่มอีเมล Admin เพิ่มได้ที่นี่ เช่น 'boss2@gmail.com'
+];
+
+// 👔 ผู้บริหาร — ดูได้ทุกอย่าง แต่แก้ไข/ลบไม่ได้
+const MANAGER_EMAILS = [
+  // เพิ่มอีเมลผู้บริหารที่นี่ เช่น 'manager@gmail.com'
+];
+
+// 💼 Sale — ส่ง Order, แก้ไข Order ตัวเอง, บันทึก Error
+// (อีเมลที่ไม่อยู่ใน Admin หรือ Manager จะเป็น Sale อัตโนมัติ)
+
+let _currentUser = null;
+let _currentRole = null; // 'admin' | 'manager' | 'sale'
+
+function getRole(email) {
+  const e = (email || '').toLowerCase();
+  if (ADMIN_EMAILS.map(x=>x.toLowerCase()).includes(e))   return 'admin';
+  if (MANAGER_EMAILS.map(x=>x.toLowerCase()).includes(e)) return 'manager';
+  return 'sale';
+}
+
+const ROLE_LABEL = { admin: '👑 Admin', manager: '👔 ผู้บริหาร', sale: '💼 Sale' };
+
+function applyRole(role) {
+  _currentRole = role;
+  document.body.classList.remove('role-admin','role-manager','role-sale');
+  document.body.classList.add('role-' + role);
+  const badge = document.getElementById('hdrRoleBadge');
+  if (badge) {
+    badge.textContent   = ROLE_LABEL[role] || role;
+    badge.className     = 'role-badge role-' + role;
+    badge.style.display = 'inline-block';
+  }
+}
+
+// ── Login / Logout ────────────────────────────────────────────
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  const btn   = document.getElementById('loginBtn');
+  const err   = document.getElementById('loginErr');
+  if (!email || !pass) { err.textContent='⚠️ กรุณากรอกอีเมลและรหัสผ่าน'; err.classList.add('show'); return; }
+  btn.disabled = true; btn.textContent = '⏳ กำลังเข้าสู่ระบบ...';
+  err.classList.remove('show');
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(e => {
+      btn.disabled = false; btn.textContent = '🔑 เข้าสู่ระบบ';
+      err.textContent = '❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+      err.classList.add('show');
+    });
+}
+
+function doLogout() {
+  if (!confirm('ออกจากระบบใช่ไหมครับ?')) return;
+  auth.signOut();
+}
+
+// ── Auth State Observer ───────────────────────────────────────
+auth.onAuthStateChanged(user => {
+  if (user) {
+    _currentUser = user;
+    const role = getRole(user.email);
+    applyRole(role);
+    // Update header
+    const emailEl = document.getElementById('hdrUserEmail');
+    if (emailEl) emailEl.textContent = user.email;
+    // Hide login screen
+    const ls = document.getElementById('loginScreen');
+    if (ls) ls.style.display = 'none';
+    // Start data sync — show loading overlay inside app
+    if (!_fbReady) {
+      showAppLoadingOverlay();
+      startFirebaseListeners();
+      onFbReady(() => {
+        const el = document.getElementById('fbLoadOverlay');
+        if (el) el.remove();
+        applyBranding();
+        populateAllDropdowns();
+        updateHeaderCount();
+        renderOrders();
+        renderSummary();
+        renderStockCards();
+        renderStockLog();
+      });
+    }
+  } else {
+    _currentUser = null;
+    _currentRole = null;
+    // Remove loading overlay ถ้ามี
+    const ov = document.getElementById('fbLoadOverlay');
+    if (ov) ov.remove();
+    // Show login screen
+    const ls = document.getElementById('loginScreen');
+    if (ls) { ls.style.display = 'flex'; }
+    const btn = document.getElementById('loginBtn');
+    if (btn) { btn.disabled = false; btn.textContent = '🔑 เข้าสู่ระบบ'; }
+    document.body.classList.remove('role-admin','role-manager','role-sale');
+    const badge = document.getElementById('hdrRoleBadge');
+    if (badge) badge.style.display = 'none';
+  }
+});
+
+// ── Firebase Paths ────────────────────────────────────────────
+const K_ORDERS    = 'sud/orders';
+const K_PROD_ERR  = 'sud/prodErrors';
+const K_SHIP_ERR  = 'sud/shipErrors';
+const K_CTR       = 'sud/orderCounter';
+const K_STOCK     = 'sud/stock';
+const K_STOCK_LOG = 'sud/stockLog';
+const K_CONFIG    = 'sud/config';
+const K_CUSTOMERS = 'sud/customers';
+const K_HISTORY   = 'sud/orderHistory';
+const K_VAR_FB    = 'sud/stockVariants';
+
+// ── In-Memory Cache (sync'd from Firebase realtime) ──────────
+const _cache = {
+  orders:[], prodErrors:[], shipErrors:[], orderCounter:0,
+  stock:{}, stockLog:[], config:null, customers:[], orderHistory:[],
+  stockVariants:{}
+};
+let _fbReady = false;
+const _fbReadyCallbacks = [];
+function onFbReady(fn) { if (_fbReady) fn(); else _fbReadyCallbacks.push(fn); }
+
+// Show loading overlay AFTER login (inside app only)
+// ไม่ block หน้า Login แล้ว — overlay จะแสดงหลัง login เท่านั้น
+function showAppLoadingOverlay() {
+  if (document.getElementById('fbLoadOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'fbLoadOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(30,58,138,0.85);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+  overlay.innerHTML = '<div style="font-size:48px;">🔥</div>'
+    + '<div style="color:#fff;font-size:18px;font-weight:800;">กำลังโหลดข้อมูล...</div>'
+    + '<div style="color:rgba(255,255,255,0.7);font-size:13px;">รอสักครู่นะครับ</div>';
+  document.body.appendChild(overlay);
+}
+
+// ── Subscribe realtime listeners ──────────────────────────────
+function startFirebaseListeners() {
+  let loadCount = 0;
+  const TOTAL = 8;
+  function checkDone() {
+    loadCount++;
+    if (loadCount >= TOTAL) {
+      _fbReady = true;
+      const el = document.getElementById('fbLoadOverlay');
+      if (el) el.remove();
+      _fbReadyCallbacks.forEach(fn => fn());
+      _fbReadyCallbacks.length = 0;
+    }
+  }
+
+  db.ref(K_ORDERS).on('value', snap => {
+    const v = snap.val();
+    _cache.orders = v ? Object.values(v).sort((a,b) => (b._idx||0)-(a._idx||0)) : [];
+    if (_fbReady) { renderOrders(); renderSummary(); updateHeaderCount(); }
+    else checkDone();
+  });
+  db.ref(K_PROD_ERR).on('value', snap => {
+    const v = snap.val();
+    _cache.prodErrors = v ? Object.values(v).sort((a,b) => (b._idx||0)-(a._idx||0)) : [];
+    if (_fbReady) renderProdFull();
+    else checkDone();
+  });
+  db.ref(K_SHIP_ERR).on('value', snap => {
+    const v = snap.val();
+    _cache.shipErrors = v ? Object.values(v).sort((a,b) => (b._idx||0)-(a._idx||0)) : [];
+    if (_fbReady) renderShipFull();
+    else checkDone();
+  });
+  db.ref(K_CTR).once('value', snap => { _cache.orderCounter = snap.val() || 0; checkDone(); });
+  db.ref(K_STOCK).on('value', snap => {
+    _cache.stock = snap.val() || {};
+    if (_fbReady) { renderStockCards(); renderOrders(); }
+    else checkDone();
+  });
+  db.ref(K_STOCK_LOG).on('value', snap => {
+    const v = snap.val();
+    _cache.stockLog = v ? Object.values(v).sort((a,b) => (b._idx||0)-(a._idx||0)) : [];
+    if (_fbReady) renderStockLog(true);
+    else checkDone();
+  });
+  db.ref(K_CUSTOMERS).on('value', snap => {
+    const v = snap.val();
+    _cache.customers = v ? Object.values(v) : [];
+    if (_fbReady) { renderCustomers(); populateCustLookup(); }
+    else checkDone();
+  });
+  db.ref(K_CONFIG).on('value', snap => {
+    const v = snap.val();
+    _cache.config = v ? { ...DEFAULT_CONFIG, ...v } : { ...DEFAULT_CONFIG };
+    if (_fbReady) { populateAllDropdowns(); applyBranding(); }
+    else checkDone();
+  });
+  db.ref(K_HISTORY).on('value', snap => {
+    const v = snap.val();
+    _cache.orderHistory = v ? Object.values(v).sort((a,b) => (b._idx||0)-(a._idx||0)) : [];
+    // Not counted in checkDone — history is lazy
+  });
+  db.ref(K_VAR_FB).on('value', snap => {
+    _cache.stockVariants = snap.val() || {};
+  });
+}
+
+// ── Helper: array → Firebase object (keyed by _fbKey or index) ─
+function arrToFbObj(arr) {
+  const obj = {};
+  arr.forEach((item, i) => {
+    const key = item._fbKey || db.ref().push().key;
+    item._fbKey = key;
+    item._idx   = arr.length - i; // descending so newest first
+    obj[key] = item;
+  });
+  return obj;
+}
+
+// ── Get helpers (read from cache) ─────────────────────────────
+const getOrders    = () => _cache.orders;
+const getProdErrs  = () => _cache.prodErrors;
+const getShipErrs  = () => _cache.shipErrors;
+const getCustomers = () => _cache.customers;
+const getHistory   = () => _cache.orderHistory;
+const getCtr       = () => _cache.orderCounter;
+
+function getStock() {
+  if (Object.keys(_cache.stock).length === 0) {
+    const s = {};
+    (_cache.config || DEFAULT_CONFIG).pileTypes.forEach(t => s[t] = DEFAULT_STOCK_QTY[t] || 0);
+    return s;
+  }
+  return _cache.stock;
+}
+function getStockLog() {
+  return _cache.stockLog.length > 0 ? _cache.stockLog : null;
+}
+function getConfig() {
+  return _cache.config || { ...DEFAULT_CONFIG };
+}
+
+// ── Save helpers (write to Firebase) ──────────────────────────
+function saveOrders(arr)    { db.ref(K_ORDERS).set(arrToFbObj(arr)); }
+function saveProdErrs(arr)  { db.ref(K_PROD_ERR).set(arrToFbObj(arr)); }
+function saveShipErrs(arr)  { db.ref(K_SHIP_ERR).set(arrToFbObj(arr)); }
+function saveCustomers(arr) { db.ref(K_CUSTOMERS).set(arrToFbObj(arr)); }
+function saveHistory(arr)   { db.ref(K_HISTORY).set(arrToFbObj(arr)); }
+function saveStock(obj)     { db.ref(K_STOCK).set(obj); }
+function saveConfigData(cfg){ db.ref(K_CONFIG).set(cfg); }
+
+function saveStockLog(arr)  {
+  const obj = {};
+  arr.forEach((item, i) => {
+    const key = item._fbKey || db.ref().push().key;
+    item._fbKey = key;
+    item._idx   = arr.length - i;
+    obj[key] = item;
+  });
+  db.ref(K_STOCK_LOG).set(obj);
+}
+
+// ── Counter: use Firebase transaction for safety ──────────────
+function incCtr() {
+  // Sync increment using cached value (good enough for single-team use)
+  _cache.orderCounter = (_cache.orderCounter || 0) + 1;
+  db.ref(K_CTR).set(_cache.orderCounter);
+  return _cache.orderCounter;
+}
+
+// ── Stock Variants (spec-based) ───────────────────────────────
+function getSpecs(pileName) {
+  return (_cache.stockVariants && _cache.stockVariants[pileName]) || [];
+}
+function saveSpecs(pileName, arr) {
+  const d = { ..._cache.stockVariants };
+  d[pileName] = arr;
+  db.ref(K_VAR_FB).set(d);
+}
+function genVid() { return 'v'+Date.now()+Math.random().toString(36).slice(2,5); }
+
+// ── Default Config ────────────────────────────────────────────
+const DEFAULT_CONFIG = {
+  companyName:  'บริษัทเสาเข็ม',
+  companyEmoji: '🏗️',
+  saleStaff:   ['คุณนิด', 'คุณบอล', 'คุณแพท'],
+  prodStaff:   ['คุณแดง', 'คุณสมชาย', 'คุณต้อม'],
+  shipStaff:   ['คุณตั้ม', 'คุณบอย', 'คุณนุ้ย'],
+  stockStaff:  ['คุณอ้อย', 'คุณต้อม', 'คุณแดง'],
+  pileTypes:   ['เสาตัน 0.22m', 'เสาตัน 0.26m', 'เสากลม 0.30m', 'เสาสี่เหลี่ยม 0.35m'],
+  pilePrices:  {},
+  stockLow:    15,
+  stockWarn:   50,
+};
+
+// (getConfig, getOrders, saveOrders etc. are defined in the Firebase layer above)
+const DEFAULT_STOCK_QTY = { 'เสาตัน 0.22m':140, 'เสาตัน 0.26m':85, 'เสากลม 0.30m':32, 'เสาสี่เหลี่ยม 0.35m':8 };
+
+// (getStock, saveStock, getStockLog, saveStockLog are defined in Firebase layer above)
+
+// ── Order Items Helpers ────────────────────────────────────────
+function getOrderItems(o) {
+  if (o.items && o.items.length > 0) return o.items;
+  return [{ pileType: o.pileType||'-', qty: o.qty||0, length: o.length||'-', value: o.orderValue||0, delivered: o.delivered||0 }];
+}
+function getOrderTotalQty(o) {
+  return getOrderItems(o).reduce((s, it) => s + (it.qty||0), 0);
+}
+function getOrderDelivered(o) {
+  if (o.items && o.items.length > 0) return o.items.reduce((s,it) => s+(it.delivered||0), 0);
+  return o.delivered || 0;
+}
+
+// ── Reserved Stock (from active orders at or past "กำลังผลิต") ──
+// สถานะ 0-1 (รับ/ยืนยัน) ยังไม่จองสต็อก เพื่อไม่ให้ตัวเลขต่ำเกินจริง
+const RESERVE_FROM_STATUS = ['กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง'];
+function getReservedStock() {
+  // BugFix#6: use per-item delivered instead of uniform doneRatio
+  const reserved = {};
+  getOrders().forEach(o => {
+    const st = o.status || 'รับ Order แล้ว';
+    if (!RESERVE_FROM_STATUS.includes(st)) return;
+    const items = getOrderItems(o);
+    if (o.items && o.items.length > 0) {
+      // Multi-item or tracked items: use exact per-item remaining
+      items.forEach(item => {
+        const rem = Math.max(0, (item.qty||0) - (item.delivered||0));
+        if (rem > 0 && item.pileType && item.pileType !== '-') {
+          reserved[item.pileType] = (reserved[item.pileType]||0) + rem;
+        }
+      });
+    } else {
+      // Legacy single-item fallback (no per-item tracking)
+      const totalQty = items.reduce((s, it) => s + (it.qty||0), 0);
+      if (totalQty === 0) return;
+      const doneRatio = Math.min(1, getOrderDelivered(o) / totalQty);
+      items.forEach(item => {
+        const rem = Math.round((item.qty||0) * (1 - doneRatio));
+        if (rem > 0 && item.pileType && item.pileType !== '-') {
+          reserved[item.pileType] = (reserved[item.pileType]||0) + rem;
+        }
+      });
+    }
+  });
+  return reserved;
+}
+
+// ── Date / ID Helpers ─────────────────────────────────────────
+const pad = n => String(n).padStart(2, '0');
+function nowTs() {
+  const d = new Date();
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${String(d.getFullYear()-543).slice(-2)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function isoToThai(iso) {
+  if (!iso) return '-';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${String(+y-543).slice(-2)}`;
+}
+function genOrderNum() {
+  const d = new Date();
+  return `ORD-${pad(d.getMonth()+1)}${pad(d.getDate())}-${String(incCtr()).padStart(3,'0')}`;
+}
+
+// ── Deadline Badge ─────────────────────────────────────────────
+function deadlineBadge(deliveryDateISO, pct) {
+  if (pct >= 100 || !deliveryDateISO) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dl = new Date(deliveryDateISO);
+  const diff = Math.round((dl - today) / 86400000);
+  if (diff < 0)  return `<br><span class="dl-badge dl-overdue">⚠️ เกินกำหนด ${Math.abs(diff)} วัน</span>`;
+  if (diff === 0) return `<br><span class="dl-badge dl-today">🔴 ครบกำหนดวันนี้!</span>`;
+  if (diff <= 3)  return `<br><span class="dl-badge dl-soon">🟡 อีก ${diff} วัน</span>`;
+  return '';
+}
+function deadlineRowClass(deliveryDateISO, pct) {
+  if (pct >= 100 || !deliveryDateISO) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((new Date(deliveryDateISO) - today) / 86400000);
+  if (diff < 0) return 'overdue-row';
+  if (diff <= 3) return 'soon-row';
+  return '';
+}
+
+// ── Status Workflow ────────────────────────────────────────────
+const STATUS_STEPS = [
+  { val:'รับ Order แล้ว', cls:'' },
+  { val:'ยืนยัน Order',   cls:'s-confirm' },
+  { val:'กำลังผลิต',      cls:'s-prod' },
+  { val:'พร้อมส่ง',       cls:'s-ready' },
+  { val:'ระหว่างขนส่ง',   cls:'s-ship' },
+  { val:'ส่งครบ',         cls:'s-done' },
+];
+function statusClass(status) {
+  const s = STATUS_STEPS.find(x => x.val === status);
+  return s ? s.cls : '';
+}
+function statusSelectHTML(orderNum, currentStatus) {
+  const currentIdx = STATUS_STEPS.findIndex(s => s.val === currentStatus);
+  const shortLabels = ['รับ','ยืนยัน','ผลิต','พร้อม','ขนส่ง','สำเร็จ'];
+  let trackHTML = '';
+  STATUS_STEPS.forEach((s, i) => {
+    const isDone = i < currentIdx, isActive = i === currentIdx;
+    const dotCls = isDone ? 's-done-dot' : isActive ? 's-active-dot' : 's-pending-dot';
+    const lblCls = isDone ? 'done-lbl' : isActive ? 'active' : '';
+    trackHTML += '<div class="step-node"><div class="step-dot ' + dotCls + '" title="' + s.val + '"></div><span class="step-lbl ' + lblCls + '">' + shortLabels[i] + '</span></div>';
+    if (i < STATUS_STEPS.length - 1) trackHTML += '<div class="step-connector ' + (isDone ? 'done' : 'pending') + '"></div>';
+  });
+  const cls = statusClass(currentStatus);
+  const opts = STATUS_STEPS.map(s => {
+    const sel = s.val === currentStatus ? ' selected' : '';
+    return '<option value="' + s.val + '"' + sel + '>' + s.val + '</option>';
+  }).join('');
+  return '<div class="status-cell"><div class="step-track">' + trackHTML + '</div><select class="status-sel ' + cls + '" onchange="updateOrderStatus(\x27' + orderNum + '\x27,this)">' + opts + '</select></div>';
+}
+
+// ── Order Value ────────────────────────────────────────────────
+function calcOrderValue(pileType, qty) {
+  const prices = getConfig().pilePrices || {};
+  const price = prices[pileType];
+  if (!price || !qty) return 0;
+  return price * qty;
+}
+function fmtBaht(v) {
+  return v > 0 ? v.toLocaleString('th-TH') + ' ฿' : '-';
+}
+
+// ── Toast ──────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── Populate Dropdowns ─────────────────────────────────────────
+function populateSelect(id, arr, emptyLabel = '— เลือก —') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const cur = el.value;
+  el.innerHTML = `<option value="">${emptyLabel}</option>` +
+    arr.map(v => `<option${v===cur?' selected':''}>${v}</option>`).join('');
+}
+function populateAllDropdowns() {
+  const cfg = getConfig();
+  populateSelect('f_sale',   cfg.saleStaff);
+  populateSelect('f_type',   cfg.pileTypes);
+  populateSelect('pe_staff', cfg.prodStaff);
+  populateSelect('se_staff', cfg.shipStaff);
+  populateSelect('sf_stype', cfg.pileTypes, '— เลือกชนิด —');
+  populateSelect('sf_staff', cfg.stockStaff);
+  populateCustLookup();
+}
+function populateCustLookup() {
+  const sel = document.getElementById('f_cust_lookup');
+  if (!sel) return;
+  const custs = getCustomers();
+  sel.innerHTML = '<option value="">— หรือพิมพ์ข้อมูลใหม่ด้านล่าง —</option>' +
+    custs.map((c,i) => `<option value="${i}">${c.name} · ${c.tel}</option>`).join('');
+}
+function fillCustomerFromDB() {
+  const sel = document.getElementById('f_cust_lookup');
+  const idx = parseInt(sel.value);
+  if (isNaN(idx)) return;
+  const c = getCustomers()[idx];
+  if (!c) return;
+  document.getElementById('f_customer').value = c.name;
+  document.getElementById('f_tel').value = c.tel;
+  document.getElementById('f_cust_addr').value = c.addr || '';
+}
+
+// ── Navigation ─────────────────────────────────────────────────
+function goTab(name, el) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'status')    { document.getElementById('tab-status').classList.remove('has-new'); renderOrders(); }
+  if (name === 'proderr')   { renderProdFull(); }
+  if (name === 'shiperr')   { renderShipFull(); }
+  if (name === 'summary')   { renderSummary(); }
+  if (name === 'stock')     { renderStockCards(); populateLogPileFilter(); renderStockLog(true); populateStockRefDropdown(); }
+  if (name === 'customers') { renderCustomers(); }
+  if (name === 'settings')  { loadSettingsUI(); }
+  updateHeaderCount();
+}
+
+// ── Multi-Item Draft ───────────────────────────────────────────
+let orderItemsDraft = [];
+
+function renderOrderItemsDraft() {
+  const listEl = document.getElementById('orderItemsList');
+  const box    = document.getElementById('orderValueBox');
+  if (!listEl) return;
+  if (orderItemsDraft.length === 0) {
+    listEl.innerHTML = '';
+    if (box) { box.className = 'order-value-box'; box.textContent = '— ยังไม่มีรายการสั่งซื้อ'; }
+    return;
+  }
+  const totalQty = orderItemsDraft.reduce((s,it) => s+(it.qty||0), 0);
+  const totalVal = orderItemsDraft.reduce((s,it) => s+(it.value||0), 0);
+  const rows = orderItemsDraft.map((it,i) => {
+    const valDisp = it.value > 0 ? it.value.toLocaleString('th-TH') + ' ฿' : '—';
+    const lenDisp = it.length && it.length !== '-' ? it.length + '' : '—';
+    return '<tr><td style="font-weight:600;">' + it.pileType + '</td>'
+      + '<td style="font-weight:700;color:#1E293B;">' + it.qty + ' ต้น</td>'
+      + '<td style="color:#64748B;">' + lenDisp + '</td>'
+      + '<td style="color:#166534;">' + valDisp + '</td>'
+      + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
+  }).join('');
+  listEl.innerHTML = '<table class="items-draft-table"><thead><tr>'
+    + '<th>ชนิดเสา</th><th>จำนวน</th><th>รายละเอียดเสา</th><th>มูลค่า</th><th></th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table>';
+  if (box) {
+    box.className = 'order-value-box has-value';
+    if (totalVal > 0) {
+      box.textContent = 'รวม ' + totalQty + ' ต้น · มูลค่า ' + totalVal.toLocaleString('th-TH') + ' บาท';
+    } else {
+      box.textContent = 'รวม ' + totalQty + ' ต้น · (ยังไม่ได้ตั้งราคา)';
+    }
+  }
+}
+
+function addOrderItem() {
+  const type = document.getElementById('f_type').value;
+  const qty  = parseInt(document.getElementById('f_qty').value) || 0;
+  const len  = (document.getElementById('f_len').value || '').trim();
+  if (!type) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
+  if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (ต้น)'); return; }
+  const value = calcOrderValue(type, qty);
+  orderItemsDraft.push({ pileType: type, qty, length: len || '-', value });
+  document.getElementById('f_type').selectedIndex = 0;
+  document.getElementById('f_qty').value = '';
+  document.getElementById('f_len').value = '';
+  renderOrderItemsDraft();
+}
+
+function removeOrderItem(i) {
+  orderItemsDraft.splice(i, 1);
+  renderOrderItemsDraft();
+}
+
+// ── Order Value Preview (legacy compat) ────────────────────────
+function updateOrderValue() { renderOrderItemsDraft(); }
+
+// ── Submit Order ───────────────────────────────────────────────
+function submitOrder() {
+  if (_currentRole === 'manager') { showToast('⛔ ผู้บริหารดูได้อย่างเดียว ไม่สามารถส่ง Order ได้'); return; }
+        sale = g('f_sale'),
+        orderDateRaw = g('f_order_date'), note = '';
+
+  if (!customer || !tel || !sale || !orderDateRaw) {
+    alert('กรุณากรอกข้อมูลที่มี * ให้ครบก่อนนะครับ'); return;
+  }
+  if (orderItemsDraft.length === 0) {
+    alert('กรุณาเพิ่มรายการสั่งซื้ออย่างน้อย 1 รายการก่อนนะครับ'); return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+
+  const totalQty   = orderItemsDraft.reduce((s,it) => s+(it.qty||0), 0);
+  const totalValue = orderItemsDraft.reduce((s,it) => s+(it.value||0), 0);
+  const firstItem  = orderItemsDraft[0];
+  const pileLabel  = orderItemsDraft.length === 1
+    ? firstItem.pileType
+    : firstItem.pileType + ' (+' + (orderItemsDraft.length-1) + ' ชนิด)';
+
+  const order = {
+    orderNum:        genOrderNum(),
+    timestamp:       nowTs(),
+    orderDateISO:    orderDateRaw,
+    orderDate:       isoToThai(orderDateRaw),
+    customer, tel, sale,
+    pileType:        firstItem.pileType,
+    qty:             totalQty,
+    length:          firstItem.length || '-',
+    site:            '-',
+    deliveryDateISO: '',
+    deliveryDate:    '-',
+    note:            '-',
+    status:          'รับ Order แล้ว',
+    delivered:       0,
+    orderValue:      totalValue,
+    items:           JSON.parse(JSON.stringify(orderItemsDraft)),
+    pileLabel,
+  };
+
+  // ── ตรวจสอบสต็อกก่อนบันทึก ────────────────────────────────
+  const _stockNow = getStock();
+  const _stockRes  = getReservedStock();
+  const _stockCfg  = getConfig();
+  const _warnings = [];
+  orderItemsDraft.forEach(it => {
+    const avail = (_stockNow[it.pileType]||0) - (_stockRes[it.pileType]||0);
+    if (avail < it.qty) {
+      _warnings.push('⚠️ ' + it.pileType + ': ต้องการ ' + it.qty + ' ต้น แต่คงเหลือจริง ' + Math.max(0,avail) + ' ต้น');
+    }
+  });
+  if (_warnings.length > 0) {
+    const proceed = confirm(
+      '\ud83d\udea8 \u0e2a\u0e15\u0e47\u0e2d\u0e04\u0e2d\u0e32\u0e08\u0e44\u0e21\u0e48\u0e1e\u0e2d!\n\n' + _warnings.join('\n') + '\n\n\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23\u0e2a\u0e48\u0e07 Order \u0e15\u0e48\u0e2d\u0e44\u0e1b\u0e44\u0e2b\u0e21? (Sale \u0e08\u0e30\u0e15\u0e49\u0e2d\u0e07\u0e1b\u0e23\u0e30\u0e2a\u0e32\u0e19\u0e07\u0e32\u0e19\u0e04\u0e25\u0e31\u0e07)'
+    );
+    if (!proceed) {
+      btn.disabled = false; btn.textContent = '✓ ส่ง Order';
+      return;
+    }
+  }
+
+  const orders = getOrders();
+  orders.unshift(order);
+  saveOrders(orders);
+
+  autoSaveCustomer(customer, tel, g('f_cust_addr').trim());
+
+  document.getElementById('formView').style.display    = 'none';
+  document.getElementById('successView').style.display = 'block';
+  document.getElementById('newOrderNum').textContent   = order.orderNum;
+  const valPart = totalValue > 0 ? ' · มูลค่า ' + totalValue.toLocaleString('th-TH') + ' ฿' : '';
+  document.getElementById('successDetail').innerHTML =
+    '<strong>' + customer + '</strong> · ' + tel + '<br>'
+    + pileLabel + ' · รวม ' + totalQty + ' ต้น' + valPart
+    + '<br>📍 ' + site + '<br>📅 วันส่ง: ' + order.deliveryDate;
+
+  document.getElementById('tab-status').classList.add('has-new');
+  updateHeaderCount();
+  orderItemsDraft = [];
+  btn.disabled = false; btn.textContent = '✓ ส่ง Order';
+}
+
+function autoSaveCustomer(name, tel, addr) {
+  if (!name || !tel) return;
+  const custs = getCustomers();
+  const exists = custs.some(c => c.name === name && c.tel === tel);
+  if (!exists) {
+    custs.push({ name, tel, addr: addr || '' });
+    saveCustomers(custs);
+  }
+}
+
+function resetFormOnly() {
+  ['f_customer','f_tel','f_qty','f_len','f_cust_addr'].forEach(id => document.getElementById(id).value = '');
+  ['f_sale','f_type','f_cust_lookup'].forEach(id => document.getElementById(id).selectedIndex = 0);
+  orderItemsDraft = [];
+  renderOrderItemsDraft();
+  var todayEl = document.getElementById('f_order_date');
+  if (todayEl) todayEl.value = new Date().toISOString().slice(0, 10);
+}
+function resetForm() {
+  document.getElementById('formView').style.display    = 'block';
+  document.getElementById('successView').style.display = 'none';
+  resetFormOnly();
+}
+function goToTracker() {
+  resetForm();
+  goTab('status', document.querySelector('[data-tab="status"]'));
+}
+function updateHeaderCount() {
+  document.getElementById('headerCount').textContent = getOrders().length;
+}
+
+// ── Edit per-item delivery ─────────────────────────────────────
+function editItemDelivered(orderNum, itemIdx) {
+  const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
+  if (!o || !o.items || !o.items[itemIdx]) return;
+  const item = o.items[itemIdx];
+  const newVal = prompt('ส่งแล้ว — ' + item.pileType + '\nสูงสุด: ' + item.qty + ' ต้น', item.delivered || 0);
+  if (newVal === null) return;
+  const prevDel = item.delivered || 0;
+  item.delivered = Math.min(Math.max(parseInt(newVal)||0, 0), item.qty);
+  const delta = item.delivered - prevDel;
+  o.delivered = o.items.reduce((s,it) => s+(it.delivered||0), 0);
+  if (o.delivered >= getOrderTotalQty(o)) o.status = 'ส่งครบ';
+  saveOrders(orders);
+  if (delta > 0 && item.pileType && item.pileType !== '-') {
+    const check = checkSpecStock(item.pileType, item.length || '', delta);
+    if (!check.ok) {
+      item.delivered = prevDel;
+      o.delivered = o.items.reduce((s,it) => s+(it.delivered||0), 0);
+      if (o.status === 'ส่งครบ') o.status = 'พร้อมส่ง';
+      saveOrders(orders);
+      alert(check.message);
+      renderOrders(); renderSummary();
+      return;
+    }
+    if (check.noSpecs) {
+      const stock = getStock(), log = getStockLog() || [];
+      stock[item.pileType] = Math.max(0, (stock[item.pileType]||0) - delta);
+      log.unshift({ ts:nowTs(), typeVal:'📤 เบิกออก (ส่งของ)', name:item.pileType, qty:delta,
+        newStock:stock[item.pileType], qtyDisplay:'-'+delta, ref:o.orderNum,
+        staff:o.sale||'-', note:'🤖 Auto: ส่ง '+o.customer+' ('+item.pileType+')' });
+      saveStock(stock); saveStockLog(log);
+    } else {
+      const num = extractLengthNum(item.length || '');
+      const specList = check.matched.map(s => '• ' + s.spec + ': ' + s.qty + ' ต้น').join('\n');
+      const confirmed = confirm(
+        '✅ ยืนยันส่งสเปค "' + num + '" — ' + item.pileType +
+        '\n\nจะหัก ' + delta + ' ต้น จากสเปค:\n' + specList +
+        '\n\nรวมมี: ' + check.totalQty + ' ต้น → เหลือ: ' + (check.totalQty - delta) + ' ต้น'
+      );
+      if (!confirmed) {
+        item.delivered = prevDel;
+        o.delivered = o.items.reduce((s,it) => s+(it.delivered||0), 0);
+        if (o.status === 'ส่งครบ') o.status = 'พร้อมส่ง';
+        saveOrders(orders);
+        renderOrders(); renderSummary();
+        return;
+      }
+      deductSpecsAndLog(item.pileType, delta, check.matched, o.orderNum, o.customer, o.sale, item.length || '');
+    }
+  }
+  renderOrders(); renderSummary();
+  showToast('✅ ' + orderNum + ' · ' + item.pileType + ': ส่งแล้ว ' + item.delivered + '/' + item.qty + ' ต้น');
+}
+
+// ── Edit Length ────────────────────────────────────────────────
+function editLength(orderNum) {
+  const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
+  if (!o) return;
+  const newVal = prompt('รายละเอียดเสา — ' + orderNum + '\nพิมพ์อิสระ เช่น 6, 6/9/12', o.length || '');
+  if (newVal === null) return;
+  o.length = newVal.trim() || '-';
+  saveOrders(orders); renderOrders();
+  showToast('✅ ' + orderNum + ': รายละเอียดเสา ' + (o.length === '-' ? 'ไม่ระบุ' : o.length + ''));
+}
+
+// ── Render Orders ──────────────────────────────────────────────
+function renderOrders() {
+  const query    = (document.getElementById('orderSearch')?.value || '').trim().toLowerCase();
+  const statusF  = document.getElementById('statusFilter')?.value || '';
+  const prodErrs = getProdErrs();
+  const _stock   = getStock();
+  const _res     = getReservedStock();
+  const _cfg     = getConfig();
+  let orders     = getOrders();
+
+  if (query)   orders = orders.filter(o => o.customer.toLowerCase().includes(query) || o.orderNum.toLowerCase().includes(query) || (o.tel||'').includes(query));
+  if (statusF) orders = orders.filter(o => (o.status || 'รับ Order แล้ว') === statusF);
+
+  const tbody = document.getElementById('ordersBody');
+  if (!orders.length) {
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="9">' + (query||statusF ? 'ไม่พบผลลัพธ์ที่ค้นหา' : 'ยังไม่มี Order — ไปกรอกที่แท็บ "📱 ส่ง Order" ก่อนนะครับ') + '</td></tr>';
+    return;
+  }
+
+  const rows = [];
+  orders.forEach((o, oi) => {
+    const items    = getOrderItems(o);
+    const isMulti  = o.items && o.items.length > 1;
+    const tq       = getOrderTotalQty(o);
+    const totalDel = getOrderDelivered(o);
+    const pct  = tq > 0 ? Math.round(totalDel/tq*100) : 0;
+    const barC = pct>=100?'#22C55E':pct>=50?'#F59E0B':'#EF4444';
+    const pctC = pct>=100?'#166534':pct>=50?'#92400E':'#991B1B';
+
+    const relErr  = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
+    const errNote = relErr.length > 0
+      ? '⚠️ ' + relErr[relErr.length-1].errorType + (relErr.length>1?' (+' + (relErr.length-1) + ')':'')
+      : (o.sale||'') + (o.note && o.note!=='-' ? ' · '+o.note.slice(0,20)+(o.note.length>20?'…':'') : '');
+    const noteStyle = relErr.length > 0 ? 'color:#854D0E;' : '';
+    const dlBadge   = deadlineBadge(o.deliveryDateISO, pct);
+    const rowHL     = oi===0 && !query && !statusF ? 'new-row' : deadlineRowClass(o.deliveryDateISO, pct);
+    const valDisp   = o.orderValue > 0 ? o.orderValue.toLocaleString('th-TH') + ' ฿' : '-';
+
+    if (!isMulti) {
+      // ── Single-item row ────────────────────────────────────
+      const it  = items[0];
+      const del = it.delivered !== undefined ? it.delivered : (o.delivered||0);
+      const rem = it.qty - del;
+      const iPct  = it.qty>0 ? Math.round(del/it.qty*100) : 0;
+      const iBarC = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
+      const iPctC = iPct>=100?'#166534':iPct>=50?'#92400E':'#991B1B';
+      const lenDisp = o.length && o.length!=='-'
+        ? '<span class="edit-cell" onclick="editLength(\x27'+o.orderNum+'\x27)" style="font-size:10px;color:#3B82F6;">'+o.length+' ✎</span>'
+        : '<span class="edit-cell" onclick="editLength(\x27'+o.orderNum+'\x27)" style="font-size:10px;color:#CBD5E1;">+ รายละเอียดเสา</span>';
+      const avail = (_stock[o.pileType]||0) - (_res[o.pileType]||0);
+      let stockBadge = '';
+      if (avail<_cfg.stockLow) stockBadge='<br><span style="font-size:10px;background:#FEE2E2;color:#991B1B;border-radius:4px;padding:1px 5px;">🚨 คลัง '+avail+' ต้น</span>';
+      else if (avail<_cfg.stockWarn) stockBadge='<br><span style="font-size:10px;background:#FEF9C3;color:#854D0E;border-radius:4px;padding:1px 5px;">⚠️ คลัง '+avail+' ต้น</span>';
+      rows.push('<tr class="'+rowHL+'">'
+        +'<td><span class="order-id">'+o.orderNum+'</span></td>'
+        +'<td><strong>'+o.customer+'</strong><br><span style="font-size:11px;color:#64748B;">'+o.tel+'</span></td>'
+        +'<td style="font-size:12px;">'+o.pileType+' '+lenDisp+'<br><strong>'+it.qty+' ต้น</strong>'+stockBadge+'</td>'
+        +'<td><span class="edit-cell" onclick="editDelivered(\x27'+o.orderNum+'\x27)">'+del+' / '+it.qty+'</span><br><span style="font-size:11px;color:'+(rem>0?'#854D0E':'#166534')+';">เหลือ '+rem+' ต้น</span></td>'
+        +'<td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:'+iPct+'%;background:'+iBarC+';"></div></div><span class="prog-pct" style="color:'+iPctC+';">'+iPct+'%</span></div></td>'
+        +'<td>'+o.deliveryDate+dlBadge+'</td>'
+        +'<td>'+statusSelectHTML(o.orderNum, o.status||'รับ Order แล้ว')+'</td>'
+        +'<td style="font-size:12px;color:#166534;font-weight:600;">'+valDisp+'</td>'
+        +'<td style="'+noteStyle+';font-size:12px;">'
+        +errNote
+        +((o.status||'รับ Order แล้ว')==='ส่งครบ' ? '<br><button onclick="closeBill(\'' + o.orderNum + '\')" style="margin-top:5px;padding:3px 10px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>' : '')
+        +'<div class="act-row"><button class="act-btn act-edit" onclick="openEditOrder(\''+o.orderNum+'\')">✏️ แก้ไข</button>'
+        +'<button class="act-btn act-del" onclick="deleteOrder(\''+o.orderNum+'\')">🗑 ลบ</button></div>'
+        +'</td>'
+        +'</tr>');
+    } else {
+      // ── Multi-item: each item gets its own row (rowspan shared cols) ──
+      const rspan = items.length;
+      items.forEach((it, idx) => {
+        const del  = it.delivered || 0;
+        const rem  = it.qty - del;
+        const iPct  = it.qty>0 ? Math.round(del/it.qty*100) : 0;
+        const iBarC = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
+        const iPctC = iPct>=100?'#166534':iPct>=50?'#92400E':'#991B1B';
+        const lenPart = it.length && it.length!=='-' ? ' <span style="font-size:10px;color:#94A3B8;">· '+it.length+'</span>' : '';
+        const avail = (_stock[it.pileType]||0) - (_res[it.pileType]||0);
+        let badge = '';
+        if (avail<_cfg.stockLow) badge=' <span style="font-size:10px;background:#FEE2E2;color:#991B1B;border-radius:4px;padding:1px 5px;">🚨'+avail+'</span>';
+        else if (avail<_cfg.stockWarn) badge=' <span style="font-size:10px;background:#FEF9C3;color:#854D0E;border-radius:4px;padding:1px 5px;">⚠️'+avail+'</span>';
+        const cls = idx===0 ? rowHL : 'sub-row';
+        let r = '<tr class="'+cls+'">';
+        if (idx===0) {
+          r += '<td rowspan="'+rspan+'" style="vertical-align:top;padding-top:10px;border-right:2px solid #E2E8F0;">'
+             + '<span class="order-id">'+o.orderNum+'</span>'
+             + '<br><span style="font-size:10px;color:#94A3B8;font-weight:600;">'+rspan+' ชนิด</span></td>';
+          r += '<td rowspan="'+rspan+'" style="vertical-align:top;padding-top:10px;">'
+             + '<strong>'+o.customer+'</strong><br><span style="font-size:11px;color:#64748B;">'+o.tel+'</span></td>';
+        }
+        r += '<td style="font-size:12px;padding-left:'+(idx>0?'24':'12')+'px;">'
+           + '<span style="font-size:10px;font-weight:700;color:#94A3B8;">['+(idx+1)+'/'+rspan+']</span> '
+           + it.pileType+lenPart+badge
+           + '<br><strong>'+it.qty+' ต้น</strong></td>';
+        r += '<td><span class="edit-cell" onclick="editItemDelivered(\x27'+o.orderNum+'\x27,'+idx+')" title="คลิกเพื่ออัปเดต">'+del+' / '+it.qty+'</span>'
+           + '<br><span style="font-size:11px;color:'+(rem>0?'#854D0E':'#166534')+';">เหลือ '+rem+'</span></td>';
+        r += '<td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:'+iPct+'%;background:'+iBarC+';"></div></div>'
+           + '<span class="prog-pct" style="color:'+iPctC+';">'+iPct+'%</span></div></td>';
+        if (idx===0) {
+          r += '<td rowspan="'+rspan+'" style="vertical-align:top;padding-top:10px;">'+o.deliveryDate+dlBadge+'</td>';
+          r += '<td rowspan="'+rspan+'" style="vertical-align:top;padding-top:8px;">'+statusSelectHTML(o.orderNum, o.status||'รับ Order แล้ว')+'</td>';
+          r += '<td rowspan="'+rspan+'" style="font-size:12px;color:#166534;font-weight:600;vertical-align:top;padding-top:10px;">'+valDisp+'</td>'; // BugFix#5: color #166634→#166534
+          r += '<td rowspan="'+rspan+'" style="'+noteStyle+';font-size:12px;vertical-align:top;padding-top:10px;">'
+             + errNote
+             + ((o.status||'รับ Order แล้ว')==='ส่งครบ' ? '<br><button onclick="closeBill(\'' + o.orderNum + '\')" style="margin-top:5px;padding:3px 10px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>' : '')
+             + '<div class="act-row"><button class="act-btn act-edit" onclick="openEditOrder(\''+o.orderNum+'\')">✏️ แก้ไข</button>'
+             + '<button class="act-btn act-del" onclick="deleteOrder(\''+o.orderNum+'\')">🗑 ลบ</button></div>'
+             + '</td>';
+        }
+        r += '</tr>';
+        rows.push(r);
+      });
+    }
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+function updateOrderStatus(orderNum, selectEl) {
+  const newStatus = selectEl.value;
+  const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
+  if (!o) return;
+  o.status = newStatus;
+  saveOrders(orders);
+  // Update select styling
+  selectEl.className = 'status-sel ' + statusClass(newStatus);
+  showToast(`📋 ${orderNum}: ${newStatus}`);
+}
+
+function editDelivered(orderNum) {
+  const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
+  if (!o) return;
+  const tq = getOrderTotalQty(o);
+  const newVal = prompt('จำนวนที่ส่งแล้ว (ต้น) — ' + orderNum + '\nสูงสุด: ' + tq + ' ต้น', o.delivered || 0);
+  if (newVal === null) return;
+  const prevDelivered = o.delivered || 0;
+  const newDelivered  = Math.min(Math.max(parseInt(newVal)||0, 0), tq);
+  const delta = newDelivered - prevDelivered;
+  o.delivered = newDelivered;
+  if (o.delivered >= tq) o.status = 'ส่งครบ';
+  saveOrders(orders);
+  if (delta > 0) {
+    const items = getOrderItems(o);
+    // Spec-based check: for single-pile orders use spec check; multi-pile fallback to main stock
+    if (items.length === 1) {
+      const item = items[0];
+      const check = checkSpecStock(item.pileType, item.length || o.length || '', delta);
+      if (!check.ok) {
+        o.delivered = prevDelivered; // BugFix#1: was prevDelivered - delta (wrong rollback formula)
+        if (o.status === 'ส่งครบ') o.status = 'พร้อมส่ง';
+        saveOrders(orders);
+        alert(check.message);
+        renderOrders(); renderSummary();
+        return;
+      }
+      if (!check.noSpecs) {
+        const num = extractLengthNum(item.length || o.length || '');
+        const specList = check.matched.map(s => '• ' + s.spec + ': ' + s.qty + ' ต้น').join('\n');
+        const confirmed = confirm(
+          '✅ ยืนยันส่งสเปค "' + num + '" — ' + item.pileType +
+          '\n\nจะหัก ' + delta + ' ต้น จากสเปค:\n' + specList +
+          '\n\nรวมมี: ' + check.totalQty + ' ต้น → เหลือ: ' + (check.totalQty - delta) + ' ต้น'
+        );
+        if (!confirmed) {
+          o.delivered = prevDelivered; // BugFix#1: was prevDelivered - delta
+          if (o.status === 'ส่งครบ') o.status = 'พร้อมส่ง';
+          saveOrders(orders);
+          renderOrders(); renderSummary();
+          return;
+        }
+        deductSpecsAndLog(item.pileType, delta, check.matched, o.orderNum, o.customer, o.sale, item.length || o.length || '');
+      } else {
+        const stock = getStock(), log = getStockLog() || [];
+        stock[item.pileType] = Math.max(0, (stock[item.pileType]||0) - delta);
+        log.unshift({ ts:nowTs(), typeVal:'📤 เบิกออก (ส่งของ)', name:item.pileType, qty:delta,
+          newStock:stock[item.pileType], qtyDisplay:'-'+delta, ref:o.orderNum,
+          staff:o.sale||'-', note:'🤖 Auto: ส่ง '+o.customer+' ('+item.pileType+')' });
+        saveStock(stock); saveStockLog(log);
+      }
+    } else {
+      // Multi-pile: deduct from main stock proportionally
+      const stock = getStock();
+      const log   = getStockLog() || [];
+      items.forEach(item => {
+        if (!item.pileType || item.pileType === '-') return;
+        const deduct = tq > 0 ? Math.round(delta * (item.qty||0) / tq) : 0;
+        if (deduct <= 0) return;
+        stock[item.pileType] = Math.max(0, (stock[item.pileType]||0) - deduct);
+        log.unshift({ ts:nowTs(), typeVal:'📤 เบิกออก (ส่งของ)', name:item.pileType, qty:deduct,
+          newStock:stock[item.pileType], qtyDisplay:'-'+deduct, ref:o.orderNum,
+          staff:o.sale||'-', note:'🤖 Auto: ส่ง '+o.customer+' +'+deduct+'ต้น' });
+      });
+      saveStock(stock);
+      saveStockLog(log);
+    }
+  }
+  renderOrders();
+  renderSummary();
+  showToast('✅ อัปเดต ' + orderNum + ': ส่งแล้ว ' + o.delivered + '/' + tq + ' ต้น');
+}
+
+// ── Render Error Tables ────────────────────────────────────────
+function renderProdFull() {
+  const errs = getProdErrs(), tbody = document.getElementById('prodErrBody');
+  if (!errs.length) { tbody.innerHTML = `<tr class="table-empty"><td colspan="7">ยังไม่มี Error ผลิต</td></tr>`; return; }
+  tbody.innerHTML = errs.map(e => {
+    const qd = e.qty > 0 ? `<span style="color:#991B1B;font-weight:700;">${e.qty}</span>` : `<span style="color:#94A3B8;">-</span>`;
+    return `<tr><td>${e.date}</td><td><span class="order-id">${e.order}</span></td><td><span class="chip ch-prod">${e.errorType}</span></td><td>${qd}</td><td>${e.cause}</td><td style="color:${e.fix!=='-'?'#166534':'#854D0E'};">${e.fix}</td><td>${e.staff}</td></tr>`;
+  }).join('');
+}
+function renderShipFull() {
+  const errs = getShipErrs(), tbody = document.getElementById('shipErrBody');
+  if (!errs.length) { tbody.innerHTML = `<tr class="table-empty"><td colspan="7">ยังไม่มี Error ขนส่ง</td></tr>`; return; }
+  tbody.innerHTML = errs.map(e => {
+    const qd = e.qty > 0 ? `<span style="color:#991B1B;font-weight:700;">${e.qty}</span>` : `<span style="color:#94A3B8;">-</span>`;
+    return `<tr><td>${e.date}</td><td><span class="order-id">${e.order}</span></td><td><span class="chip ch-err">${e.errorType}</span></td><td>${qd}</td><td>${e.cause}</td><td style="color:#854D0E;">${e.fix}</td><td>${e.staff}</td></tr>`;
+  }).join('');
+}
+
+// ── Submit Errors ──────────────────────────────────────────────
+function submitProdErr() {
+  if (_currentRole === 'manager') { showToast('⛔ ผู้บริหารดูได้อย่างเดียว ไม่สามารถบันทึก Error ได้'); return; }
+  if (!date||!order||!type||!cause||!staff) { alert('กรุณากรอกข้อมูลที่มี * ให้ครบก่อนนะครับ'); return; }
+  const errs = getProdErrs();
+  errs.unshift({ timestamp:nowTs(), date:isoToThai(date), order, errorType:type, qty:+qty||0, cause, fix:fix||'-', staff });
+  saveProdErrs(errs); renderProdFull(); renderOrders(); renderSummary(); clearProd();
+  showToast(`🏭 บันทึก Error ผลิตแล้ว — ${order}`);
+}
+function submitShipErr() {
+  if (_currentRole === 'manager') { showToast('⛔ ผู้บริหารดูได้อย่างเดียว ไม่สามารถบันทึก Error ได้'); return; }
+  const g = id => document.getElementById(id).value;
+  const date=g('se_date'), order=g('se_order').trim(), type=g('se_type'), qty=g('se_qty'), cause=g('se_cause').trim(), fix=g('se_fix').trim(), staff=g('se_staff');
+  if (!date||!order||!type||!cause||!staff) { alert('กรุณากรอกข้อมูลที่มี * ให้ครบก่อนนะครับ'); return; }
+  const errs = getShipErrs();
+  errs.unshift({ timestamp:nowTs(), date:isoToThai(date), order, errorType:type, qty:+qty||0, cause, fix:fix||'-', staff });
+  saveShipErrs(errs); renderShipFull(); renderSummary(); clearShip();
+  showToast(`🚛 บันทึก Error ขนส่งแล้ว — ${order}`);
+}
+function clearProd() {
+  ['pe_date','pe_order','pe_qty','pe_cause','pe_fix'].forEach(id => document.getElementById(id).value = '');
+  ['pe_type','pe_staff'].forEach(id => document.getElementById(id).selectedIndex = 0);
+}
+function clearShip() {
+  ['se_date','se_order','se_qty','se_cause','se_fix'].forEach(id => document.getElementById(id).value = '');
+  ['se_type','se_staff'].forEach(id => document.getElementById(id).selectedIndex = 0);
+}
+
+// ── Charts ─────────────────────────────────────────────────────
+const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+function getMonthlyData(orders, months=6) {
+  const now = new Date();
+  return Array.from({length:months}, (_,i) => {
+    const d = new Date(now.getFullYear(), now.getMonth()-(months-1-i), 1);
+    const mStr = pad(d.getMonth()+1);
+    const yStr = String(d.getFullYear()-543).slice(-2);
+    const count = orders.filter(o => {
+      const parts = (o.timestamp||'').split(' ')[0].split('/');
+      return parts.length===3 && parts[1]===mStr && parts[2]===yStr;
+    }).length;
+    return { l: THAI_MONTHS[d.getMonth()], v: count };
+  });
+}
+
+function svgBarChart(data, color='#3B82F6') {
+  if (!data.length || data.every(d=>d.v===0)) return '<div style="text-align:center;color:#94A3B8;padding:24px;font-size:12px;">ยังไม่มีข้อมูล</div>';
+  const W=300, H=130, padL=8, padR=8, padT=22, padB=28;
+  const cW = W-padL-padR, cH = H-padT-padB;
+  const max = Math.max(...data.map(d=>d.v), 1);
+  const bW = Math.max(12, Math.floor(cW/data.length*0.55));
+  const gap = (cW - bW*data.length) / (data.length+1);
+  const bars = data.map((d,i) => {
+    const x = padL + gap + i*(bW+gap);
+    const bh = Math.max(d.v>0?3:0, (d.v/max)*cH);
+    const y = padT + cH - bh;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${bh.toFixed(1)}" fill="${color}" rx="3" opacity="${d.v>0?'0.85':'0.2'}"/>
+      ${d.v>0?`<text x="${(x+bW/2).toFixed(1)}" y="${(y-4).toFixed(1)}" text-anchor="middle" font-size="10" fill="#374151" font-weight="700">${d.v}</text>`:''}
+      <text x="${(x+bW/2).toFixed(1)}" y="${(H-4).toFixed(1)}" text-anchor="middle" font-size="9" fill="#94A3B8">${d.l}</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${W}px;display:block;margin:0 auto;">
+    <line x1="${padL}" y1="${padT+cH}" x2="${W-padR}" y2="${padT+cH}" stroke="#E2E8F0" stroke-width="1"/>
+    ${bars}</svg>`;
+}
+
+function hBarChart(data) {
+  if (!data.length) return '<div style="text-align:center;color:#94A3B8;padding:12px;font-size:12px;">ยังไม่มีข้อมูล</div>';
+  const colors = ['#FEF9C3','#FEF3C7','#F3E8FF','#DBEAFE','#E0F2FE','#DCFCE7'];
+  const tColors = ['#854D0E','#92400E','#6D28D9','#1D4ED8','#0369A1','#166534'];
+  const max = Math.max(...data.map(d=>d.v), 1);
+  return data.map((d,i) => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:11px;">
+      <div style="min-width:80px;color:#374151;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.l}">${d.l}</div>
+      <div style="flex:1;background:#F1F5F9;border-radius:4px;height:16px;overflow:hidden;">
+        <div style="width:${(d.v/max*100).toFixed(1)}%;background:${colors[i%colors.length]};border:1px solid ${tColors[i%tColors.length]}33;height:100%;border-radius:4px;transition:width 0.4s;"></div>
+      </div>
+      <div style="min-width:18px;font-weight:700;color:#374151;text-align:right;">${d.v}</div>
+    </div>`).join('');
+}
+
+// ── Summary ────────────────────────────────────────────────────
+function renderSummary() {
+  const orders = getOrders(), prodErrs = getProdErrs(), shipErrs = getShipErrs();
+  const totalO   = orders.length;
+  const doneO    = orders.filter(o => getOrderDelivered(o) >= getOrderTotalQty(o) && getOrderTotalQty(o) > 0).length;
+  const totalQty = orders.reduce((s,o) => s + getOrderTotalQty(o), 0);
+  const totDel   = orders.reduce((s,o) => s + getOrderDelivered(o), 0);
+  const pErr = prodErrs.length, pDmg = prodErrs.reduce((s,e) => s+(e.qty||0), 0);
+  const sErr = shipErrs.length, sDmg = shipErrs.reduce((s,e) => s+(e.qty||0), 0);
+  const totalVal = orders.reduce((s,o) => s+(o.orderValue||0), 0);
+  const overdueCount = orders.filter(o => {
+    if (getOrderDelivered(o) >= getOrderTotalQty(o) || !o.deliveryDateISO) return false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    return new Date(o.deliveryDateISO) < today;
+  }).length;
+
+  const hist = getHistory();
+  const histVal = hist.reduce((s,h)=>s+(h.orderValue||0),0);
+  const grandTotal = totalVal + histVal;
+
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="sum-card blue"><div class="sum-label">📦 Order ทั้งหมด</div><div class="sum-val">${totalO}</div><div class="sum-sub">ส่งครบแล้ว ${doneO} รายการ</div></div>
+    <div class="sum-card green"><div class="sum-label">🏗️ ส่งแล้ว</div><div class="sum-val">${totDel}<span style="font-size:16px;font-weight:400;color:#64748B;"> / ${totalQty}</span></div><div class="sum-sub">ต้นเสาเข็ม</div></div>
+    <div class="sum-card red"><div class="sum-label">🏭 Error ผลิต</div><div class="sum-val">${pErr}</div><div class="sum-sub">เสียหาย ${pDmg} ต้น</div></div>
+    <div class="sum-card purple"><div class="sum-label">🚛 Error ขนส่ง</div><div class="sum-val">${sErr}</div><div class="sum-sub">เสียหาย ${sDmg} ต้น</div></div>
+    ${grandTotal > 0 ? `<div class="sum-card amber"><div class="sum-label">💰 มูลค่ารวม</div><div class="sum-val" style="font-size:22px;">${(grandTotal/1000).toFixed(0)}K</div><div class="sum-sub">${grandTotal.toLocaleString('th-TH')} บาท (รวมจบบิลแล้ว)</div></div>` : ''}
+    ${hist.length > 0 ? `<div class="sum-card" style="background:linear-gradient(135deg,#F0FDF4,#DCFCE7);border-color:#86EFAC;"><div class="sum-label">✅ จบบิลแล้ว</div><div class="sum-val" style="color:#15803D;">${hist.length}</div><div class="sum-sub">${histVal>0?histVal.toLocaleString('th-TH')+' ฿':''}</div></div>` : ''}
+    ${overdueCount > 0 ? `<div class="sum-card red"><div class="sum-label">⚠️ เกินกำหนด</div><div class="sum-val">${overdueCount}</div><div class="sum-sub">Order ที่ยังไม่ส่งครบ</div></div>` : ''}
+  `;
+  renderHistorySummary();
+
+  // Charts
+  const monthly = getMonthlyData(orders);
+  const statusMap = {};
+  orders.forEach(o => { const s = o.status||'รับ Order แล้ว'; statusMap[s] = (statusMap[s]||0)+1; });
+  const statusData = STATUS_STEPS.map(s => ({ l:s.val.replace('รับ Order แล้ว','รับใหม่').replace('ยืนยัน Order','ยืนยัน').replace('ระหว่างขนส่ง','ขนส่ง'), v:statusMap[s.val]||0 })).filter(d=>d.v>0);
+
+  document.getElementById('chartsRow').innerHTML =
+    '<div class="chart-card"><div class="chart-title">📊 Orders ต่อเดือน (6 เดือนล่าสุด)</div>' + svgBarChart(monthly, '#3B82F6') + '</div>' +
+    '<div class="chart-card"><div class="chart-title">📋 สถานะ Order</div>' + (statusData.length ? hBarChart(statusData) : '<div style="text-align:center;color:#94A3B8;padding:24px;font-size:12px;">ยังไม่มีข้อมูล</div>') + '</div>';
+}
+
+
+// ── History Summary ────────────────────────────────────────────
+function renderHistorySummary() {
+  const hist = getHistory();
+  const tbody = document.getElementById('histSummaryBody');
+  if (!tbody) return;
+  const sub = document.getElementById('histSummarySub');
+  if (!hist.length) {
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="7">ยังไม่มีประวัติ Order ที่จบบิล · กดปุ่ม 🔴 จบบิล ในแท็บสถานะ Order</td></tr>';
+    if (sub) sub.textContent = 'ยังไม่มีรายการ';
+    return;
+  }
+  const totalVal = hist.reduce((s,h)=>s+(h.orderValue||0),0);
+  if (sub) sub.textContent = hist.length + ' รายการ · มูลค่ารวม ' + (totalVal>0?totalVal.toLocaleString('th-TH')+' ฿':'ไม่ระบุ');
+  tbody.innerHTML = hist.map(h => {
+    const items = h.archivedItems || getOrderItems(h);
+    const itemsStr = items.map(it => it.pileType + (it.length&&it.length!=='-'?' '+it.length:'') + ' ' + it.qty + 'ต้น').join('<br>');
+    const totalQty = items.reduce((s,it)=>s+(it.qty||0),0);
+    const val = (h.orderValue||0)>0 ? (h.orderValue).toLocaleString('th-TH')+' ฿' : '-';
+    return `<tr>
+      <td><span class="order-id">${h.orderNum}</span></td>
+      <td style="font-size:11px;color:#64748B;">${h.closedAt||'-'}</td>
+      <td><strong>${h.customer}</strong><br><span style="font-size:11px;color:#64748B;">${h.tel||''}</span></td>
+      <td style="font-size:12px;">${itemsStr}</td>
+      <td style="font-weight:700;">${totalQty} ต้น</td>
+      <td style="color:#15803D;font-weight:700;">${val}</td>
+      <td style="font-size:12px;">${h.sale||'-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportHistoryCSV() {
+  const hist = getHistory();
+  if (!hist.length) { showToast('ℹ️ ยังไม่มีประวัติ Order ที่จบบิล'); return; }
+  const rows = [];
+  hist.forEach(h => {
+    const items = h.archivedItems || getOrderItems(h);
+    items.forEach(it => {
+      rows.push([h.orderNum, h.closedAt||'-', h.customer, h.tel||'-', h.sale||'-',
+        it.pileType, it.length||'-', it.qty, it.delivered||0, h.orderValue||0, h.note||'-']);
+    });
+  });
+  downloadCSV('order_history_' + new Date().toISOString().slice(0,10) + '.csv',
+    ['เลข Order','วันที่จบ','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','รายละเอียดเสา','จำนวน','ส่งแล้ว','มูลค่า','หมายเหตุ'], rows);
+  showToast('📥 Export ประวัติ Order เรียบร้อย!');
+}
+
+// ── Stock Ref Dropdown ─────────────────────────────────────────
+function populateStockRefDropdown() {
+  const sel = document.getElementById('sf_ref');
+  const orders = getOrders();
+  const active = orders.filter(o => getOrderDelivered(o) < getOrderTotalQty(o)); // BugFix#2: multi-item orders
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— ไม่ระบุ —</option>';
+  if (active.length === 0) {
+    const opt = document.createElement('option'); opt.disabled = true; opt.textContent = '(ยังไม่มี Order ที่กำลังดำเนินการ)'; sel.appendChild(opt);
+  } else {
+    active.forEach(o => {
+      const opt = document.createElement('option'); opt.value = o.orderNum;
+      opt.textContent = `${o.orderNum} · ${o.customer} · ${o.pileType} (${o.delivered||0}/${o.qty} ต้น)`;
+      if (o.orderNum === cur) opt.selected = true; sel.appendChild(opt);
+    });
+  }
+  const done = orders.filter(o => (o.delivered||0) >= o.qty && o.qty > 0);
+  if (done.length > 0) {
+    const sep = document.createElement('option'); sep.disabled = true; sep.textContent = '── ส่งครบแล้ว ──'; sel.appendChild(sep);
+    done.forEach(o => {
+      const opt = document.createElement('option'); opt.value = o.orderNum;
+      opt.textContent = `${o.orderNum} · ${o.customer} ✅`;
+      if (o.orderNum === cur) opt.selected = true; sel.appendChild(opt);
+    });
+  }
+}
+
+// ── Stock ──────────────────────────────────────────────────────
+const DEMO_STOCK_LOG = [
+  {ts:'23/05/69 13:00',typeVal:'📤 เบิกออก (ส่งของ)',    name:'เสาตัน 0.22m',        qty:60,  newStock:140,qtyDisplay:'-60',  ref:'DO-0523-001',staff:'คุณอ้อย',note:'ส่ง บ.ABC จำกัด'},
+  {ts:'22/05/69 16:20',typeVal:'📥 รับเข้า (ผลิตเสร็จ)', name:'เสาตัน 0.22m',        qty:200, newStock:200,qtyDisplay:'+200', ref:'WO-0522-003',staff:'คุณอ้อย',note:'ผลิต batch 3'},
+  {ts:'21/05/69 11:30',typeVal:'📤 เบิกออก (ส่งของ)',    name:'เสากลม 0.30m',        qty:20,  newStock:32, qtyDisplay:'-20',  ref:'DO-0521-002',staff:'คุณต้อม',note:'ส่ง หจก.สมศรี'},
+  {ts:'20/05/69 09:15',typeVal:'🔧 ปรับแก้ (นับใหม่)',  name:'เสาสี่เหลี่ยม 0.35m', qty:8,   newStock:8,  qtyDisplay:'→8',   ref:'-',          staff:'คุณแดง',note:'ตรวจนับจริง'},
+  {ts:'19/05/69 14:45',typeVal:'📥 รับเข้า (ผลิตเสร็จ)', name:'เสาตัน 0.26m',        qty:85,  newStock:85, qtyDisplay:'+85',  ref:'WO-0519-001',staff:'คุณอ้อย',note:'ผลิต batch 1'},
+];
+
+function getLastStockTs(name) {
+  const log = getStockLog() || DEMO_STOCK_LOG;
+  const entry = log.find(e => e.name === name);
+  return entry ? entry.ts : null;
+}
+
+function quickFillStock(name) {
+  // open modal directly
+  openStockDetail(name);
+}
+
+function renderStockCards() {
+  const stock    = getStock(), cfg = getConfig();
+  const reserved = getReservedStock();
+  const prices   = cfg.pilePrices || {};
+  let totalValue = 0;
+  const grid = document.getElementById('stockCardsGrid');
+  const cards = cfg.pileTypes.map(name => {
+    const qty   = stock[name] || 0;
+    const res   = reserved[name] || 0;
+    const avail = qty - res;
+    const price = prices[name] || 0;
+    const val   = price > 0 ? qty * price : 0;
+    totalValue += val;
+    let cls = 'stock-ok', aClass = 'ok';
+    if (avail < cfg.stockLow)  { cls = 'stock-low';  aClass = 'low'; }
+    else if (avail < cfg.stockWarn) { cls = 'stock-warn'; aClass = 'warn'; }
+    const resHtml   = res > 0 ? `<div class="stock-reserved">🔒 จองแล้ว ${res} ต้น</div>` : '';
+    const availHtml = res > 0 ? `<div class="stock-avail ${aClass}">✅ คงเหลือจริง: ${avail} ต้น</div>` : '';
+    const valHtml   = val > 0 ? `<div style="font-size:11px;color:#64748B;margin-bottom:4px;">💰 ${val.toLocaleString('th-TH')} ฿</div>` : '';
+    const ts        = getLastStockTs(name);
+    const tsHtml    = ts ? `<span class="stock-ts">อัปเดต: ${ts}</span>` : `<span class="stock-ts">ยังไม่มีประวัติ</span>`;
+    const quickBtn  = `<button class="stock-quick-btn" onclick="quickFillStock('${name.replace(/'/g,"\'")}')">+ รับเข้า</button>`;
+    const statusChip = `<span class="chip ${avail < cfg.stockLow ? 'ch-err' : avail < cfg.stockWarn ? 'ch-delay' : 'ch-in'}">${avail < cfg.stockLow ? '🚨 ต่ำมาก' : avail < cfg.stockWarn ? '⚠ ใกล้หมด' : '✓ ปกติ'}</span>`;
+    return `<div class="stock-card ${cls}" onclick="openStockDetail('${name.replace(/'/g,'\\'+'\'')}')">
+      <div class="stock-name">${name}</div>
+      <div class="stock-qty">${qty}</div>
+      <div class="stock-unit">ต้นทั้งหมด</div>
+      ${resHtml}${availHtml}${valHtml}
+      ${statusChip}
+      <div class="stock-card-footer">${tsHtml}${quickBtn}</div>
+    </div>`;
+  });
+  // Summary value row
+  const valueRow = totalValue > 0
+    ? `<div class="stock-card stock-ok" style="grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:14px 18px;">
+        <span style="font-size:14px;font-weight:700;color:#1E293B;">💰 มูลค่าสินค้าคงคลังรวม</span>
+        <span style="font-size:24px;font-weight:900;color:#166534;">${totalValue.toLocaleString('th-TH')} บาท</span>
+        <span style="font-size:11px;color:#64748B;">(คำนวณจากราคาต่อต้นที่ตั้งไว้)</span>
+      </div>`
+    : '';
+  grid.innerHTML = cards.join('') + valueRow;
+}
+
+function stockUpdatePreview() {
+  const name=document.getElementById('sf_stype').value, typeVal=document.getElementById('sf_type').value;
+  const qty=parseInt(document.getElementById('sf_qty').value)||0, prev=document.getElementById('stockPreview');
+  if (!name||!qty||!typeVal) { prev.textContent='👆 กรอกข้อมูลด้านบนแล้วกด "บันทึก"'; prev.style.cssText='background:#EFF6FF;color:#1D4ED8;'; return; }
+  const cur = getStock()[name]||0;
+  let newStock = cur;
+  if (typeVal.includes('รับเข้า'))  newStock = cur+qty;
+  if (typeVal.includes('เบิกออก')) newStock = cur-qty;
+  if (typeVal.includes('ปรับแก้')) newStock = qty;
+  if (newStock < 0) { prev.textContent='⚠️ สต็อกไม่พอ! ไม่สามารถเบิกออกได้'; prev.style.cssText='background:#FEE2E2;color:#991B1B;'; }
+  else { prev.textContent=`✓ Preview: ${name} จะเหลือ ${newStock} ต้น`; prev.style.cssText='background:#F0FDF4;color:#166534;'; }
+}
+
+function submitStock() {
+  const name=document.getElementById('sf_stype').value, typeVal=document.getElementById('sf_type').value;
+  const qty=parseInt(document.getElementById('sf_qty').value), date=document.getElementById('sf_date').value;
+  const staff=document.getElementById('sf_staff').value, ref=document.getElementById('sf_ref').value.trim()||'-';
+  const note=document.getElementById('sf_note').value.trim()||'-';
+  if (!typeVal||!name||!qty||!date||!staff) { alert('กรุณากรอกข้อมูลที่มี * ให้ครบก่อนนะครับ'); return; }
+  const stock=getStock(), cur=stock[name]||0;
+  let newStock=cur, qtyDisplay='';
+  if (typeVal.includes('รับเข้า'))  { newStock=cur+qty;  qtyDisplay=`+${qty}`; }
+  if (typeVal.includes('เบิกออก')) { newStock=cur-qty;  qtyDisplay=`-${qty}`; if(newStock<0){alert('⚠️ สต็อกไม่พอครับ!');return;} }
+  if (typeVal.includes('ปรับแก้')) { newStock=qty;       qtyDisplay=`→${qty}`; }
+  stock[name] = newStock; saveStock(stock);
+  const log = getStockLog()||[];
+  log.unshift({ts:nowTs(),typeVal,name,qty,newStock,qtyDisplay,ref,staff,note}); saveStockLog(log);
+  renderStockCards(); populateLogPileFilter(); renderStockLog(true);
+  const prev=document.getElementById('stockPreview');
+  prev.textContent=`✅ บันทึกแล้ว! ${name} — สต็อกใหม่: ${newStock} ต้น`; prev.style.cssText='background:#F0FDF4;color:#166534;';
+  clearStockForm(true); showToast(`📦 อัปเดตสต็อก: ${name} เหลือ ${newStock} ต้น`);
+}
+
+let _logPage = 0;
+const LOG_PAGE_SIZE = 50;
+
+function populateLogPileFilter() {
+  const sel = document.getElementById('logPileFilter');
+  if (!sel) return;
+  const cur = sel.value;
+  const types = getConfig().pileTypes;
+  sel.innerHTML = '<option value="">ทุกชนิดเสา</option>' +
+    types.map(t => `<option${t===cur?' selected':''}>${t}</option>`).join('');
+}
+
+function renderStockLog(resetPage) {
+  if (resetPage) _logPage = 0;
+  const rawLog = getStockLog(), allLog = rawLog || DEMO_STOCK_LOG;
+  const query     = (document.getElementById('logSearch')?.value || '').trim().toLowerCase();
+  const typeF     = document.getElementById('logTypeFilter')?.value || '';
+  const pileF     = document.getElementById('logPileFilter')?.value || '';
+
+  let log = allLog;
+  if (query)  log = log.filter(e => (e.name||'').toLowerCase().includes(query) || (e.ref||'').toLowerCase().includes(query) || (e.note||'').toLowerCase().includes(query));
+  if (typeF)  log = log.filter(e => e.typeVal.includes(typeF));
+  if (pileF)  log = log.filter(e => e.name === pileF);
+
+  const total = log.length;
+  const totalPages = Math.max(1, Math.ceil(total / LOG_PAGE_SIZE));
+  if (_logPage >= totalPages) _logPage = totalPages - 1;
+  const pageLog = log.slice(_logPage * LOG_PAGE_SIZE, (_logPage + 1) * LOG_PAGE_SIZE);
+
+  const countEl = document.getElementById('logCount');
+  if (countEl) countEl.textContent = total + ' รายการ' + (total !== allLog.length ? ' (กรองแล้ว)' : '');
+
+  const tbody = document.getElementById('stockLogBody');
+  if (!pageLog.length) {
+    tbody.innerHTML = `<tr class="table-empty"><td colspan="8">${total===0 ? 'ยังไม่มีประวัติ' : 'ไม่พบผลลัพธ์ที่ค้นหา'}</td></tr>`;
+  } else {
+    tbody.innerHTML = pageLog.map((e,i) => {
+      const isIn=e.typeVal.includes('รับเข้า'), isOut=e.typeVal.includes('เบิกออก');
+      const qC=isIn?'#166534':isOut?'#991B1B':'#6D28D9';
+      const chipCls=isIn?'ch-in':isOut?'ch-out':'ch-adj';
+      const label=e.typeVal.split('(')[0].trim();
+      const isNewest=(rawLog && _logPage===0 && i===0);
+      const bg=isNewest?'background:#F0FDF4;':'';
+      return `<tr>
+        <td style="${bg}">${e.ts}</td>
+        <td style="${bg}"><span class="chip ${chipCls}">${label}</span></td>
+        <td style="${bg}font-weight:600;">${e.name}</td>
+        <td style="${bg}color:${qC};font-weight:700;">${e.qtyDisplay}</td>
+        <td style="font-weight:700;">${e.newStock}</td>
+        <td style="${bg}">${e.ref}</td>
+        <td style="${bg}">${e.staff}</td>
+        <td style="${bg}">${e.note}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Pagination
+  const pgEl = document.getElementById('logPagination');
+  if (pgEl) {
+    if (totalPages <= 1) { pgEl.innerHTML=''; pgEl.style.display='none'; return; }
+    pgEl.style.display='flex';
+    const prevDis = _logPage===0 ? 'disabled style="opacity:.4;"' : '';
+    const nextDis = _logPage>=totalPages-1 ? 'disabled style="opacity:.4;"' : '';
+    pgEl.innerHTML =
+      `<button class="btn btn-ghost btn-sm" onclick="goLogPage(${_logPage-1})" ${prevDis}>← ก่อนหน้า</button>` +
+      `<span style="font-size:12px;color:#64748B;">หน้า ${_logPage+1} / ${totalPages}</span>` +
+      `<button class="btn btn-ghost btn-sm" onclick="goLogPage(${_logPage+1})" ${nextDis}>ถัดไป →</button>`;
+  }
+}
+
+function goLogPage(p) {
+  const allLog = getStockLog() || DEMO_STOCK_LOG;
+  const totalPages = Math.max(1, Math.ceil(allLog.length / LOG_PAGE_SIZE));
+  _logPage = Math.max(0, Math.min(p, totalPages-1));
+  renderStockLog();
+}
+
+function clearStockForm(keepPreview) {
+  ['sf_qty','sf_note','sf_date'].forEach(id => document.getElementById(id).value = '');
+  ['sf_type','sf_stype','sf_staff','sf_ref'].forEach(id => document.getElementById(id).selectedIndex = 0);
+  if (!keepPreview) { const p=document.getElementById('stockPreview'); p.textContent='👆 กรอกข้อมูลด้านบนแล้วกด "บันทึก"'; p.style.cssText='background:#EFF6FF;color:#1D4ED8;'; }
+}
+
+// ── Customers ──────────────────────────────────────────────────
+
+
+// ── Order History (Closed Bills) ──────────────────────────────
+function showCustHistory(custName) {
+  const hist = getHistory().filter(h => h.customer === custName);
+  const card = document.getElementById('histCard');
+  const title = document.getElementById('histCardTitle');
+  if (!card) return;
+  title.textContent = '📋 ประวัติการซื้อขาย — ' + custName;
+  const tbody = document.getElementById('histBody');
+  if (!hist.length) {
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="6">ยังไม่มีประวัติการซื้อขาย</td></tr>';
+  } else {
+    tbody.innerHTML = hist.map(h => {
+      const items = h.archivedItems || getOrderItems(h);
+      const itemsStr = items.map(it => it.pileType + (it.length&&it.length!=='-'?' '+it.length:'') + ' ' + it.qty + ' ต้น').join('<br>');
+      const totalDel = items.reduce((s,it)=>s+(it.delivered||0),0);
+      const totalQty = items.reduce((s,it)=>s+(it.qty||0),0);
+      const val = (h.orderValue||0)>0 ? (h.orderValue||0).toLocaleString('th-TH') + ' ฿' : '-';
+      return `<tr>
+        <td><span class="order-id">${h.orderNum}</span></td>
+        <td style="font-size:11px;color:#64748B;">${h.closedAt||'-'}</td>
+        <td style="font-size:12px;">${itemsStr}</td>
+        <td style="font-size:12px;font-weight:700;color:#166534;">${totalDel}/${totalQty} ต้น</td>
+        <td style="font-size:12px;color:#15803D;font-weight:700;">${val}</td>
+        <td style="font-size:12px;">${h.sale||'-'}</td>
+      </tr>`;
+    }).join('');
+  }
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Close Bill ─────────────────────────────────────────────────
+function closeBill(orderNum) {
+  const orders = getOrders();
+  const o = orders.find(x => x.orderNum === orderNum);
+  if (!o) return;
+  const items = getOrderItems(o);
+  const tq    = getOrderTotalQty(o);
+  const val   = (o.orderValue||0).toLocaleString('th-TH');
+  const itemsStr = items.map(it => it.pileType + (it.length&&it.length!=='-'?' '+it.length:'') + ' ' + it.qty + ' ต้น').join(', ');
+  const confirmed = confirm(
+    '🔴 ยืนยันจบบิล — ' + orderNum + '\n\n' +
+    'ลูกค้า: ' + o.customer + ' (' + (o.tel||'-') + ')\n' +
+    'รายการ: ' + itemsStr + '\n' +
+    'มูลค่า: ' + (o.orderValue>0 ? val + ' ฿' : 'ไม่ระบุ') + '\n' +
+    'Sale: ' + (o.sale||'-') + '\n\n' +
+    '⚠️ Order นี้จะถูกเก็บในประวัติและนำออกจากรายการ active\n' +
+    'ตกลง = จบบิล | ยกเลิก = ยังไม่จบ'
+  );
+  if (!confirmed) return;
+
+  // Archive to history
+  const hist = getHistory();
+  hist.unshift({ ...o, closedAt: nowTs(), archivedItems: JSON.parse(JSON.stringify(items)) });
+  saveHistory(hist);
+
+  // Update customer record: track total spend & order count
+  const custs = getCustomers();
+  const ci = custs.findIndex(c => c.name === o.customer);
+  if (ci >= 0) {
+    custs[ci].totalSpend = (custs[ci].totalSpend || 0) + (o.orderValue || 0);
+    custs[ci].ordersClosed = (custs[ci].ordersClosed || 0) + 1;
+    custs[ci].lastOrderDate = o.deliveryDate || '-';
+    saveCustomers(custs);
+  }
+
+  // Remove from active orders
+  const newOrders = orders.filter(x => x.orderNum !== orderNum);
+  saveOrders(newOrders);
+
+  renderOrders(); renderSummary();
+  if (document.getElementById('sec-customers')?.classList.contains('active')) renderCustomers();
+  showToast('✅ จบบิล ' + orderNum + ' — เก็บประวัติแล้ว');
+}
+
+function renderCustomers() {
+  const query = (document.getElementById('custSearch')?.value || '').trim().toLowerCase();
+  let custs = getCustomers();
+  if (query) custs = custs.filter(c => c.name.toLowerCase().includes(query) || (c.tel||'').includes(query));
+  const orders = getOrders();
+  const tbody = document.getElementById('custBody');
+  if (!custs.length) {
+    tbody.innerHTML = `<tr class="table-empty"><td colspan="6">${query ? 'ไม่พบลูกค้าที่ค้นหา' : 'ยังไม่มีข้อมูลลูกค้า · ส่ง Order แรกจะบันทึกอัตโนมัติ'}</td></tr>`; return;
+  }
+  tbody.innerHTML = custs.map((c, i) => {
+    const custOrders = orders.filter(o => o.customer === c.name);
+    const custHist   = getHistory().filter(h => h.customer === c.name);
+    const totalActive = custOrders.reduce((s,o)=>s+(o.orderValue||0),0);
+    const totalArch   = custHist.reduce((s,h)=>s+(h.orderValue||0),0);
+    const totalVal    = totalActive + totalArch;
+    const totalCount  = custOrders.length + custHist.length;
+    return `<tr>
+      <td><strong>${c.name}</strong></td>
+      <td>${c.tel}</td>
+      <td style="color:#64748B;font-size:12px;">${c.addr||'-'}</td>
+      <td style="font-weight:700;color:#1E40AF;">${totalCount}<span style="font-size:10px;color:#94A3B8;font-weight:400;"> (${custOrders.length} active · ${custHist.length} จบแล้ว)</span></td>
+      <td style="font-size:12px;color:#166534;font-weight:700;">${totalVal>0?totalVal.toLocaleString('th-TH')+' ฿':'-'}</td>
+      <td>
+        ${custHist.length>0?`<button class="btn btn-ghost btn-sm" onclick="showCustHistory('${c.name}')" style="font-size:11px;padding:4px 8px;color:#1D4ED8;margin-right:4px;">📋 ประวัติ</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="deleteCustomer(${i})" style="font-size:11px;padding:4px 8px;color:#EF4444;">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function submitCustomer() {
+  const name=document.getElementById('c_name').value.trim(), tel=document.getElementById('c_tel').value.trim(), addr=document.getElementById('c_addr').value.trim();
+  if (!name||!tel) { alert('กรุณากรอกชื่อและเบอร์โทรก่อนนะครับ'); return; }
+  const custs = getCustomers();
+  if (custs.some(c=>c.name===name&&c.tel===tel)) { showToast('ℹ️ ลูกค้านี้มีในระบบแล้ว'); return; }
+  custs.push({name,tel,addr:addr||''}); saveCustomers(custs);
+  renderCustomers(); populateCustLookup(); clearCustomerForm();
+  showToast(`👥 บันทึกลูกค้า: ${name}`);
+}
+function deleteCustomer(idx) {
+  if (!confirm('ลบลูกค้านี้ออกจากฐานข้อมูล?')) return;
+  const custs = getCustomers(); custs.splice(idx,1); saveCustomers(custs);
+  renderCustomers(); populateCustLookup();
+}
+function clearCustomerForm() {
+  ['c_name','c_tel','c_addr'].forEach(id => document.getElementById(id).value = '');
+}
+
+// ── Export CSV ─────────────────────────────────────────────────
+function downloadCSV(filename, headers, rows) {
+  const BOM = '﻿';
+  const csv = BOM + [headers, ...rows].map(r => r.map(c => `"${String(c==null?'':c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {href:url, download:filename});
+  a.click(); URL.revokeObjectURL(url);
+}
+function exportOrdersCSV() {
+  const orders = getOrders();
+  if (!orders.length) { showToast('ℹ️ ยังไม่มีข้อมูล Order'); return; }
+  const rows = [];
+  orders.forEach(o => {
+    const items = getOrderItems(o);
+    items.forEach((it, idx) => {
+      rows.push([
+        o.orderNum,
+        o.customer,
+        o.tel,
+        o.sale,
+        it.pileType || o.pileType,
+        it.qty || 0,
+        it.delivered || (idx===0 ? (o.delivered||0) : 0),
+        it.length || o.length || '-',
+        o.deliveryDate,
+        o.status || 'รับ Order แล้ว',
+        it.value || (idx===0 ? (o.orderValue||0) : 0),
+        o.site,
+        o.note
+      ]);
+    });
+  });
+  downloadCSV(
+    `orders_${new Date().toISOString().slice(0,10)}.csv`,
+    ['เลข Order','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','จำนวน (ต้น)','ส่งแล้ว (ต้น)','รายละเอียดเสา','วันต้องการ','สถานะ','มูลค่า (บาท)','ไซต์งาน','หมายเหตุ'],
+    rows
+  );
+  showToast('📥 Export Orders เรียบร้อย!');
+}
+function exportStockCSV() {
+  const log = getStockLog() || DEMO_STOCK_LOG;
+  if (!log.length) { showToast('ℹ️ ยังไม่มีประวัติสต็อก'); return; }
+  downloadCSV(
+    `stock_log_${new Date().toISOString().slice(0,10)}.csv`,
+    ['วันเวลา','ประเภท','ชนิดเสา','จำนวน','สต็อกหลัง','อ้างอิง','ผู้บันทึก','หมายเหตุ'],
+    log.map(e => [e.ts,e.typeVal,e.name,e.qtyDisplay,e.newStock,e.ref,e.staff,e.note])
+  );
+  showToast('📥 Export สต็อก เรียบร้อย!');
+}
+
+// ── Settings ───────────────────────────────────────────────────
+let _cfg = null;
+const TAG_MAP = {
+  sale:       { key:'saleStaff',  container:'tagsSale' },
+  prod:       { key:'prodStaff',  container:'tagsProd' },
+  ship:       { key:'shipStaff',  container:'tagsShip' },
+  stockStaff: { key:'stockStaff', container:'tagsStockStaff' },
+  pile:       { key:'pileTypes',  container:'tagsPile' },
+};
+
+function loadSettingsUI() {
+  const cfg = getConfig();
+  _cfg = JSON.parse(JSON.stringify(cfg));
+  document.getElementById('cfg_companyName').value  = cfg.companyName;
+  document.getElementById('cfg_companyEmoji').value = cfg.companyEmoji;
+  document.getElementById('cfg_stockLow').value     = cfg.stockLow;
+  document.getElementById('cfg_stockWarn').value    = cfg.stockWarn;
+  Object.keys(TAG_MAP).forEach(type => renderTags(TAG_MAP[type].container, _cfg[TAG_MAP[type].key], type));
+  renderPriceTable();
+}
+
+function renderPriceTable() {
+  const prices = (_cfg && _cfg.pilePrices) || getConfig().pilePrices || {};
+  const types  = (_cfg && _cfg.pileTypes)  || getConfig().pileTypes  || [];
+  document.getElementById('priceTableBody').innerHTML = types.map(name => `
+    <tr>
+      <td style="font-weight:600;">${name}</td>
+      <td><input class="price-inp" type="number" id="price_${name.replace(/\s/g,'_').replace(/\./g,'_')}" placeholder="0" min="0" value="${prices[name]||''}" oninput="updatePricePreview('${name}',this.value)"/></td>
+      <td style="color:#64748B;font-size:11px;" id="pricePrev_${name.replace(/\s/g,'_').replace(/\./g,'_')}">${prices[name]>0?'= '+prices[name].toLocaleString('th-TH')+' ฿/ต้น':''}</td>
+    </tr>`).join('');
+}
+
+function updatePricePreview(name, val) {
+  const safeKey = name.replace(/\s/g,'_').replace(/\./g,'_');
+  const el = document.getElementById(`pricePrev_${safeKey}`);
+  const v = parseInt(val)||0;
+  if (el) el.textContent = v > 0 ? '= '+v.toLocaleString('th-TH')+' ฿/ต้น' : '';
+}
+
+function renderTags(containerId, arr, type) {
+  const el = document.getElementById(containerId); if (!el) return;
+  el.innerHTML = arr.map((v,i) => `<div class="tag-item">${v}<button class="tag-remove" onclick="removeTag('${type}',${i})">×</button></div>`).join('');
+}
+function addTag(type) {
+  const inp = document.getElementById('inp_' + type), val = inp ? inp.value.trim() : '';
+  if (!val) return;
+  if (!_cfg) _cfg = JSON.parse(JSON.stringify(getConfig()));
+  const key = TAG_MAP[type].key;
+  if (!_cfg[key].includes(val)) { _cfg[key].push(val); renderTags(TAG_MAP[type].container, _cfg[key], type); }
+  if (type === 'pile') renderPriceTable();
+  inp.value = '';
+}
+function removeTag(type, idx) {
+  if (!_cfg) return;
+  _cfg[TAG_MAP[type].key].splice(idx, 1);
+  renderTags(TAG_MAP[type].container, _cfg[TAG_MAP[type].key], type);
+  if (type === 'pile') renderPriceTable();
+}
+
+function saveSettings() {
+  if (_currentRole !== 'admin') { showToast('⛔ เฉพาะ Admin เท่านั้นที่แก้ไขการตั้งค่าได้'); return; }
+  if (!_cfg) _cfg = JSON.parse(JSON.stringify(getConfig()));
+  _cfg.companyName  = document.getElementById('cfg_companyName').value.trim()  || 'บริษัทเสาเข็ม';
+  _cfg.companyEmoji = document.getElementById('cfg_companyEmoji').value.trim() || '🏗️';
+  _cfg.stockLow     = parseInt(document.getElementById('cfg_stockLow').value)  || 15;
+  _cfg.stockWarn    = parseInt(document.getElementById('cfg_stockWarn').value) || 50;
+  // Collect prices
+  _cfg.pilePrices = {};
+  (_cfg.pileTypes||[]).forEach(name => {
+    const safeKey = name.replace(/\s/g,'_').replace(/\./g,'_');
+    const el = document.getElementById(`price_${safeKey}`);
+    if (el) { const v = parseInt(el.value)||0; if (v>0) _cfg.pilePrices[name] = v; }
+  });
+  saveConfigData(_cfg);
+  populateAllDropdowns();
+  applyBranding();
+  showToast('💾 บันทึกการตั้งค่าเรียบร้อย!');
+}
+
+// ── Branding ───────────────────────────────────────────────────
+function applyBranding() {
+  const cfg = getConfig();
+  document.getElementById('hdrEmoji').textContent = cfg.companyEmoji;
+  document.getElementById('hdrTitle').textContent = `ระบบดิจิทัล — ${cfg.companyName}`;
+  document.title = `ระบบดิจิทัล — ${cfg.companyName}`;
+}
+
+// ── Clear Demo ─────────────────────────────────────────────────
+function clearDemo() {
+  if (_currentRole !== 'admin') { showToast('⛔ เฉพาะ Admin เท่านั้น'); return; }
+  if (!confirm('⚠️ ล้างข้อมูลทดสอบทั้งหมด (Orders, Errors, สต็อก, ลูกค้า) ใช่ไหม?\n\nหมายเหตุ: การตั้งค่าจะยังคงอยู่')) return;
+  const paths = [K_ORDERS, K_PROD_ERR, K_SHIP_ERR, K_CTR, K_STOCK, K_STOCK_LOG, K_CUSTOMERS, K_HISTORY, K_VAR_FB];
+  paths.forEach(p => db.ref(p).remove());
+  _cache.orderCounter = 0;
+  resetForm(); updateHeaderCount();
+  showToast('🗑 ล้างข้อมูลทดสอบเรียบร้อย');
+}
+
+// ── Init handled by auth.onAuthStateChanged above ─────────────
+
+// (getSpecs, saveSpecs are defined in Firebase layer above)
+
+let _sdCurrentPile = null;
+
+function openStockDetail(name) {
+  _sdCurrentPile = name;
+  const stock    = getStock();
+  const reserved = getReservedStock();
+  const cfg      = getConfig();
+  const qty      = stock[name] || 0;
+  const res      = reserved[name] || 0;
+  const avail    = qty - res;
+  const price    = (cfg.pilePrices||{})[name] || 0;
+
+  document.getElementById('sdTitle').textContent = name;
+  document.getElementById('sdSub').textContent   = 'จัดการสต็อกแบบละเอียด · แยกตามสเปค';
+
+  const statItems = [
+    { val: qty,   lbl: 'สต็อกรวม (ต้น)' },
+    { val: res,   lbl: 'จองแล้ว (ต้น)' },
+    { val: avail, lbl: 'คงเหลือจริง' },
+    { val: price > 0 ? price.toLocaleString('th-TH')+' ฿' : '-', lbl: 'ราคา/ต้น' },
+  ];
+  if (price > 0) statItems.push({ val: (qty*price).toLocaleString('th-TH')+' ฿', lbl: 'มูลค่ารวม' });
+  document.getElementById('sdStats').innerHTML = statItems.map(s =>
+    `<div class="sd-stat"><div class="sd-stat-val">${s.val}</div><div class="sd-stat-lbl">${s.lbl}</div></div>`
+  ).join('');
+
+  renderSpecGrid();
+  renderDetailLog();
+  sdPopulateStaff();
+  clearSdLog();
+
+  document.getElementById('sdOverlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeStockDetail() {
+  document.getElementById('sdOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+  _sdCurrentPile = null;
+}
+
+function sdOverlayClick(e) {
+  if (e.target === document.getElementById('sdOverlay')) closeStockDetail();
+}
+
+// ── Spec Grid ─────────────────────────────────────────────────
+function renderSpecGrid() {
+  const name  = _sdCurrentPile;
+  const specs = getSpecs(name);
+  const grid  = document.getElementById('sdSpecGrid');
+  const count = document.getElementById('sdSpecCount');
+  if (count) count.textContent = specs.length ? specs.length + ' สเปค · รวม ' + specs.reduce((s,v)=>s+(v.qty||0),0) + ' ต้น' : '';
+
+  if (!specs.length) {
+    grid.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:16px;font-size:12px;font-style:italic;">ยังไม่มีสเปค · บันทึกรับเข้าด้านล่างเพื่อเริ่มต้น</div>';
+    return;
+  }
+  const total = specs.reduce((s,v) => s+(v.qty||0), 0);
+  grid.innerHTML = specs.map(v => {
+    const pct   = total > 0 ? Math.round((v.qty||0)/total*100) : 0;
+    const color = (v.qty||0) === 0 ? '#E2E8F0' : '#3B82F6';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0;">
+      <div style="font-size:14px;font-weight:800;color:#1E293B;min-width:90px;">${escHtml(v.spec)}</div>
+      <div style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;">
+        <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .3s;"></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:#1E293B;min-width:60px;text-align:right;">${v.qty||0} ต้น</div>
+      <button onclick="quickDeductSpec('${v.spec.replace(/'/g,"\'")}')" style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:6px;border:1.5px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;white-space:nowrap;" title="เบิกออกจากสเปคนี้">− เบิก</button>
+      <button onclick="deleteSpec('${v.id}')" style="padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid #E2E8F0;background:#F8FAFC;color:#94A3B8;cursor:pointer;" title="ลบสเปคนี้">✕</button>
+    </div>`;
+  }).join('');
+
+  // Update datalist
+  const dl = document.getElementById('sdSpecList');
+  if (dl) dl.innerHTML = specs.map(v => `<option value="${escHtml(v.spec)}">`).join('');
+}
+
+function deleteSpec(vid) {
+  if (!confirm('ลบสเปคนี้? จำนวนสต็อกจะถูกหักออกด้วย')) return;
+  const specs   = getSpecs(_sdCurrentPile);
+  const target  = specs.find(v => v.id === vid);
+  if (!target) return;
+  const newSpecs= specs.filter(v => v.id !== vid);
+  saveSpecs(_sdCurrentPile, newSpecs);
+  // Deduct from main stock
+  const stock   = getStock();
+  const log     = getStockLog()||[];
+  const deduct  = target.qty||0;
+  stock[_sdCurrentPile] = Math.max(0, (stock[_sdCurrentPile]||0) - deduct);
+  if (deduct > 0) log.unshift({ ts:nowTs(), typeVal:'🗑 ลบสเปค (เบิกออก)', name:_sdCurrentPile, qty:deduct, // BugFix#7: ปรับ log type ให้ถูกต้อง
+    newStock:stock[_sdCurrentPile], qtyDisplay:'-'+deduct, ref:'-', staff:'-', note:'ลบสเปค: '+target.spec });
+  saveStock(stock); saveStockLog(log);
+  openStockDetail(_sdCurrentPile);
+  renderStockCards(); populateLogPileFilter(); renderStockLog(true);
+  showToast('🗑 ลบสเปค: ' + target.spec);
+}
+
+function quickDeductSpec(spec) {
+  const el = document.getElementById('sd_logtype');
+  const sp = document.getElementById('sd_logspec');
+  if (el) el.value = 'out';
+  if (sp) sp.value = spec;
+  sdPreview();
+  document.getElementById('sd_logqty')?.focus();
+  document.getElementById('sdLogForm')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+
+// ── Order × Spec Stock Integration ───────────────────────────
+function extractLengthNum(s) {
+  const m = String(s || '').match(/(\d+(?:\.\d+)?)/);
+  return m ? m[1] : '';
+}
+function findMatchingSpecs(pileName, lengthStr) {
+  const num = extractLengthNum(lengthStr);
+  if (!num) return [];
+  return getSpecs(pileName).filter(sp => extractLengthNum(sp.spec) === num);
+}
+function checkSpecStock(pileName, lengthStr, needed) {
+  const allSpecs = getSpecs(pileName);
+  if (!allSpecs.length) return { ok: true, matched: [], totalQty: 0, noSpecs: true };
+  const matched = findMatchingSpecs(pileName, lengthStr);
+  const totalQty = matched.reduce((s, sp) => s + (sp.qty || 0), 0);
+  const num = extractLengthNum(lengthStr) || lengthStr;
+  if (!matched.length) {
+    return { ok: false, matched: [], totalQty: 0,
+      message: '⚠️ ไม่มีสต็อกสเปค "' + num + '" สำหรับ ' + pileName + '\nกรุณาเพิ่มสต็อกสเปคนี้ก่อนส่งของ' };
+  }
+  if (totalQty < needed) {
+    return { ok: false, matched, totalQty,
+      message: '⚠️ สต็อกสเปค "' + num + '" ไม่พอ!\nมี: ' + totalQty + ' ต้น | ต้องการ: ' + needed + ' ต้น' }; // BugFix#4: typo ต้อน→ต้น
+  }
+  return { ok: true, matched, totalQty, noSpecs: false };
+}
+function deductSpecsAndLog(pileName, delta, matched, orderNum, customer, sale, lengthStr) {
+  const specs = getSpecs(pileName);
+  let remain = delta;
+  matched.forEach(ms => {
+    if (remain <= 0) return;
+    const sp = specs.find(s => s.id === ms.id);
+    if (!sp) return;
+    const take = Math.min(sp.qty, remain);
+    sp.qty -= take;
+    remain -= take;
+  });
+  const newSpecs = specs.filter(s => s.qty > 0);
+  saveSpecs(pileName, newSpecs);
+  const stock = getStock();
+  const newMain = newSpecs.reduce((s, sp) => s + (sp.qty || 0), 0);
+  stock[pileName] = newMain;
+  const log = getStockLog() || [];
+  const num = extractLengthNum(lengthStr) || lengthStr;
+  log.unshift({ ts: nowTs(), typeVal: '📤 เบิกออก (ส่งของ)',
+    name: pileName, qty: delta, newStock: newMain, qtyDisplay: '-' + delta,
+    ref: orderNum, staff: sale || '-',
+    note: '🤖 Auto: ส่ง ' + customer + ' [สเปค ' + num + ']' });
+  saveStock(stock); saveStockLog(log);
+  return newMain;
+}
+
+// ── Modal inline stock-log (spec-aware) ───────────────────────
+function sdPopulateStaff() {
+  const cfg = getConfig();
+  const all = [...new Set([...cfg.stockStaff, ...cfg.prodStaff, ...cfg.saleStaff])];
+  const sel = document.getElementById('sd_logstaff');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— เลือก —</option>' +
+    all.map(s => `<option${s===cur?' selected':''}>${s}</option>`).join('');
+}
+
+function sdPreview() {
+  const typeVal = document.getElementById('sd_logtype')?.value;
+  const spec    = (document.getElementById('sd_logspec')?.value||'').trim();
+  const qty     = parseInt(document.getElementById('sd_logqty')?.value)||0;
+  const prev    = document.getElementById('sdLogPreview');
+  if (!prev) return;
+  if (!typeVal || !qty) {
+    prev.textContent = '👆 เลือกประเภท กรอกสเปค และจำนวน';
+    prev.style.cssText = 'margin-top:10px;padding:10px 14px;border-radius:8px;background:#EFF6FF;color:#1D4ED8;font-size:12.5px;font-weight:600;';
+    return;
+  }
+  const specs    = getSpecs(_sdCurrentPile);
+  const existing = specs.find(v => v.spec === spec);
+  const mainCur  = getStock()[_sdCurrentPile]||0;
+  let msg = '', bgColor = '#F0FDF4', txColor = '#166534';
+
+  if (typeVal === 'in') {
+    const newSpecQty = (existing ? existing.qty : 0) + qty;
+    const newMain    = mainCur + qty;
+    if (existing) {
+      msg = '✓ สเปค "'+spec+'" มีอยู่แล้ว ('+existing.qty+' ต้น) → รวมเป็น '+newSpecQty+' ต้น · สต็อกรวม: '+newMain+' ต้น';
+    } else {
+      msg = '✨ สเปคใหม่ "'+spec+'" → '+qty+' ต้น · สต็อกรวม: '+newMain+' ต้น';
+    }
+  } else if (typeVal === 'out') {
+    if (!existing) {
+      msg = '⚠️ ไม่มีสเปค "'+spec+'" ในระบบ';
+      bgColor='#FEF9C3'; txColor='#854D0E';
+    } else if (existing.qty < qty) {
+      msg = '🚨 สเปค "'+spec+'" มีแค่ '+existing.qty+' ต้น ไม่พอเบิก '+qty+' ต้น';
+      bgColor='#FEE2E2'; txColor='#991B1B';
+    } else {
+      const after = existing.qty - qty;
+      msg = '✓ เบิกออกจาก "'+spec+'" '+existing.qty+' → '+after+' ต้น · สต็อกรวม: '+(mainCur-qty)+' ต้น';
+    }
+  } else if (typeVal === 'adj') {
+    if (existing) {
+      msg = '🔧 ปรับสเปค "'+spec+'" '+existing.qty+' → '+qty+' ต้น';
+    } else {
+      msg = '🔧 ตั้งสเปคใหม่ "'+spec+'" = '+qty+' ต้น';
+    }
+    bgColor='#F3E8FF'; txColor='#6D28D9';
+  }
+  prev.textContent = msg;
+  prev.style.cssText = 'margin-top:10px;padding:10px 14px;border-radius:8px;background:'+bgColor+';color:'+txColor+';font-size:12.5px;font-weight:600;';
+}
+
+function submitSdLog() {
+  const typeVal = document.getElementById('sd_logtype')?.value;
+  const spec    = (document.getElementById('sd_logspec')?.value||'').trim();
+  const qty     = parseInt(document.getElementById('sd_logqty')?.value)||0;
+  const staff   = document.getElementById('sd_logstaff')?.value;
+  const note    = document.getElementById('sd_lognote')?.value.trim()||'-';
+
+  if (!typeVal)  { showToast('⚠️ เลือกประเภทก่อน'); return; }
+  if (!spec)     { showToast('⚠️ กรอกสเปคก่อน'); return; }
+  if (!qty)      { showToast('⚠️ กรอกจำนวนก่อน'); return; }
+  if (!staff)    { showToast('⚠️ เลือกผู้บันทึกก่อน'); return; }
+
+  const name     = _sdCurrentPile;
+  const specs    = getSpecs(name);
+  const existing = specs.find(v => v.spec === spec);
+  const stock    = getStock();
+  const log      = getStockLog()||[];
+  let   newMain  = stock[name]||0;
+  let   qtyDisplay='', typeLabel='';
+
+  if (typeVal === 'in') {
+    if (existing) { existing.qty = (existing.qty||0) + qty; }
+    else          { specs.push({ id:genVid(), spec, qty }); }
+    newMain += qty;
+    qtyDisplay = '+'+qty;
+    typeLabel  = '📥 รับเข้า (ผลิตเสร็จ)';
+
+  } else if (typeVal === 'out') {
+    if (!existing)           { showToast('⚠️ ไม่มีสเปค "'+spec+'" ในระบบ'); return; }
+    if (existing.qty < qty)  { showToast('⚠️ สเปค "'+spec+'" มีแค่ '+existing.qty+' ต้น'); return; }
+    existing.qty -= qty;
+    if (existing.qty === 0) { specs.splice(specs.indexOf(existing), 1); }
+    newMain -= qty;
+    if (newMain < 0) { showToast('⚠️ สต็อกรวมจะติดลบ'); return; }
+    qtyDisplay = '-'+qty;
+    typeLabel  = '📤 เบิกออก (ส่งของ)';
+
+  } else if (typeVal === 'adj') {
+    if (existing) { existing.qty = qty; }
+    else          { specs.push({ id:genVid(), spec, qty }); }
+    // Recalc main = sum of all specs
+    const specTotal = specs.reduce((s,v)=>s+(v.qty||0), 0);
+    newMain = specTotal;
+    qtyDisplay = '→'+qty;
+    typeLabel  = '🔧 ปรับแก้ (นับใหม่)';
+  }
+
+  stock[name] = newMain;
+  log.unshift({ ts:nowTs(), typeVal:typeLabel, name, qty, newStock:newMain, qtyDisplay, ref:'-', staff, note:'['+spec+'] '+note });
+  saveSpecs(name, specs);
+  saveStock(stock);
+  saveStockLog(log);
+
+  clearSdLog();
+  renderStockCards();
+  populateLogPileFilter();
+  renderStockLog(true);
+  openStockDetail(name);
+  showToast('✅ บันทึก '+spec+' · สต็อกรวม: '+newMain+' ต้น');
+}
+
+function clearSdLog() {
+  ['sd_logqty','sd_lognote','sd_logspec'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const t=document.getElementById('sd_logtype'); if(t) t.selectedIndex=0;
+  const s=document.getElementById('sd_logstaff'); if(s) s.selectedIndex=0;
+  const p=document.getElementById('sdLogPreview');
+  if(p){ p.textContent='👆 เลือกประเภท กรอกสเปค และจำนวน'; p.style.cssText='margin-top:10px;padding:10px 14px;border-radius:8px;background:#EFF6FF;color:#1D4ED8;font-size:12.5px;font-weight:600;'; }
+}
+
+function sdQuickLog() { /* replaced by inline form in modal */ } // BugFix#3: removed duplicate sdQuickLog below
+
+// legacy stubs (referenced from old HTML that may remain)
+function addVariant() {}
+function saveVariantRow() {}
+function deleteVariant(vid) { deleteSpec(vid); }
+function checkSyncNote() {}
+function syncVariantToMain() {}
+
+function renderDetailLog() {
+  const name  = _sdCurrentPile;
+  const all   = getStockLog()||DEMO_STOCK_LOG;
+  const log   = all.filter(e => e.name === name).slice(0,30);
+  const tbody = document.getElementById('sdLogBody');
+  if (!log.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94A3B8;padding:16px;font-style:italic;">ยังไม่มีประวัติสำหรับประเภทนี้</td></tr>';
+    return;
+  }
+  tbody.innerHTML = log.map(e => {
+    const isIn=e.typeVal.includes('รับเข้า');
+    const isOut=e.typeVal.includes('เบิกออก');
+    const qC=isIn?'#166534':isOut?'#991B1B':'#6D28D9';
+    const chipCls=isIn?'ch-in':isOut?'ch-out':'ch-adj';
+    const label=e.typeVal.split('(')[0].trim();
+    return `<tr>
+      <td style="font-size:11px;">${e.ts}</td>
+      <td><span class="chip ${chipCls}" style="font-size:10px;">${label}</span></td>
+      <td style="color:${qC};font-weight:700;">${e.qtyDisplay}</td>
+      <td style="font-weight:700;">${e.newStock}</td>
+      <td style="font-size:11px;">${e.ref}</td>
+      <td style="font-size:11px;">${e.staff}</td>
+      <td style="font-size:11px;color:#64748B;">${e.note}</td>
+    </tr>`;
+  }).join('');
+}
+
+// BugFix#3: removed duplicate sdQuickLog (was overwriting the stub above with buggy logic)
+
+// ══════════════════════════════════════════════════════════════
+// ── EDIT ORDER ────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+let _editOrderNum = null;
+let _editItemsDraft = [];
+
+function openEditOrder(orderNum) {
+  if (_currentRole === 'manager') { showToast('⛔ ผู้บริหารดูได้อย่างเดียว ไม่สามารถแก้ไข Order ได้'); return; }
+  const o = orders.find(x => x.orderNum === orderNum);
+  if (!o) return;
+  _editOrderNum = orderNum;
+  _editItemsDraft = JSON.parse(JSON.stringify(getOrderItems(o)));
+
+  const cfg = getConfig();
+  populateSelect('edit_sale', cfg.saleStaff);
+  populateSelect('edit_f_type', cfg.pileTypes);
+
+  document.getElementById('editOrderTitle').textContent = 'แก้ไข Order — ' + orderNum;
+  document.getElementById('editOrderSub').textContent   = o.customer + ' · ' + (o.deliveryDate || '-');
+  document.getElementById('edit_customer').value   = o.customer || '';
+  document.getElementById('edit_tel').value        = o.tel || '';
+  document.getElementById('edit_cust_addr').value  = o.custAddr || '';
+  document.getElementById('edit_sale').value       = o.sale || '';
+  document.getElementById('edit_site').value       = o.site || '';
+  document.getElementById('edit_date').value       = o.deliveryDateISO || '';
+  document.getElementById('edit_note').value       = (o.note && o.note !== '-') ? o.note : '';
+  document.getElementById('edit_f_qty').value      = '';
+  document.getElementById('edit_f_len').value      = '';
+
+  renderEditItemsTable();
+  document.getElementById('editOrderOverlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function renderEditItemsTable() {
+  const listEl = document.getElementById('editItemsList');
+  const box    = document.getElementById('editOrderValueBox');
+
+  if (!_editItemsDraft.length) {
+    listEl.innerHTML = '<div style="color:#94A3B8;font-style:italic;padding:8px 0;">ไม่มีรายการ — กรุณาเพิ่มอย่างน้อย 1 รายการ</div>';
+    if (box) { box.className = 'order-value-box'; box.textContent = '—'; }
+    return;
+  }
+
+  const rows = _editItemsDraft.map((it, i) => {
+    const hasDel   = (it.delivered || 0) > 0;
+    const qtyCell  = hasDel
+      ? `<span style="font-weight:700;">${it.qty} ต้น</span><br><span style="font-size:10px;color:#94A3B8;">ส่งแล้ว ${it.delivered} ต้น (ล็อก)</span>`
+      : `<input type="number" min="1" value="${it.qty}" style="width:70px;padding:5px 8px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none;" onchange="editItemChangeQty(${i},this.value)" oninput="editItemChangeQty(${i},this.value)"/>`;
+    const lenCell  = `<input type="text" value="${it.length && it.length !== '-' ? it.length : ''}" placeholder="รายละเอียดเสา" style="width:90px;padding:5px 8px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none;" onchange="editItemChangeLen(${i},this.value)"/>`;
+    const delCell  = hasDel ? '<span style="font-size:10px;color:#94A3B8;">—</span>'
+      : `<button class="item-del-btn" onclick="editRemoveItem(${i})">✕</button>`;
+    const valDisp  = it.value > 0 ? it.value.toLocaleString('th-TH') + ' ฿' : '—';
+    return `<tr>
+      <td style="font-weight:600;font-size:12px;">${escHtml(it.pileType)}</td>
+      <td>${qtyCell}</td>
+      <td>${lenCell}</td>
+      <td style="color:#166534;font-size:12px;font-weight:600;">${valDisp}</td>
+      <td>${delCell}</td>
+    </tr>`;
+  }).join('');
+
+  listEl.innerHTML = `<table class="edit-items-table">
+    <thead><tr><th>ชนิดเสา</th><th>จำนวน</th><th>รายละเอียดเสา</th><th>มูลค่า</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+
+  const totalQty = _editItemsDraft.reduce((s, it) => s + (it.qty || 0), 0);
+  const totalVal = _editItemsDraft.reduce((s, it) => s + (it.value || 0), 0);
+  if (box) {
+    box.className = 'order-value-box has-value';
+    box.textContent = totalVal > 0
+      ? 'รวม ' + totalQty + ' ต้น · มูลค่า ' + totalVal.toLocaleString('th-TH') + ' บาท'
+      : 'รวม ' + totalQty + ' ต้น';
+  }
+}
+
+function editItemChangeQty(i, val) {
+  const minQty = _editItemsDraft[i].delivered || 0;
+  const qty    = Math.max(minQty, parseInt(val) || 1);
+  _editItemsDraft[i].qty   = qty;
+  _editItemsDraft[i].value = calcOrderValue(_editItemsDraft[i].pileType, qty);
+  // update summary box only (avoid re-rendering inputs and losing focus)
+  const totalQty = _editItemsDraft.reduce((s, it) => s + (it.qty || 0), 0);
+  const totalVal = _editItemsDraft.reduce((s, it) => s + (it.value || 0), 0);
+  const box = document.getElementById('editOrderValueBox');
+  if (box) {
+    box.className   = 'order-value-box has-value';
+    box.textContent = totalVal > 0
+      ? 'รวม ' + totalQty + ' ต้น · มูลค่า ' + totalVal.toLocaleString('th-TH') + ' บาท'
+      : 'รวม ' + totalQty + ' ต้น';
+  }
+}
+
+function editItemChangeLen(i, val) {
+  _editItemsDraft[i].length = val.trim() || '-';
+}
+
+function editRemoveItem(i) {
+  if ((_editItemsDraft[i].delivered || 0) > 0) {
+    showToast('⚠️ ไม่สามารถลบรายการที่ส่งไปแล้วได้'); return;
+  }
+  _editItemsDraft.splice(i, 1);
+  renderEditItemsTable();
+}
+
+function editAddItem() {
+  const type = document.getElementById('edit_f_type').value;
+  const qty  = parseInt(document.getElementById('edit_f_qty').value) || 0;
+  const len  = (document.getElementById('edit_f_len').value || '').trim();
+  if (!type) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
+  if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (ต้น)'); return; }
+  const value = calcOrderValue(type, qty);
+  _editItemsDraft.push({ pileType: type, qty, length: len || '-', value, delivered: 0 });
+  document.getElementById('edit_f_type').selectedIndex = 0;
+  document.getElementById('edit_f_qty').value  = '';
+  document.getElementById('edit_f_len').value  = '';
+  renderEditItemsTable();
+}
+
+function submitEditOrder() {
+  const g  = id => document.getElementById(id).value;
+  const customer  = g('edit_customer').trim();
+  const tel       = g('edit_tel').trim();
+  const sale      = g('edit_sale');
+  const site      = g('edit_site').trim();
+  const dateRaw   = g('edit_date');
+  const note      = g('edit_note').trim();
+  const custAddr  = g('edit_cust_addr').trim();
+
+  if (!customer || !tel || !sale || !site || !dateRaw) {
+    alert('กรุณากรอกข้อมูลที่มี * ให้ครบก่อนนะครับ'); return;
+  }
+  if (!_editItemsDraft.length) {
+    alert('กรุณาเพิ่มรายการสั่งซื้ออย่างน้อย 1 รายการ'); return;
+  }
+
+  const orders = getOrders();
+  const o = orders.find(x => x.orderNum === _editOrderNum);
+  if (!o) return;
+
+  o.customer       = customer;
+  o.tel            = tel;
+  o.sale           = sale;
+  o.custAddr       = custAddr;
+  o.site           = site;
+  o.deliveryDateISO = dateRaw;
+  o.deliveryDate   = isoToThai(dateRaw);
+  o.note           = note || '-';
+  o.items          = JSON.parse(JSON.stringify(_editItemsDraft));
+  o.qty            = _editItemsDraft.reduce((s, it) => s + (it.qty || 0), 0);
+  o.delivered      = _editItemsDraft.reduce((s, it) => s + (it.delivered || 0), 0);
+  o.pileType       = _editItemsDraft[0].pileType;
+  o.length         = _editItemsDraft[0].length || '-';
+  o.orderValue     = _editItemsDraft.reduce((s, it) => s + (it.value || 0), 0);
+  const rspan      = _editItemsDraft.length;
+  o.pileLabel      = rspan === 1
+    ? _editItemsDraft[0].pileType
+    : _editItemsDraft[0].pileType + ' (+' + (rspan - 1) + ' ชนิด)';
+  if (o.delivered >= o.qty && o.qty > 0) o.status = 'ส่งครบ';
+
+  saveOrders(orders);
+  autoSaveCustomer(customer, tel, custAddr);
+  closeEditOrder();
+  renderOrders();
+  renderSummary();
+  updateHeaderCount();
+  showToast('✅ แก้ไข ' + _editOrderNum + ' เรียบร้อยแล้ว');
+}
+
+function closeEditOrder() {
+  document.getElementById('editOrderOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+  _editOrderNum    = null;
+  _editItemsDraft  = [];
+}
+
+function editOrderOverlayClick(e) {
+  if (e.target === document.getElementById('editOrderOverlay')) closeEditOrder();
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── DELETE ORDER ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+function deleteOrder(orderNum) {
+  if (_currentRole === 'manager') { showToast('⛔ ผู้บริหารดูได้อย่างเดียว ไม่สามารถลบ Order ได้'); return; }
+  if (_currentRole !== 'admin')   { showToast('⛔ เฉพาะ Admin เท่านั้นที่ลบ Order ได้'); return; }
+  const orders = getOrders();
+  const o = orders.find(x => x.orderNum === orderNum);
+  if (!o) return;
+  const items    = getOrderItems(o);
+  const itemsStr = items.map(it => it.pileType + ' ' + it.qty + ' ต้น').join(', ');
+  const confirmed = confirm(
+    '🗑 ยืนยันลบ Order — ' + orderNum + '\n\n' +
+    'ลูกค้า: ' + o.customer + '\n' +
+    'รายการ: ' + itemsStr + '\n' +
+    'สถานะ: ' + (o.status || 'รับ Order แล้ว') + '\n\n' +
+    '⚠️ Order นี้จะถูกลบออกจากระบบถาวร ไม่สามารถกู้คืนได้\nตกลง = ลบ | ยกเลิก = ไม่ลบ'
+  );
+  if (!confirmed) return;
+  const newOrders = orders.filter(x => x.orderNum !== orderNum);
+  saveOrders(newOrders);
+  renderOrders();
+  renderSummary();
+  updateHeaderCount();
+  showToast('🗑 ลบ Order ' + orderNum + ' เรียบร้อยแล้ว');
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── EXPORT EXCEL (SheetJS) ────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+function xlsxStyleHeader(ws, range, bgColor, fontColor) {
+  // Apply bold + fill to header row (best-effort, SheetJS CE has limited style support)
+  if (!ws['!cols']) ws['!cols'] = [];
+}
+
+function buildOrdersSheet() {
+  const orders = getOrders();
+  const headers = ['เลข Order','วันที่สร้าง','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','จำนวน (ต้น)','ส่งแล้ว (ต้น)','รายละเอียดเสา','วันต้องการ','สถานะ','มูลค่า (บาท)','ไซต์งาน','หมายเหตุ'];
+  const data = [headers];
+  orders.forEach(o => {
+    const items = getOrderItems(o);
+    items.forEach((it, idx) => {
+      data.push([
+        o.orderNum,
+        o.timestamp || '-',
+        o.customer,
+        o.tel || '-',
+        o.sale || '-',
+        it.pileType || o.pileType || '-',
+        it.qty || 0,
+        it.delivered || (idx === 0 ? (o.delivered || 0) : 0),
+        it.length || o.length || '-',
+        o.deliveryDate || '-',
+        o.status || 'รับ Order แล้ว',
+        idx === 0 ? (o.orderValue || 0) : '',
+        o.site || '-',
+        o.note || '-',
+      ]);
+    });
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [
+    {wch:16},{wch:14},{wch:22},{wch:14},{wch:12},{wch:20},
+    {wch:12},{wch:12},{wch:10},{wch:12},{wch:16},{wch:14},{wch:24},{wch:24}
+  ];
+  return ws;
+}
+
+function buildHistorySheet() {
+  const hist = getHistory();
+  const headers = ['เลข Order','วันที่จบ','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','รายละเอียดเสา','จำนวน (ต้น)','ส่งแล้ว','มูลค่า (บาท)','หมายเหตุ'];
+  const data = [headers];
+  hist.forEach(h => {
+    const items = h.archivedItems || getOrderItems(h);
+    items.forEach(it => {
+      data.push([
+        h.orderNum, h.closedAt || '-', h.customer, h.tel || '-', h.sale || '-',
+        it.pileType, it.length || '-', it.qty, it.delivered || 0,
+        h.orderValue || 0, h.note || '-',
+      ]);
+    });
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [
+    {wch:16},{wch:14},{wch:22},{wch:14},{wch:12},{wch:20},{wch:10},{wch:12},{wch:12},{wch:14},{wch:24}
+  ];
+  return ws;
+}
+
+function buildStockLogSheet() {
+  const log = getStockLog() || DEMO_STOCK_LOG;
+  const headers = ['วันเวลา','ประเภท','ชนิดเสา','การเปลี่ยนแปลง','สต็อกหลัง','อ้างอิง','ผู้บันทึก','หมายเหตุ'];
+  const data = [headers];
+  log.forEach(e => {
+    data.push([e.ts, e.typeVal, e.name, e.qtyDisplay, e.newStock, e.ref, e.staff, e.note]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{wch:16},{wch:20},{wch:20},{wch:14},{wch:12},{wch:16},{wch:14},{wch:28}];
+  return ws;
+}
+
+function buildStockSummarySheet() {
+  const stock    = getStock();
+  const reserved = getReservedStock();
+  const cfg      = getConfig();
+  const prices   = cfg.pilePrices || {};
+  const headers  = ['ชนิดเสา','สต็อกรวม (ต้น)','จองแล้ว (ต้น)','คงเหลือจริง','ราคา/ต้น (บาท)','มูลค่ารวม (บาท)','สถานะ'];
+  const data = [headers];
+  cfg.pileTypes.forEach(name => {
+    const qty   = stock[name] || 0;
+    const res   = reserved[name] || 0;
+    const avail = qty - res;
+    const price = prices[name] || 0;
+    const val   = price > 0 ? qty * price : 0;
+    const status = avail < cfg.stockLow ? '🚨 ต่ำมาก' : avail < cfg.stockWarn ? '⚠️ ใกล้หมด' : '✅ ปกติ';
+    data.push([name, qty, res, avail, price || '-', val || '-', status]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{wch:24},{wch:14},{wch:14},{wch:14},{wch:16},{wch:16},{wch:12}];
+  return ws;
+}
+
+function exportOrdersXLSX() {
+  if (!window.XLSX) { showToast('⚠️ กำลังโหลด SheetJS...'); return; }
+  const orders = getOrders();
+  if (!orders.length) { showToast('ℹ️ ยังไม่มี Order'); return; }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, buildOrdersSheet(), 'Orders ปัจจุบัน');
+  const fname = 'orders_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+  XLSX.writeFile(wb, fname);
+  showToast('📊 Export Excel Orders เรียบร้อย!');
+}
+
+function exportFullXLSX() {
+  if (!window.XLSX) { showToast('⚠️ กำลังโหลด SheetJS...'); return; }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, buildOrdersSheet(),      'Orders ปัจจุบัน');
+  XLSX.utils.book_append_sheet(wb, buildHistorySheet(),     'ประวัติ Order');
+  XLSX.utils.book_append_sheet(wb, buildStockSummarySheet(),'สต็อกปัจจุบัน');
+  XLSX.utils.book_append_sheet(wb, buildStockLogSheet(),    'ประวัติสต็อก');
+  const cfg   = getConfig();
+  const fname = (cfg.companyName || 'report') + '_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+  XLSX.writeFile(wb, fname);
+  showToast('📊 Export Excel ทั้งหมด (4 sheet) เรียบร้อย!');
+}
+
+
+
+// ── Auto-fill order date on page load ──────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var el = document.getElementById('f_order_date');
+  if (el && !el.value) el.value = new Date().toISOString().slice(0, 10);
+});
+
+</script>
+</body>
+</html>
