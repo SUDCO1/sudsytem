@@ -382,7 +382,7 @@ body.role-sale    .manager-notice { display:none!important; }
   <div class="nav-tab" data-tab="proderr" onclick="goTab('proderr',this)">🏭 Error ผลิต</div>
   <div class="nav-tab" data-tab="shiperr" onclick="goTab('shiperr',this)">🚛 Error ขนส่ง</div>
   <div class="nav-tab manager-up" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
-  <div class="nav-tab manager-up" data-tab="stock" onclick="goTab('stock',this)">📦 ระบบสต็อก</div>
+  <div class="nav-tab" data-tab="stock" onclick="goTab('stock',this)">📦 ระบบสต็อก</div>
   <div class="nav-tab" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
   <div class="nav-tab admin-only" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
 </div>
@@ -429,6 +429,10 @@ body.role-sale    .manager-notice { display:none!important; }
           <div class="field">
             <label class="field-label">วันที่สั่งซื้อ <span class="req">*</span></label>
             <input type="date" id="f_order_date"/>
+          </div>
+          <div class="field">
+            <label class="field-label">เลข Order (ถ้าไม่กรอกจะสร้างอัตโนมัติ)</label>
+            <input type="text" id="f_custom_order_num" placeholder="เช่น SUD-001, SO-2526-001"/>
           </div>
 
           <div class="section-divider">🏗️ รายการสั่งซื้อ <span style="font-weight:400;color:#9CA3AF;">(เพิ่มได้หลายรายการ)</span></div>
@@ -1035,7 +1039,8 @@ const ADMIN_EMAILS = [
 
 // 👔 ผู้บริหาร — ดูได้ทุกอย่าง แต่แก้ไข/ลบไม่ได้
 const MANAGER_EMAILS = [
-  // เพิ่มอีเมลผู้บริหารที่นี่ เช่น 'manager@gmail.com'
+  'manager@gmail.com',
+  // เพิ่มอีเมลผู้บริหารเพิ่มเติมได้ที่นี่
 ];
 
 // 💼 Sale — ส่ง Order, แก้ไข Order ตัวเอง, บันทึก Error
@@ -1599,7 +1604,7 @@ function submitOrder() {
     : firstItem.pileType + ' (+' + (orderItemsDraft.length-1) + ' ชนิด)';
 
   const order = {
-    orderNum:        genOrderNum(),
+    orderNum:        (document.getElementById('f_custom_order_num').value.trim() || genOrderNum()),
     timestamp:       nowTs(),
     orderDateISO:    orderDateRaw,
     orderDate:       isoToThai(orderDateRaw),
@@ -1671,7 +1676,7 @@ function autoSaveCustomer(name, tel, addr) {
 }
 
 function resetFormOnly() {
-  ['f_customer','f_tel','f_qty','f_len','f_cust_addr'].forEach(id => document.getElementById(id).value = '');
+  ['f_customer','f_tel','f_qty','f_len','f_cust_addr','f_custom_order_num'].forEach(id => document.getElementById(id).value = '');
   ['f_sale','f_type','f_cust_lookup'].forEach(id => document.getElementById(id).selectedIndex = 0);
   orderItemsDraft = [];
   renderOrderItemsDraft();
@@ -2967,7 +2972,7 @@ let _editItemsDraft = [];
 
 function openEditOrder(orderNum) {
   if (_currentRole === 'manager') { showToast('⛔ ผู้บริหารดูได้อย่างเดียว ไม่สามารถแก้ไข Order ได้'); return; }
-  const o = orders.find(x => x.orderNum === orderNum);
+  const o = getOrders().find(x => x.orderNum === orderNum);
   if (!o) return;
   _editOrderNum = orderNum;
   _editItemsDraft = JSON.parse(JSON.stringify(getOrderItems(o)));
