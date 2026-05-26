@@ -326,10 +326,32 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 /* Role badge in header */
 .role-badge{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800;margin-left:8px;}
 .role-admin{background:#FEF3C7;color:#92400E;}
+.role-manager{background:#FCE7F3;color:#9D174D;}
 .role-sale{background:#DBEAFE;color:#1D4ED8;}
-/* Admin-only elements hidden from Sale */
+/* Visibility rules per role */
 body.role-sale .admin-only{display:none!important;}
+body.role-sale .manager-only{display:none!important;}
+body.role-sale .admin-manager-only{display:none!important;}
+body.role-manager .admin-only{display:none!important;}
+body.role-manager .sale-only{display:none!important;}
+body.role-manager .manager-readonly .btn{display:none!important;}
+/* Manager ดูได้อย่างเดียว — ซ่อนปุ่มแก้ไขและ dropdown status */
+body.role-manager .act-edit{display:none!important;}
+body.role-manager .status-sel{pointer-events:none;opacity:0.75;cursor:default;}
 body.role-admin .sale-hint{display:none!important;}
+/* User Management styles */
+.um-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
+.um-table th{background:#F8FAFC;color:#475569;font-weight:700;font-size:11px;padding:10px 12px;text-align:left;border-bottom:2px solid #E2E8F0;}
+.um-table td{padding:10px 12px;border-bottom:1px solid #F1F5F9;vertical-align:middle;}
+.um-table tr:last-child td{border-bottom:none;}
+.role-sel-um{padding:5px 8px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:12px;font-weight:700;outline:none;font-family:inherit;cursor:pointer;}
+.um-add-form{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;margin-top:16px;padding:16px;background:#F8FAFC;border-radius:10px;border:1.5px dashed #CBD5E1;}
+@media(max-width:700px){.um-add-form{grid-template-columns:1fr;}}
+.um-loading{text-align:center;color:#94A3B8;padding:24px;font-style:italic;}
+.um-err{background:#FEE2E2;color:#991B1B;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:600;margin-top:10px;display:none;}
+.um-err.show{display:block;}
+.um-ok{background:#DCFCE7;color:#166534;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:600;margin-top:10px;display:none;}
+.um-ok.show{display:block;}
 </style>
 <body>
 
@@ -372,12 +394,12 @@ body.role-admin .sale-hint{display:none!important;}
 
 <!-- NAV -->
 <div class="app-nav">
-  <div class="nav-tab active" data-tab="form" onclick="goTab('form',this)">📱 ส่ง Order</div>
+  <div class="nav-tab sale-only active" data-tab="form" onclick="goTab('form',this)">📱 ส่ง Order</div>
   <div class="nav-tab" id="tab-status" data-tab="status" onclick="goTab('status',this)">📋 สถานะ Order <span class="nav-dot"></span></div>
-  <div class="nav-tab" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ผลิต</div>
-  <div class="nav-tab" data-tab="shiperr" onclick="goTab('shiperr',this)">🚛 Error ขนส่ง</div>
-  <div class="nav-tab admin-only" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
-  <div class="nav-tab admin-only" data-tab="stock" onclick="goTab('stock',this)">📦 ระบบสต็อก</div>
+  <div class="nav-tab sale-only" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ผลิต</div>
+  <div class="nav-tab sale-only" data-tab="shiperr" onclick="goTab('shiperr',this)">🚛 Error ขนส่ง</div>
+  <div class="nav-tab admin-manager-only" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
+  <div class="nav-tab admin-manager-only" data-tab="stock" onclick="goTab('stock',this)">📦 ระบบสต็อก</div>
   <div class="nav-tab" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
   <div class="nav-tab admin-only" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
 </div>
@@ -928,6 +950,51 @@ body.role-admin .sale-hint{display:none!important;}
         </div>
       </div>
     </div>
+
+    <!-- ── USER MANAGEMENT CARD (admin only) ── -->
+    <div class="card" style="margin-top:20px;">
+      <div class="card-header">
+        <div>
+          <div class="card-title">👤 จัดการผู้ใช้งาน</div>
+          <div class="card-sub">เพิ่ม / แก้ไข / ลบ บัญชีผู้ใช้และกำหนดสิทธิ์</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="umRefresh()" style="margin-left:auto;">🔄 รีเฟรช</button>
+      </div>
+      <div class="card-body">
+        <!-- User list -->
+        <div id="umUserList"><div class="um-loading">⏳ กำลังโหลดรายชื่อผู้ใช้...</div></div>
+
+        <!-- Add new user form -->
+        <div style="margin-top:20px;">
+          <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;">➕ เพิ่มผู้ใช้ใหม่</div>
+          <div class="um-add-form">
+            <div class="field">
+              <label class="field-label">📧 อีเมล <span class="req">*</span></label>
+              <input type="email" id="um_email" placeholder="user@company.com"/>
+            </div>
+            <div class="field">
+              <label class="field-label">🔒 รหัสผ่าน <span class="req">*</span></label>
+              <input type="password" id="um_pass" placeholder="อย่างน้อย 6 ตัวอักษร"/>
+            </div>
+            <div class="field">
+              <label class="field-label">🎖 สิทธิ์ <span class="req">*</span></label>
+              <select id="um_role" class="filter-sel" style="width:100%;">
+                <option value="sale">💼 Sale</option>
+                <option value="manager">📊 Manager</option>
+                <option value="admin">👑 Admin</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">&nbsp;</label>
+              <button class="btn btn-primary" onclick="umAddUser()" id="umAddBtn">➕ เพิ่ม</button>
+            </div>
+          </div>
+          <div class="um-err" id="umErr"></div>
+          <div class="um-ok"  id="umOk"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1112,31 +1179,85 @@ const db   = firebase.database();
 const auth = firebase.auth();
 
 // ══════════════════════════════════════════════════════════════
-// ── ROLE SYSTEM ───────────────────────────────────────────────
-// Admin emails — เพิ่มอีเมล Admin ที่นี่
+// ── ROLE SYSTEM (Firebase-backed) ─────────────────────────────
+// roles เก็บใน Firebase: sud/userRoles/{uid} = 'admin'|'manager'|'sale'
 // ══════════════════════════════════════════════════════════════
-const ADMIN_EMAILS = [
-  'admin@gmail.com',
-  // เพิ่มอีเมล Admin คนอื่นที่นี่ได้เลย เช่น 'boss@company.com'
-];
+const K_USER_ROLES = 'sud/userRoles';
 
 let _currentUser  = null;
-let _currentRole  = null; // 'admin' | 'sale'
+let _currentRole  = null; // 'admin' | 'manager' | 'sale'
 
-function getRole(email) {
-  return ADMIN_EMAILS.includes((email||'').toLowerCase()) ? 'admin' : 'sale';
+// Secondary Firebase app สำหรับสร้าง account ใหม่โดยไม่ logout admin
+let _secondaryApp  = null;
+let _secondaryAuth = null;
+function getSecondaryAuth() {
+  if (!_secondaryAuth) {
+    try {
+      _secondaryApp  = firebase.initializeApp(firebaseConfig, 'secondary_' + Date.now());
+      _secondaryAuth = _secondaryApp.auth();
+    } catch(e) {
+      _secondaryApp  = firebase.app('secondary');
+      _secondaryAuth = _secondaryApp.auth();
+    }
+  }
+  return _secondaryAuth;
+}
+
+function getRoleLabel(role) {
+  if (role === 'admin')   return '👑 Admin';
+  if (role === 'manager') return '📊 Manager';
+  return '💼 Sale';
 }
 
 function applyRole(role) {
   _currentRole = role;
-  document.body.classList.remove('role-admin','role-sale');
+  document.body.classList.remove('role-admin','role-manager','role-sale');
   document.body.classList.add('role-' + role);
   const badge = document.getElementById('hdrRoleBadge');
   if (badge) {
-    badge.textContent  = role === 'admin' ? '👑 Admin' : '💼 Sale';
-    badge.className    = 'role-badge role-' + role;
+    badge.textContent   = getRoleLabel(role);
+    badge.className     = 'role-badge role-' + role;
     badge.style.display = 'inline-block';
   }
+  // ปรับ default tab ตาม role
+  if (role === 'manager') {
+    const sumTab = document.querySelector('[data-tab="summary"]');
+    if (sumTab) { goTab('summary', sumTab); }
+  } else if (role === 'admin') {
+    const sumTab = document.querySelector('[data-tab="summary"]');
+    if (sumTab) { goTab('summary', sumTab); }
+  }
+}
+
+// ── Bootstrap: อีเมล admin เริ่มต้น (ใช้ครั้งแรกก่อนมีข้อมูลใน DB) ──
+// เปลี่ยนเป็นอีเมลจริงของ admin คุณ แล้วหลังจาก login ครั้งแรก
+// ให้ไปเพิ่มตัวเองใน User Management แล้วลบบรรทัดนี้ได้เลย
+const BOOTSTRAP_ADMIN_EMAIL = 'admin@gmail.com';
+
+// อ่าน role จาก Firebase DB (async)
+// ถ้ายังไม่มี record ใน DB → ดูว่าเป็น bootstrap admin ไหม → ถ้าใช่ auto-สร้าง record admin
+function loadRoleFromDB(uid, callback) {
+  db.ref(K_USER_ROLES + '/' + uid).once('value').then(snap => {
+    const data = snap.val();
+    if (data && data.role) {
+      callback(data.role);
+    } else {
+      // ยังไม่มีใน DB — ตรวจว่าเป็น bootstrap admin หรือเปล่า
+      const user  = firebase.auth().currentUser;
+      const email = (user && user.email) ? user.email.toLowerCase() : '';
+      if (email === BOOTSTRAP_ADMIN_EMAIL.toLowerCase()) {
+        // auto-สร้าง record admin ให้
+        db.ref(K_USER_ROLES + '/' + uid).set({
+          email: email, role: 'admin',
+          addedBy: 'system-bootstrap', addedAt: Date.now()
+        }).catch(()=>{});
+        callback('admin');
+      } else {
+        // ยังไม่มี role → sale โดย default
+        callback('sale');
+      }
+    }
+  }).catch(() => callback('sale'));
 }
 
 // ── Login / Logout ────────────────────────────────────────────
@@ -1165,27 +1286,29 @@ function doLogout() {
 auth.onAuthStateChanged(user => {
   if (user) {
     _currentUser = user;
-    const role = getRole(user.email);
-    applyRole(role);
-    // Update header
+    // Update header email
     const emailEl = document.getElementById('hdrUserEmail');
     if (emailEl) emailEl.textContent = user.email;
     // Hide login screen
     const ls = document.getElementById('loginScreen');
     if (ls) ls.style.display = 'none';
-    // Start data sync
-    if (!_fbReady) {
-      startFirebaseListeners();
-      onFbReady(() => {
-        applyBranding();
-        populateAllDropdowns();
-        updateHeaderCount();
-        renderOrders();
-        renderSummary();
-        renderStockCards();
-        renderStockLog();
-      });
-    }
+    // Load role from Firebase DB
+    loadRoleFromDB(user.uid, role => {
+      applyRole(role);
+      // Start data sync
+      if (!_fbReady) {
+        startFirebaseListeners();
+        onFbReady(() => {
+          applyBranding();
+          populateAllDropdowns();
+          updateHeaderCount();
+          renderOrders();
+          renderSummary();
+          renderStockCards();
+          renderStockLog();
+        });
+      }
+    });
   } else {
     _currentUser = null;
     _currentRole = null;
@@ -1194,7 +1317,7 @@ auth.onAuthStateChanged(user => {
     if (ls) { ls.style.display = 'flex'; }
     const btn = document.getElementById('loginBtn');
     if (btn) { btn.disabled = false; btn.textContent = '🔑 เข้าสู่ระบบ'; }
-    document.body.classList.remove('role-admin','role-sale');
+    document.body.classList.remove('role-admin','role-manager','role-sale');
     const badge = document.getElementById('hdrRoleBadge');
     if (badge) badge.style.display = 'none';
   }
@@ -1595,7 +1718,7 @@ function goTab(name, el) {
   if (name === 'summary')   { renderSummary(); }
   if (name === 'stock')     { renderStockCards(); populateLogPileFilter(); renderStockLog(true); populateStockRefDropdown(); }
   if (name === 'customers') { renderCustomers(); }
-  if (name === 'settings')  { loadSettingsUI(); }
+  if (name === 'settings')  { loadSettingsUI(); if (_currentRole === 'admin') umRefresh(); }
   updateHeaderCount();
 }
 
@@ -1984,6 +2107,7 @@ function renderOrders() {
 }
 
 function updateOrderStatus(orderNum, selectEl) {
+  if (_currentRole === 'manager') { showToast('👁 Manager ดูได้อย่างเดียว'); renderOrders(); return; }
   const newStatus = selectEl.value;
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
@@ -3074,6 +3198,107 @@ function clearDemo() {
   showToast('🗑 ล้างข้อมูลทดสอบเรียบร้อย');
 }
 
+// ══════════════════════════════════════════════════════════════
+// ── USER MANAGEMENT ───────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+function umRefresh() {
+  if (_currentRole !== 'admin') return;
+  const container = document.getElementById('umUserList');
+  if (!container) return;
+  container.innerHTML = '<div class="um-loading">⏳ กำลังโหลด...</div>';
+  db.ref(K_USER_ROLES).once('value').then(snap => {
+    const data = snap.val() || {};
+    const users = Object.entries(data).map(([uid, val]) => ({ uid, ...val }));
+    if (!users.length) {
+      container.innerHTML = '<div class="um-loading">ยังไม่มีผู้ใช้ในระบบ — เพิ่มคนแรกได้เลย</div>';
+      return;
+    }
+    let html = `<div class="table-wrap"><table class="um-table">
+      <thead><tr><th>อีเมล</th><th>สิทธิ์</th><th>เพิ่มโดย</th><th>วันที่เพิ่ม</th><th>จัดการ</th></tr></thead><tbody>`;
+    users.forEach(u => {
+      const isMe = _currentUser && u.uid === _currentUser.uid;
+      const addedAt = u.addedAt ? new Date(u.addedAt).toLocaleDateString('th-TH') : '-';
+      html += `<tr>
+        <td><strong>${u.email||'-'}</strong>${isMe ? ' <span style="font-size:10px;color:#3B82F6;">(คุณ)</span>' : ''}</td>
+        <td>
+          <select class="role-sel-um" onchange="umChangeRole('${u.uid}', this.value)" ${isMe?'disabled':''}>
+            <option value="sale"    ${u.role==='sale'   ?'selected':''}>💼 Sale</option>
+            <option value="manager" ${u.role==='manager'?'selected':''}>📊 Manager</option>
+            <option value="admin"   ${u.role==='admin'  ?'selected':''}>👑 Admin</option>
+          </select>
+        </td>
+        <td style="font-size:11px;color:#64748B;">${u.addedBy||'-'}</td>
+        <td style="font-size:11px;color:#64748B;">${addedAt}</td>
+        <td>${isMe ? '<span style="font-size:11px;color:#94A3B8;">ไม่สามารถลบตัวเองได้</span>' :
+          `<button class="btn btn-danger btn-sm" onclick="umDeleteUser('${u.uid}','${u.email||''}')">🗑 ลบ</button>`}
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  }).catch(() => {
+    container.innerHTML = '<div class="um-loading" style="color:#DC2626;">⚠️ โหลดข้อมูลไม่ได้ ลองรีเฟรชใหม่</div>';
+  });
+}
+
+function umChangeRole(uid, newRole) {
+  if (_currentRole !== 'admin') return;
+  db.ref(K_USER_ROLES + '/' + uid + '/role').set(newRole)
+    .then(() => showToast('✅ เปลี่ยนสิทธิ์เรียบร้อย'))
+    .catch(() => showToast('⚠️ เปลี่ยนสิทธิ์ไม่ได้ ลองใหม่'));
+}
+
+function umDeleteUser(uid, email) {
+  if (_currentRole !== 'admin') return;
+  if (!confirm(`ลบผู้ใช้ "${email}" ออกจากระบบใช่ไหม?\n\nหมายเหตุ: บัญชี Firebase จะยังอยู่ แต่จะเข้าระบบไม่ได้ (role ถูกลบแล้ว)`)) return;
+  db.ref(K_USER_ROLES + '/' + uid).remove()
+    .then(() => { showToast('🗑 ลบผู้ใช้เรียบร้อย'); umRefresh(); })
+    .catch(() => showToast('⚠️ ลบไม่ได้ ลองใหม่'));
+}
+
+function umAddUser() {
+  if (_currentRole !== 'admin') { showToast('⛔ เฉพาะ Admin เท่านั้น'); return; }
+  const email = (document.getElementById('um_email').value||'').trim();
+  const pass  = (document.getElementById('um_pass').value||'');
+  const role  = document.getElementById('um_role').value;
+  const errEl = document.getElementById('umErr');
+  const okEl  = document.getElementById('umOk');
+  const btn   = document.getElementById('umAddBtn');
+  errEl.classList.remove('show'); okEl.classList.remove('show');
+  if (!email || !pass) { errEl.textContent='⚠️ กรุณากรอกอีเมลและรหัสผ่าน'; errEl.classList.add('show'); return; }
+  if (pass.length < 6) { errEl.textContent='⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'; errEl.classList.add('show'); return; }
+  btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง...';
+  // สร้าง user ด้วย secondary app เพื่อไม่ logout admin
+  const secAuth = getSecondaryAuth();
+  secAuth.createUserWithEmailAndPassword(email, pass)
+    .then(cred => {
+      const newUid = cred.user.uid;
+      return db.ref(K_USER_ROLES + '/' + newUid).set({
+        email: email,
+        role: role,
+        addedBy: _currentUser ? _currentUser.email : '-',
+        addedAt: Date.now()
+      }).then(() => secAuth.signOut());
+    })
+    .then(() => {
+      btn.disabled = false; btn.textContent = '➕ เพิ่ม';
+      document.getElementById('um_email').value = '';
+      document.getElementById('um_pass').value  = '';
+      okEl.textContent = `✅ สร้างบัญชี "${email}" เรียบร้อย (สิทธิ์: ${role})`;
+      okEl.classList.add('show');
+      umRefresh();
+    })
+    .catch(e => {
+      btn.disabled = false; btn.textContent = '➕ เพิ่ม';
+      let msg = e.message || 'เกิดข้อผิดพลาด';
+      if (e.code === 'auth/email-already-in-use') msg = '⚠️ อีเมลนี้มีในระบบแล้ว';
+      if (e.code === 'auth/invalid-email')        msg = '⚠️ รูปแบบอีเมลไม่ถูกต้อง';
+      if (e.code === 'auth/weak-password')        msg = '⚠️ รหัสผ่านไม่ปลอดภัยพอ (ต้องการ 6+ ตัวอักษร)';
+      errEl.textContent = msg; errEl.classList.add('show');
+    });
+}
+
 // ── Init handled by auth.onAuthStateChanged above ─────────────
 
 // (getSpecs, saveSpecs are defined in Firebase layer above)
@@ -3445,6 +3670,7 @@ let _editOrderNum = null;
 let _editItemsDraft = [];
 
 function openEditOrder(orderNum) {
+  if (_currentRole === 'manager') { showToast('👁 Manager ดูได้อย่างเดียว ไม่สามารถแก้ไข Order ได้'); return; }
   const orders = getOrders();
   const o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
