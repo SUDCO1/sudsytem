@@ -528,7 +528,7 @@ body.role-admin .sale-hint{display:none!important;}
   <div class="nav-tab sale-only" id="nav-proderr" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ผลิต</div>
   <div class="nav-tab sale-only" id="nav-shiperr" data-tab="shiperr" onclick="goTab('shiperr',this)">🚛 Error ขนส่ง</div>
   <div class="nav-tab admin-manager-only" id="nav-summary" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
-  <div class="nav-tab admin-manager-only" id="nav-dashboard" data-tab="dashboard" onclick="goTab('dashboard',this)" style="display:none;">📈 Dashboard</div>
+  <div class="nav-tab admin-manager-only" id="nav-dashboard" data-tab="dashboard" onclick="goTab('dashboard',this)" style="display:none !important;">📈 Dashboard</div>
   <div class="nav-tab admin-manager-only" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ระบบสต็อก</div>
   <div class="nav-tab" id="nav-customers" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
   <div class="nav-tab admin-only" id="nav-settings" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
@@ -651,8 +651,6 @@ body.role-admin .sale-hint{display:none!important;}
           <option>ระหว่างขนส่ง</option>
           <option>ส่งครบ</option>
         </select>
-        <button class="btn btn-export btn-sm desk-export-btn" onclick="exportOrdersCSV()">📥 Export CSV</button>
-        <button class="btn btn-sm desk-export-btn" style="background:#16A34A;color:#fff;" onclick="exportOrdersXLSX()">📊 Export Excel</button>
       </div>
       <div id="ordersTableWrap" class="table-wrap">
         <table class="data-table">
@@ -925,10 +923,6 @@ body.role-admin .sale-hint{display:none!important;}
           <div class="card-title">📋 ประวัติ Order ที่จบบิลแล้ว</div>
           <div class="card-sub" id="histSummarySub">รายการ Order ที่ส่งครบและปิดบิลเรียบร้อย</div>
         </div>
-        <div style="margin-left:auto;display:flex;gap:6px;">
-          <button class="btn btn-export btn-sm" onclick="exportHistoryCSV()">📥 Export CSV</button>
-          <button class="btn btn-sm" style="background:#16A34A;color:#fff;" onclick="exportFullXLSX()">📊 Export Excel ทั้งหมด</button>
-        </div>
       </div>
       <div class="table-wrap">
         <table class="data-table">
@@ -967,7 +961,6 @@ body.role-admin .sale-hint{display:none!important;}
     <div class="card">
       <div class="card-header">
         <div class="card-title">📋 ประวัติการเคลื่อนไหวสต็อก</div>
-        <button class="btn btn-export btn-sm" style="margin-left:auto;" onclick="exportStockCSV()">📥 Export CSV</button>
       </div>
       <div class="toolbar">
         <input type="search" class="search-inp" id="logSearch" placeholder="🔍 ค้นหาชนิดเสา / อ้างอิง..." oninput="renderStockLog()"/>
@@ -1368,15 +1361,6 @@ body.role-admin .sale-hint{display:none!important;}
   </div>
 </div>
 
-<!-- MOBILE EXPORT SHEET -->
-<div class="mob-more-overlay" id="mobExportOverlay" onclick="closeMobExportSheet()">
-  <div class="mob-more-sheet" onclick="event.stopPropagation()">
-    <div class="mob-more-handle"></div>
-    <div class="mob-more-title">Export ข้อมูล</div>
-    <div class="mob-more-item" onclick="closeMobExportSheet();exportOrdersCSV()"><span class="mob-more-icon">📥</span><span>Export CSV</span></div>
-    <div class="mob-more-item" onclick="closeMobExportSheet();exportOrdersXLSX()"><span class="mob-more-icon">📊</span><span>Export Excel</span></div>
-  </div>
-</div>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
@@ -1984,7 +1968,7 @@ function applyPermissions() {
   showNav('nav-proderr',   canDo('view_production'));
   showNav('nav-shiperr',   canDo('view_shipping'));
   showNav('nav-summary',   canDo('view_summary'));
-  showNav('nav-dashboard', canDo('view_dashboard'));
+  // showNav('nav-dashboard', canDo('view_dashboard')); // ซ่อน Dashboard
   showNav('nav-stock',     canDo('view_stock'));
   showNav('nav-customers', canDo('view_customers'));
   showNav('nav-settings',  canDo('view_settings'));
