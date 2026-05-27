@@ -431,6 +431,7 @@ body.role-admin .sale-hint{display:none!important;}
   .desk-export-btn{display:none !important;}
   .mob-export-btn{display:flex !important;}
   #sec-status .toolbar{flex-direction:column;gap:8px;}
+  .desk-only-btn{display:none !important;}
   .toolbar-mob-row{display:flex;gap:8px;width:100%;}
   /* Order Cards */
   .mob-oc{background:#fff;border-radius:12px;border:1px solid #E2E8F0;margin-bottom:10px;overflow:hidden;}
@@ -635,8 +636,8 @@ body.role-admin .sale-hint{display:none!important;}
         </div>
       </div>
       <div class="toolbar">
-        <button class="btn btn-danger btn-sm" onclick="goTab('proderr',document.querySelector('[data-tab=proderr]'))">🏭 Error ผลิต</button>
-        <button class="btn btn-danger btn-sm" onclick="goTab('shiperr',document.querySelector('[data-tab=shiperr]'))">🚛 Error ขนส่ง</button>
+        <button class="btn btn-danger btn-sm desk-only-btn" onclick="goTab('proderr',document.querySelector('[data-tab=proderr]'))">🏭 Error ผลิต</button>
+        <button class="btn btn-danger btn-sm desk-only-btn" onclick="goTab('shiperr',document.querySelector('[data-tab=shiperr]'))">🚛 Error ขนส่ง</button>
         <input type="search" class="search-inp" id="orderSearch" placeholder="🔍 ค้นหาลูกค้า / เลข Order..." oninput="renderOrders()"/>
         <select class="filter-sel" id="statusFilter" onchange="renderOrders()">
           <option value="">สถานะ: ทั้งหมด</option>
@@ -650,18 +651,6 @@ body.role-admin .sale-hint{display:none!important;}
         </select>
         <button class="btn btn-export btn-sm desk-export-btn" onclick="exportOrdersCSV()">📥 Export CSV</button>
         <button class="btn btn-sm desk-export-btn" style="background:#16A34A;color:#fff;" onclick="exportOrdersXLSX()">📊 Export Excel</button>
-        <div class="toolbar-mob-row">
-          <button class="btn btn-danger btn-sm" style="flex:1;" onclick="goTab('proderr',document.getElementById('nav-proderr'))">🏭 Error ผลิต</button>
-          <button class="btn btn-danger btn-sm" style="flex:1;" onclick="goTab('shiperr',document.getElementById('nav-shiperr'))">🚛 ขนส่ง</button>
-          <button class="btn btn-sm mob-export-btn" style="background:#059669;color:#fff;" onclick="openMobExportSheet()">📥 Export</button>
-        </div>
-        <div class="toolbar-mob-row">
-          <input type="search" placeholder="🔍 ค้นหา Order / ลูกค้า..." oninput="document.getElementById('orderSearch').value=this.value;renderOrders()" style="flex:2;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;outline:none;font-family:inherit;"/>
-          <select onchange="document.getElementById('statusFilter').value=this.value;renderOrders()" style="flex:1;padding:9px 8px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:12px;outline:none;background:#fff;">
-            <option value="">ทุกสถานะ</option>
-            <option>รับ Order แล้ว</option><option>กำลังผลิต</option><option>ผลิตเสร็จแล้ว</option><option>พร้อมส่ง</option><option>ส่งครบ</option>
-          </select>
-        </div>
       </div>
       <div id="ordersTableWrap" class="table-wrap">
         <table class="data-table">
