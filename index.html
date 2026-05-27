@@ -340,6 +340,51 @@ body.role-manager .manager-readonly .btn{display:none!important;}
 body.role-manager .act-edit{display:none!important;}
 body.role-manager .status-sel{pointer-events:none;opacity:0.75;cursor:default;}
 body.role-admin .sale-hint{display:none!important;}
+/* Permission UI — role pills + collapsible table */
+.perm-roles-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 16px;}
+.perm-role-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:700;user-select:none;border:2px solid transparent;box-shadow:0 1px 4px rgba(0,0,0,0.09);}
+.perm-role-pill .del-btn{font-size:14px;opacity:.5;cursor:pointer;margin-left:2px;}
+.perm-role-pill .del-btn:hover{opacity:1;}
+.perm-add-role-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:2px dashed #CBD5E1;color:#64748B;background:transparent;}
+.perm-add-role-btn:hover{border-color:#94A3B8;color:#475569;}
+/* Add role form */
+.perm-add-form{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:18px;margin-bottom:16px;display:none;}
+.perm-add-form.show{display:block;}
+.perm-add-form h4{font-size:13px;font-weight:800;color:#374151;margin-bottom:14px;}
+.perm-form-name-row{display:flex;gap:8px;margin-bottom:14px;}
+.perm-inp{padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;outline:none;font-family:inherit;background:#fff;flex:1;}
+.perm-inp:focus{border-color:#3B82F6;}
+.perm-color-label{font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+.perm-color-presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.perm-color-opt{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .15s,border-color .15s;flex-shrink:0;}
+.perm-color-opt:hover{transform:scale(1.12);}
+.perm-color-opt.selected{border-color:#1E293B;transform:scale(1.15);}
+.perm-color-custom-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.perm-color-picker{width:34px;height:34px;border:2px solid #E2E8F0;padding:2px;border-radius:50%;cursor:pointer;background:none;flex-shrink:0;}
+.perm-preview-pill{display:inline-flex;align-items:center;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;transition:all .2s;}
+.perm-form-actions{display:flex;gap:8px;}
+/* Permission table */
+.perm-table{width:100%;border-collapse:collapse;font-size:13px;}
+.perm-table th{background:#F8FAFC;color:#475569;font-weight:700;font-size:11px;padding:10px 14px;text-align:center;border-bottom:2px solid #E2E8F0;white-space:nowrap;}
+.perm-table th:first-child{text-align:left;min-width:200px;}
+.perm-table td{padding:10px 14px;border-bottom:1px solid #F1F5F9;vertical-align:middle;text-align:center;}
+.perm-table td:first-child{text-align:left;font-size:13px;color:#374151;}
+.perm-table tr:last-child td{border-bottom:none;}
+.perm-group-row td{background:#EEF2FF !important;padding:0;cursor:pointer;user-select:none;}
+.perm-group-row:hover td{background:#E0E7FF !important;}
+.perm-group-row-inner{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;font-size:11px;font-weight:800;letter-spacing:.06em;color:#3730A3;text-transform:uppercase;}
+.perm-group-chevron{width:24px;height:24px;border-radius:6px;background:#fff;border:1.5px solid #C7D2FE;display:flex;align-items:center;justify-content:center;font-size:11px;color:#4F46E5;transition:transform .2s;flex-shrink:0;}
+.perm-group-row.collapsed .perm-group-chevron{transform:rotate(-90deg);}
+.perm-item-row.hidden{display:none;}
+/* Toggle switch */
+.perm-toggle{position:relative;display:inline-block;width:42px;height:22px;}
+.perm-toggle input{opacity:0;width:0;height:0;}
+.perm-slider{position:absolute;cursor:pointer;inset:0;background:#D1D5DB;border-radius:22px;transition:.2s;}
+.perm-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
+input:checked + .perm-slider{background:#1E40AF;}
+input:checked + .perm-slider:before{transform:translateX(20px);}
+input:disabled + .perm-slider{background:#22C55E;cursor:default;}
+input:disabled + .perm-slider:before{transform:translateX(20px);}
 /* User Management styles */
 .um-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
 .um-table th{background:#F8FAFC;color:#475569;font-weight:700;font-size:11px;padding:10px 12px;text-align:left;border-bottom:2px solid #E2E8F0;}
@@ -526,7 +571,7 @@ body.role-admin .sale-hint{display:none!important;}
   <div class="nav-tab sale-only active" id="nav-form" data-tab="form" onclick="goTab('form',this)">📱 ส่ง Order</div>
   <div class="nav-tab" id="nav-status" data-tab="status" onclick="goTab('status',this)">📋 สถานะ Order <span class="nav-dot"></span></div>
   <div class="nav-tab sale-only" id="nav-proderr" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ผลิต</div>
-  <div class="nav-tab sale-only" id="nav-shiperr" data-tab="shiperr" onclick="goTab('shiperr',this)">🚛 Error ขนส่ง</div>
+  <div class="nav-tab sale-only" id="nav-shiperr" data-tab="shiperr" onclick="goTab('shiperr',this)">⚠️ Error ผลิต</div>
   <div class="nav-tab admin-manager-only" id="nav-summary" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
   <div class="nav-tab admin-manager-only" id="nav-dashboard" data-tab="dashboard" onclick="goTab('dashboard',this)" style="display:none !important;">📈 Dashboard</div>
   <div class="nav-tab admin-manager-only" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ระบบสต็อก</div>
@@ -639,7 +684,7 @@ body.role-admin .sale-hint{display:none!important;}
       </div>
       <div class="toolbar">
         <button class="btn btn-danger btn-sm desk-only-btn" onclick="goTab('proderr',document.querySelector('[data-tab=proderr]'))">🏭 Error ผลิต</button>
-        <button class="btn btn-danger btn-sm desk-only-btn" onclick="goTab('shiperr',document.querySelector('[data-tab=shiperr]'))">🚛 Error ขนส่ง</button>
+        <button class="btn btn-danger btn-sm desk-only-btn" onclick="goTab('shiperr',document.querySelector('[data-tab=shiperr]'))">⚠️ Error ผลิต</button>
         <input type="search" class="search-inp" id="orderSearch" placeholder="🔍 ค้นหาลูกค้า / เลข Order..." oninput="renderOrders()"/>
         <select class="filter-sel" id="statusFilter" onchange="renderOrders()">
           <option value="">สถานะ: ทั้งหมด</option>
@@ -815,47 +860,21 @@ body.role-admin .sale-hint{display:none!important;}
   </div>
 </div>
 
-<!-- ================================================================ SECTION: Error ขนส่ง ================================================================ -->
+<!-- ================================================================ SECTION: Error ผลิต (History) ================================================================ -->
 <div id="sec-shiperr" class="section">
   <div class="app-content stack">
     <div class="card">
-      <div class="card-header"><div class="card-title">🚛 ประวัติ Error ขนส่ง</div></div>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead><tr><th>วันที่</th><th>เลข Order/DO</th><th>ประเภท Error</th><th>เสีย (ต้น)</th><th>สาเหตุ</th><th>การแก้ไข</th><th>คนขับ/ผู้แจ้ง</th></tr></thead>
-          <tbody id="shipErrBody"></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">📝 บันทึก Error ขนส่งใหม่</div>
-          <div class="card-sub">กรอกเมื่อเกิดปัญหาในการขนส่ง</div>
+          <div class="card-title">⚠️ ประวัติ Error ผลิต</div>
+          <div class="card-sub">บันทึก Error ได้จากหน้า 🏭 ผลิต</div>
         </div>
       </div>
-      <div class="card-body">
-        <div class="err-grid">
-          <div class="field"><label class="field-label">วันที่เกิดเหตุ <span class="req">*</span></label><input type="date" id="se_date"/></div>
-          <div class="field"><label class="field-label">เลข Order / DO <span class="req">*</span></label><input type="text" id="se_order" placeholder="เช่น ORD-0523-001"/></div>
-          <div class="field">
-            <label class="field-label">ประเภท Error <span class="req">*</span></label>
-            <select id="se_type">
-              <option value="">— เลือก —</option>
-              <option>⏰ ส่งล่าช้า</option><option>💥 สินค้าเสียหายระหว่างทาง</option>
-              <option>🚫 ส่งผิดที่ / ผิดไซต์</option><option>🔢 จำนวนไม่ครบ</option>
-              <option>🚗 รถเสีย / อุบัติเหตุ</option><option>⛽ ปัญหาเส้นทาง</option>
-            </select>
-          </div>
-          <div class="field"><label class="field-label">ต้นเสียหาย</label><input type="number" id="se_qty" placeholder="0" min="0"/></div>
-          <div class="field"><label class="field-label">คนขับ / ผู้แจ้ง <span class="req">*</span></label><select id="se_staff"><option value="">— เลือก —</option></select></div>
-          <div class="field"><label class="field-label">สาเหตุ <span class="req">*</span></label><input type="text" id="se_cause" placeholder="อธิบายสาเหตุ"/></div>
-          <div class="field full-col"><label class="field-label">การแก้ไข</label><input type="text" id="se_fix" placeholder="วิธีแก้ไข / แผนทดแทน"/></div>
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-danger" onclick="submitShipErr()">💾 บันทึก Error ขนส่ง</button>
-          <button class="btn btn-ghost" onclick="clearShip()">🗑 ล้าง</button>
-        </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>วันที่</th><th>เลข Order</th><th>ประเภท Error</th><th>เสีย (ต้น)</th><th>สาเหตุ</th><th>การแก้ไข</th><th>ผู้บันทึก</th></tr></thead>
+          <tbody id="prodErrHistBody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -1124,6 +1143,48 @@ body.role-admin .sale-hint{display:none!important;}
         <div class="settings-footer">
           <button class="btn btn-ghost" onclick="loadSettingsUI()">↺ ยกเลิก</button>
           <button class="btn btn-primary" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ROLE PERMISSION CARD (admin only) ── -->
+    <div class="card admin-only" style="margin-top:20px;">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🔐 สิทธิ์การเข้าถึงตามตำแหน่ง</div>
+          <div class="card-sub">Admin มีสิทธิ์ทุกอย่างเสมอ — ปรับเฉพาะตำแหน่งอื่น</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveRolePerms()" style="margin-left:auto;">💾 บันทึก</button>
+      </div>
+      <div class="card-body" style="padding:12px 16px 16px;">
+        <!-- Role pills -->
+        <div class="perm-roles-row" id="permRolesRow"></div>
+
+        <!-- Add role form -->
+        <div class="perm-add-form" id="permAddForm">
+          <h4>เพิ่มตำแหน่งใหม่</h4>
+          <div class="perm-form-name-row">
+            <input class="perm-inp" id="permNewRoleName" placeholder="ชื่อตำแหน่ง เช่น คลังสินค้า" oninput="permUpdatePreview()"/>
+          </div>
+          <div class="perm-color-label">เลือกสี</div>
+          <div class="perm-color-presets" id="permColorPresets"></div>
+          <div class="perm-color-custom-row">
+            <span style="font-size:12px;color:#64748B;">กำหนดเอง:</span>
+            <input type="color" class="perm-color-picker" id="permCustomColor" value="#3B82F6" oninput="permOnCustomColor(this.value)"/>
+            <div class="perm-preview-pill" id="permPreviewPill">ตัวอย่าง</div>
+          </div>
+          <div class="perm-form-actions">
+            <button class="btn btn-primary btn-sm" onclick="permAddRole()">+ เพิ่ม</button>
+            <button class="btn btn-ghost btn-sm" onclick="permToggleAddForm()">ยกเลิก</button>
+          </div>
+        </div>
+
+        <!-- Permission table -->
+        <div class="table-wrap">
+          <table class="perm-table" id="permTable">
+            <thead id="permThead"></thead>
+            <tbody id="permTableBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1597,7 +1658,7 @@ function startFirebaseListeners() {
   db.ref(K_PROD_ERR).on('value', snap => {
     const v = snap.val();
     _cache.prodErrors = v ? Object.values(v).sort((a,b) => (b._idx||0)-(a._idx||0)) : [];
-    if (_fbReady) { renderProdFull(); renderProdSection(); }
+    if (_fbReady) { renderProdFull(); renderProdSection(); renderProdErrHistory(); }
     else checkDone();
   });
   db.ref(K_SHIP_ERR).on('value', snap => {
@@ -1961,8 +2022,8 @@ function showNav(id, visible) {
 }
 
 function applyPermissions() {
-  const perms = DEFAULT_ROLE_PERMS[_currentRole] || DEFAULT_ROLE_PERMS.sale;
-  _userPerms = Object.assign({}, perms);
+  const base = _savedRolePerms?.[_currentRole] || DEFAULT_ROLE_PERMS[_currentRole] || DEFAULT_ROLE_PERMS.sale;
+  _userPerms = Object.assign({}, base);
   // Show/hide nav tabs based on permissions
   showNav('nav-form',      _currentRole !== 'manager');
   showNav('nav-proderr',   canDo('view_production'));
@@ -1988,11 +2049,11 @@ function goTab(name, el) {
   if (name === 'dashboard') { renderDashboard(); }
   if (name === 'status')    { document.getElementById('nav-status')?.classList.remove('has-new'); renderOrders(); }
   if (name === 'proderr')   { renderActiveProd(); renderProdSection(); renderProdLogHistory(); }
-  if (name === 'shiperr')   { renderShipFull(); }
+  if (name === 'shiperr')   { renderProdErrHistory(); }
   if (name === 'summary')   { renderSummary(); }
   if (name === 'stock')     { renderStockCards(); populateLogPileFilter(); renderStockLog(true); populateStockRefDropdown(); }
   if (name === 'customers') { renderCustomers(); }
-  if (name === 'settings')  { loadSettingsUI(); if (_currentRole === 'admin') umRefresh(); }
+  if (name === 'settings')  { loadSettingsUI(); if (_currentRole === 'admin') { umRefresh(); loadRolePerms(renderPermUI); } }
   updateHeaderCount();
 }
 
@@ -2801,6 +2862,25 @@ function submitFinishProd() {
     }
   }
 
+  // บันทึก Error ผลิต อัตโนมัติเมื่อมีของเสีย
+  if (defect > 0) {
+    const errs = getProdErrs();
+    const specNote = (a.length && a.length !== '-') ? ' สเปค ' + a.length : '';
+    errs.unshift({
+      timestamp: nowTs(),
+      date: isoToThai(dateISO),
+      order: a.orderNum,
+      errorType: '🏭 เสียระหว่างผลิต',
+      qty: defect,
+      cause: 'เสียระหว่างผลิต ' + a.pileType + specNote,
+      fix: '-',
+      staff: (_currentUser && _currentUser.email) || '-'
+    });
+    saveProdErrs(errs);
+    renderProdFull();
+    renderProdErrHistory();
+  }
+
   // เพิ่มสต็อก
   if (netQty > 0) {
     const specLabel = a.length !== '-' ? a.length : '-';
@@ -2934,12 +3014,13 @@ function renderProdFull() {
     return `<tr><td>${e.date}</td><td><span class="order-id">${e.order}</span></td><td><span class="chip ch-prod">${e.errorType}</span></td><td>${qd}</td><td>${e.cause}</td><td style="color:${e.fix!=='-'?'#166534':'#854D0E'};">${e.fix}</td><td>${e.staff}</td></tr>`;
   }).join('');
 }
-function renderShipFull() {
-  const errs = getShipErrs(), tbody = document.getElementById('shipErrBody');
-  if (!errs.length) { tbody.innerHTML = `<tr class="table-empty"><td colspan="7">ยังไม่มี Error ขนส่ง</td></tr>`; return; }
+function renderProdErrHistory() {
+  const errs = getProdErrs(), tbody = document.getElementById('prodErrHistBody');
+  if (!tbody) return;
+  if (!errs.length) { tbody.innerHTML = `<tr class="table-empty"><td colspan="7">ยังไม่มี Error ผลิต</td></tr>`; return; }
   tbody.innerHTML = errs.map(e => {
     const qd = e.qty > 0 ? `<span style="color:#991B1B;font-weight:700;">${e.qty}</span>` : `<span style="color:#94A3B8;">-</span>`;
-    return `<tr><td>${e.date}</td><td><span class="order-id">${e.order}</span></td><td><span class="chip ch-err">${e.errorType}</span></td><td>${qd}</td><td>${e.cause}</td><td style="color:#854D0E;">${e.fix}</td><td>${e.staff}</td></tr>`;
+    return `<tr><td>${e.date}</td><td><span class="order-id">${e.order}</span></td><td><span class="chip ch-prod">${e.errorType}</span></td><td>${qd}</td><td>${e.cause}</td><td style="color:${e.fix!=='-'?'#166534':'#854D0E'};">${e.fix}</td><td>${e.staff}</td></tr>`;
   }).join('');
 }
 
@@ -2950,7 +3031,7 @@ function submitProdErr() {
   if (!date||!order||!type||!cause||!staff) { alert('กรุณากรอกข้อมูลที่มี * ให้ครบก่อนนะครับ'); return; }
   const errs = getProdErrs();
   errs.unshift({ timestamp:nowTs(), date:isoToThai(date), order, errorType:type, qty:+qty||0, cause, fix:fix||'-', staff });
-  saveProdErrs(errs); renderProdFull(); renderOrders(); renderSummary(); clearProd();
+  saveProdErrs(errs); renderProdFull(); renderProdErrHistory(); renderOrders(); renderSummary(); clearProd();
   showToast(`🏭 บันทึก Error ผลิตแล้ว — ${order}`);
 }
 function submitShipErr() {
@@ -3526,6 +3607,216 @@ const TAG_MAP = {
   stockStaff: { key:'stockStaff', container:'tagsStockStaff' },
   pile:       { key:'pileTypes',  container:'tagsPile' },
 };
+
+// ── Role Permission UI ────────────────────────────────────────
+let _savedRolePerms = null;
+
+// Preset palette
+const PERM_PRESET_COLORS = [
+  { bg:'#DBEAFE', text:'#1E40AF' },
+  { bg:'#EDE9FE', text:'#5B21B6' },
+  { bg:'#D1FAE5', text:'#065F46' },
+  { bg:'#FEF9C3', text:'#854D0E' },
+  { bg:'#FFE4E6', text:'#9F1239' },
+  { bg:'#E0F2FE', text:'#0369A1' },
+  { bg:'#F3E8FF', text:'#6D28D9' },
+  { bg:'#DCFCE7', text:'#166534' },
+  { bg:'#FEE2E2', text:'#B91C1C' },
+  { bg:'#F1F5F9', text:'#334155' },
+];
+let _permRoles = [
+  { id:'admin',   label:'Admin',   color:{ bg:'#FEF9C3', text:'#854D0E' }, locked:true },
+  { id:'manager', label:'Manager', color:{ bg:'#EDE9FE', text:'#5B21B6' } },
+  { id:'sale',    label:'Sale',    color:{ bg:'#DBEAFE', text:'#1E40AF' } },
+];
+let _permSelectedColor = { ...PERM_PRESET_COLORS[0] };
+let _permUsingCustom = false;
+
+function _permInitials(label) { return label.charAt(0).toUpperCase(); }
+
+function _permAutoText(hex) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  const lum=(0.299*r+0.587*g+0.114*b)/255;
+  if (lum>0.55) {
+    return '#'+[r,g,b].map(x=>Math.round(x*0.45).toString(16).padStart(2,'0')).join('');
+  }
+  return '#FFFFFF';
+}
+
+function renderPermUI() {
+  if (!document.getElementById('permRolesRow')) return;
+  _renderPermRoles();
+  _renderPermTable();
+}
+
+function _renderPermRoles() {
+  const row = document.getElementById('permRolesRow');
+  if (!row) return;
+  row.innerHTML = _permRoles.map(r => `
+    <div class="perm-role-pill" style="background:${r.color.bg};color:${r.color.text};border-color:${r.color.bg};">
+      ${r.label}
+      ${!r.locked ? `<span class="del-btn" onclick="permDeleteRole('${r.id}')">✕</span>` : ''}
+    </div>
+  `).join('') + `<button class="perm-add-role-btn" onclick="permToggleAddForm()">+ เพิ่มตำแหน่ง</button>`;
+}
+
+function _renderPermTable() {
+  const editableRoles = _permRoles.filter(r => !r.locked);
+  const perms = _savedRolePerms || DEFAULT_ROLE_PERMS;
+
+  // thead
+  let thHtml = `<tr><th>สิทธิ์</th><th>👑 Admin</th>`;
+  editableRoles.forEach(r => {
+    thHtml += `<th><span style="background:${r.color.bg};color:${r.color.text};padding:4px 12px;border-radius:10px;font-size:11px;font-weight:800;">${r.label}</span></th>`;
+  });
+  thHtml += '</tr>';
+  const thead = document.getElementById('permThead');
+  if (thead) thead.innerHTML = thHtml;
+
+  // tbody
+  let lastGroup = '', html = '';
+  ALL_PERMISSIONS.forEach(p => {
+    if (p.group !== lastGroup) {
+      const gid = 'pgrp_' + p.group.replace(/[^a-zA-Zก-๙]/g,'_');
+      html += `<tr class="perm-group-row" id="${gid}" onclick="permToggleGroup('${gid}')">
+        <td colspan="${editableRoles.length + 2}">
+          <div class="perm-group-row-inner">${p.group}<span class="perm-group-chevron">▼</span></div>
+        </td></tr>`;
+      lastGroup = p.group;
+    }
+    const gid = 'pgrp_' + p.group.replace(/[^a-zA-Zก-๙]/g,'_');
+    let tds = `<td>${p.label}</td>`;
+    tds += `<td><label class="perm-toggle"><input type="checkbox" checked disabled/><span class="perm-slider"></span></label></td>`;
+    editableRoles.forEach(r => {
+      const checked = perms[r.id]?.[p.key] ? 'checked' : '';
+      tds += `<td><label class="perm-toggle"><input type="checkbox" id="perm_${r.id}_${p.key}" ${checked}/><span class="perm-slider"></span></label></td>`;
+    });
+    html += `<tr class="perm-item-row" data-group="${gid}">${tds}</tr>`;
+  });
+  const tbody = document.getElementById('permTableBody');
+  if (tbody) tbody.innerHTML = html;
+}
+
+function permToggleGroup(gid) {
+  const grp = document.getElementById(gid);
+  const rows = document.querySelectorAll(`.perm-item-row[data-group="${gid}"]`);
+  const isCollapsed = grp.classList.toggle('collapsed');
+  rows.forEach(r => r.classList.toggle('hidden', isCollapsed));
+}
+
+function permToggleAddForm() {
+  const f = document.getElementById('permAddForm');
+  f.classList.toggle('show');
+  if (f.classList.contains('show')) {
+    document.getElementById('permNewRoleName').value = '';
+    _permSelectedColor = { ...PERM_PRESET_COLORS[0] };
+    _permUsingCustom = false;
+    _buildPermColorPresets();
+    permUpdatePreview();
+    document.getElementById('permNewRoleName').focus();
+  }
+}
+
+function _buildPermColorPresets() {
+  const c = document.getElementById('permColorPresets');
+  if (!c) return;
+  c.innerHTML = PERM_PRESET_COLORS.map((col, i) => {
+    const isSel = !_permUsingCustom && col.bg === _permSelectedColor.bg;
+    return `<div class="perm-color-opt${isSel?' selected':''}" style="background:${col.bg};border-color:${isSel?col.text:'transparent'};" onclick="permSelectPreset(${i})"></div>`;
+  }).join('');
+}
+
+function permSelectPreset(i) {
+  _permSelectedColor = { ...PERM_PRESET_COLORS[i] };
+  _permUsingCustom = false;
+  _buildPermColorPresets();
+  permUpdatePreview();
+}
+
+function permOnCustomColor(hex) {
+  _permUsingCustom = true;
+  _permSelectedColor = { bg: hex, text: _permAutoText(hex) };
+  document.querySelectorAll('.perm-color-opt').forEach(x => { x.classList.remove('selected'); x.style.borderColor='transparent'; });
+  permUpdatePreview();
+}
+
+function permUpdatePreview() {
+  const name = (document.getElementById('permNewRoleName')?.value.trim()) || 'ตำแหน่ง';
+  const pill = document.getElementById('permPreviewPill');
+  if (!pill) return;
+  pill.textContent = name;
+  pill.style.background = _permSelectedColor.bg;
+  pill.style.color = _permSelectedColor.text;
+}
+
+function permAddRole() {
+  const name = document.getElementById('permNewRoleName').value.trim();
+  if (!name) { showToast('⚠️ กรอกชื่อตำแหน่งด้วยครับ'); return; }
+  const id = name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'') || 'role_'+Date.now();
+  if (_permRoles.find(r => r.id === id)) { showToast('⚠️ ตำแหน่งนี้มีอยู่แล้ว'); return; }
+  _permRoles.push({ id, label: name, color: { ..._permSelectedColor } });
+  if (!_savedRolePerms) _savedRolePerms = {};
+  _savedRolePerms[id] = {};
+  document.getElementById('permAddForm').classList.remove('show');
+  _renderPermRoles();
+  _renderPermTable();
+  showToast(`✅ เพิ่มตำแหน่ง "${name}" แล้ว`);
+}
+
+function permDeleteRole(id) {
+  const r = _permRoles.find(x => x.id === id);
+  if (!confirm(`ลบตำแหน่ง "${r?.label}" ออกจากระบบ?`)) return;
+  _permRoles = _permRoles.filter(x => x.id !== id);
+  if (_savedRolePerms) delete _savedRolePerms[id];
+  _renderPermRoles();
+  _renderPermTable();
+  showToast('ลบตำแหน่งแล้ว');
+}
+
+function saveRolePerms() {
+  const editableRoles = _permRoles.filter(r => !r.locked);
+  const newPerms = {};
+  editableRoles.forEach(r => {
+    newPerms[r.id] = {};
+    ALL_PERMISSIONS.forEach(p => {
+      newPerms[r.id][p.key] = document.getElementById(`perm_${r.id}_${p.key}`)?.checked || false;
+    });
+  });
+  // Save roles list too
+  const rolesData = _permRoles.filter(r => !r.locked).map(r => ({ id:r.id, label:r.label, color:r.color }));
+  const db = firebase.database();
+  Promise.all([
+    db.ref('/config/rolePerms').set(newPerms),
+    db.ref('/config/customRoles').set(rolesData),
+  ]).then(() => {
+    _savedRolePerms = newPerms;
+    if (_currentRole !== 'admin') {
+      _userPerms = Object.assign({}, newPerms[_currentRole] || {});
+      applyPermissions();
+    }
+    showToast('✅ บันทึกสิทธิ์เรียบร้อย!');
+  }).catch(() => showToast('❌ บันทึกไม่สำเร็จ'));
+}
+
+function loadRolePerms(cb) {
+  const db = firebase.database();
+  Promise.all([
+    db.ref('/config/rolePerms').once('value'),
+    db.ref('/config/customRoles').once('value'),
+  ]).then(([permSnap, rolesSnap]) => {
+    if (permSnap.exists()) _savedRolePerms = permSnap.val();
+    if (rolesSnap.exists()) {
+      const custom = rolesSnap.val();
+      if (Array.isArray(custom)) {
+        const lockedRoles = _permRoles.filter(r => r.locked);
+        _permRoles = [...lockedRoles, ...custom];
+      }
+    }
+    if (cb) cb();
+  }).catch(() => {
+    if (cb) cb();
+  });
+}
 
 function loadSettingsUI() {
   const cfg = getConfig();
@@ -4574,7 +4865,7 @@ function _dbBucketOrders(orders, days, mode) {
 
 // ── Mobile More Sheet ──────────────────────────────────────────
 const _mobMoreConfig = {
-  'nav-shiperr':   { icon:'🚛', label:'Error ขนส่ง',      tab:'shiperr' },
+  'nav-shiperr':   { icon:'⚠️', label:'Error ผลิต',       tab:'shiperr' },
   'nav-summary':   { icon:'📊', label:'สรุปภาพรวม',        tab:'summary' },
   'nav-customers': { icon:'👥', label:'ลูกค้า',            tab:'customers' },
   'nav-settings':  { icon:'⚙️', label:'ตั้งค่าระบบ',       tab:'settings' },
