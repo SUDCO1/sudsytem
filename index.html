@@ -412,7 +412,7 @@ body.role-admin .sale-hint{display:none!important;}
 @media(max-width:768px){
   .mob-nav{display:flex;}
   .app-nav{display:none !important;}
-  .app-header{padding:8px 12px;gap:8px;}
+  .app-header{padding:8px 12px;gap:8px;user-select:none;-webkit-user-select:none;}
   .hdr-logo{font-size:22px;}
   .hdr-title{font-size:13px;}
   .hdr-sub{display:none;}
@@ -4570,6 +4570,13 @@ function openMobMore() {
     item.onclick = () => { goTab(cfg.tab, el); closeMobMore(); };
     list.appendChild(item);
   });
+  // ปุ่มออกจากระบบ
+  const logoutItem = document.createElement('div');
+  logoutItem.className = 'mob-more-item';
+  logoutItem.style.cssText = 'color:#DC2626;border-top:2px solid #FEE2E2;margin-top:4px;';
+  logoutItem.innerHTML = `<span class="mob-more-icon">🚪</span><span>ออกจากระบบ</span>`;
+  logoutItem.onclick = () => { closeMobMore(); doLogout(); };
+  list.appendChild(logoutItem);
   document.getElementById('mobMoreOverlay').classList.add('open');
 }
 function closeMobMore() {
