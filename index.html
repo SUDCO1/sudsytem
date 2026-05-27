@@ -21,7 +21,7 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .app-header{background:linear-gradient(135deg,#1E40AF 0%,#1E3A8A 100%);padding:14px 24px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,0.2);position:sticky;top:0;z-index:100;}
 .hdr-logo{font-size:28px;line-height:1;}
 .hdr-info{flex:1;}
-.hdr-title{font-size:17px;font-weight:800;color:#fff;}
+.hdr-title{font-size:15px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
 .hdr-sub{font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;}
 .hdr-badge{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;}
 .badge-count{background:#EF4444;color:#fff;font-size:11px;font-weight:800;padding:1px 8px;border-radius:10px;}
@@ -352,6 +352,125 @@ body.role-admin .sale-hint{display:none!important;}
 .um-err.show{display:block;}
 .um-ok{background:#DCFCE7;color:#166534;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:600;margin-top:10px;display:none;}
 .um-ok.show{display:block;}
+
+/* ========== DASHBOARD CSS ========== */
+.db-wrap{padding:20px 24px;max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:16px;}
+.db-filter-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.db-filter-title{font-size:18px;font-weight:800;color:#1E293B;}
+.db-period-group{display:flex;gap:6px;background:#fff;padding:4px;border-radius:10px;border:1px solid #E2E8F0;}
+.db-period-btn{padding:6px 16px;border-radius:7px;border:none;background:transparent;font-size:12px;font-weight:700;color:#64748B;cursor:pointer;transition:all 0.15s;}
+.db-period-btn.active{background:#1E40AF;color:#fff;box-shadow:0 2px 6px rgba(30,64,175,0.3);}
+.db-period-btn:hover:not(.active){background:#F1F5F9;}
+.db-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
+.db-kpi{background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px 18px;border-left:4px solid #CBD5E1;}
+.db-kpi.blue{border-left-color:#3B82F6;} .db-kpi.green{border-left-color:#22C55E;} .db-kpi.amber{border-left-color:#F59E0B;}
+.db-kpi.purple{border-left-color:#A855F7;} .db-kpi.red{border-left-color:#EF4444;} .db-kpi.teal{border-left-color:#14B8A6;}
+.db-kpi-label{font-size:11px;color:#64748B;font-weight:600;margin-bottom:6px;}
+.db-kpi-val{font-size:26px;font-weight:900;color:#1E293B;line-height:1;}
+.db-kpi-sub{font-size:10px;color:#94A3B8;margin-top:4px;}
+.db-charts-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;}
+.db-charts-row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.db-charts-row,.db-charts-row2{grid-template-columns:1fr;}}
+.db-card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;}
+.db-card-title{font-size:13px;font-weight:800;color:#1E293B;}
+.db-empty{text-align:center;color:#CBD5E1;padding:20px;font-size:13px;}
+.db-legend{display:flex;flex-wrap:wrap;gap:8px;}
+.db-legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#64748B;}
+.db-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.db-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.db-bar-name{width:90px;font-size:11px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+.db-bar-bg{flex:1;background:#F1F5F9;border-radius:6px;height:14px;overflow:hidden;}
+.db-bar-fill{height:100%;border-radius:6px;}
+.db-bar-num{width:34px;text-align:right;font-size:11px;font-weight:700;color:#374151;flex-shrink:0;}
+.db-table{width:100%;border-collapse:collapse;font-size:12px;}
+.db-table th{background:#F8FAFC;color:#64748B;font-weight:700;padding:7px 10px;text-align:left;border-bottom:2px solid #E2E8F0;}
+.db-table td{padding:7px 10px;border-bottom:1px solid #F1F5F9;}
+/* ========== MOBILE NAV CSS ========== */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#1E3A8A;border-top:1.5px solid rgba(255,255,255,0.12);padding-bottom:env(safe-area-inset-bottom,0px);}
+.mob-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 2px 6px;cursor:pointer;gap:2px;position:relative;color:rgba(255,255,255,0.5);font-size:10px;font-weight:700;min-height:58px;-webkit-tap-highlight-color:transparent;user-select:none;transition:color .15s;}
+.mob-nav-item:active{background:rgba(255,255,255,0.06);}
+.mob-nav-item.active{color:#fff;}
+.mob-nav-item.active::after{content:'';position:absolute;top:0;left:15%;right:15%;height:2.5px;background:#60A5FA;border-radius:0 0 3px 3px;}
+.mob-nav-icon{font-size:20px;line-height:1.1;}
+.mob-nav-badge{position:absolute;top:6px;right:calc(50% - 14px);width:8px;height:8px;background:#EF4444;border-radius:50%;display:none;}
+.mob-nav-badge.show{display:block;}
+.mob-more-overlay{display:flex;align-items:flex-end;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.mob-more-overlay.open{opacity:1;pointer-events:all;}
+.mob-more-sheet{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform 0.3s cubic-bezier(.32,.72,0,1);padding-bottom:env(safe-area-inset-bottom,0px);}
+.mob-more-overlay.open .mob-more-sheet{transform:translateY(0);}
+.mob-more-handle{width:36px;height:4px;background:#E2E8F0;border-radius:2px;margin:12px auto 4px;}
+.mob-more-title{font-size:15px;font-weight:800;color:#1E293B;padding:4px 20px 12px;}
+.mob-more-item{display:flex;align-items:center;gap:14px;padding:13px 20px;cursor:pointer;font-size:14px;font-weight:600;color:#1E293B;-webkit-tap-highlight-color:transparent;}
+.mob-more-item:active{background:#F8FAFC;}
+.mob-more-icon{font-size:22px;width:28px;text-align:center;}
+/* Mobile Cards display:none on desktop */
+#ordersMobile,#prodLogMobile,#stockLogMobile{display:none;}
+.mob-export-btn{display:none;}
+.toolbar-mob-row{display:none;}
+/* ========== MOBILE RESPONSIVE ========== */
+@media(max-width:768px){
+  .mob-nav{display:flex;}
+  .app-nav{display:none !important;}
+  .app-content{padding:10px 12px 80px;}
+  .stack{padding:10px 12px 80px;}
+  table.data-table td,table.data-table th{padding:7px 8px;font-size:12px;}
+  .card{border-radius:12px;}
+  #ordersTableWrap{display:none !important;}
+  #ordersMobile{display:block;}
+  #prodLogTableWrap{display:none !important;}
+  #prodLogMobile{display:block;}
+  #stockLogTableWrap{display:none !important;}
+  #stockLogMobile{display:block;}
+  .desk-export-btn{display:none !important;}
+  .mob-export-btn{display:flex !important;}
+  #sec-status .toolbar{flex-direction:column;gap:8px;}
+  .toolbar-mob-row{display:flex;gap:8px;width:100%;}
+  /* Order Cards */
+  .mob-oc{background:#fff;border-radius:12px;border:1px solid #E2E8F0;margin-bottom:10px;overflow:hidden;}
+  .mob-oc.new-oc{border-left:4px solid #3B82F6;}
+  .mob-oc.err-oc{border-left:4px solid #EF4444;background:#FFFBFB;}
+  .mob-oc-top{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px;}
+  .mob-oc-num{font-size:14px;font-weight:900;color:#1E40AF;}
+  .mob-oc-status{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+  .mob-oc-cust{padding:0 14px 8px;font-size:14px;font-weight:700;color:#1E293B;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
+  .mob-oc-tel{font-size:11px;color:#64748B;font-weight:400;}
+  .mob-oc-div{height:1px;background:#F1F5F9;margin:0 14px;}
+  .mob-oc-mid{display:flex;align-items:stretch;padding:10px 14px;gap:12px;}
+  .mob-oc-pile{background:#EFF6FF;border-radius:8px;padding:8px 12px;flex-shrink:0;text-align:center;min-width:58px;}
+  .mob-oc-pile-type{font-size:16px;font-weight:900;color:#1E40AF;}
+  .mob-oc-pile-qty{font-size:11px;color:#3B82F6;font-weight:700;}
+  .mob-oc-info{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .mob-oc-prog-lbl{display:flex;justify-content:space-between;align-items:center;}
+  .mob-oc-prog-txt{font-size:12px;color:#374151;font-weight:600;}
+  .mob-oc-bar{height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;}
+  .mob-oc-fill{height:100%;border-radius:4px;}
+  .mob-oc-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .mob-oc-date{font-size:11px;color:#64748B;background:#F8FAFC;padding:3px 8px;border-radius:6px;}
+  .mob-oc-bottom{padding:8px 14px;border-top:1px solid #F1F5F9;display:flex;gap:8px;align-items:center;}
+  .mob-oc-note{flex:1;font-size:11px;color:#64748B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+  /* Prod Log Cards */
+  .mob-pc{background:#fff;border-radius:12px;border:1px solid #E2E8F0;margin-bottom:8px;padding:12px 14px;}
+  .mob-pc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+  .mob-pc-order{font-size:14px;font-weight:800;color:#1E40AF;}
+  .mob-pc-date{font-size:11px;color:#94A3B8;}
+  .mob-pc-pile{font-size:13px;font-weight:700;margin-bottom:8px;color:#1E293B;}
+  .mob-pc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .mob-pc-stat{background:#F8FAFC;border-radius:8px;padding:8px;text-align:center;}
+  .mob-pc-val{font-size:20px;font-weight:900;}
+  .mob-pc-lbl{font-size:10px;color:#64748B;font-weight:600;}
+  /* Stock Log Cards */
+  .mob-lc{background:#fff;border-radius:10px;border:1px solid #E2E8F0;margin-bottom:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;}
+  .mob-lc-tag{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0;white-space:nowrap;}
+  .mob-lc-in{background:#DCFCE7;color:#166534;}
+  .mob-lc-out{background:#FEE2E2;color:#991B1B;}
+  .mob-lc-adj{background:#F3E8FF;color:#6D28D9;}
+  .mob-lc-info{flex:1;min-width:0;}
+  .mob-lc-pile{font-size:13px;font-weight:700;color:#1E293B;}
+  .mob-lc-date{font-size:11px;color:#94A3B8;}
+  .mob-lc-right{text-align:right;flex-shrink:0;}
+  .mob-lc-qty{font-size:18px;font-weight:900;}
+  .mob-lc-after{font-size:11px;color:#64748B;}
+}
 </style>
 <body>
 
@@ -394,14 +513,15 @@ body.role-admin .sale-hint{display:none!important;}
 
 <!-- NAV -->
 <div class="app-nav">
-  <div class="nav-tab sale-only active" data-tab="form" onclick="goTab('form',this)">📱 ส่ง Order</div>
-  <div class="nav-tab" id="tab-status" data-tab="status" onclick="goTab('status',this)">📋 สถานะ Order <span class="nav-dot"></span></div>
-  <div class="nav-tab sale-only" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ผลิต</div>
-  <div class="nav-tab sale-only" data-tab="shiperr" onclick="goTab('shiperr',this)">🚛 Error ขนส่ง</div>
-  <div class="nav-tab admin-manager-only" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
-  <div class="nav-tab admin-manager-only" data-tab="stock" onclick="goTab('stock',this)">📦 ระบบสต็อก</div>
-  <div class="nav-tab" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
-  <div class="nav-tab admin-only" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
+  <div class="nav-tab sale-only active" id="nav-form" data-tab="form" onclick="goTab('form',this)">📱 ส่ง Order</div>
+  <div class="nav-tab" id="nav-status" data-tab="status" onclick="goTab('status',this)">📋 สถานะ Order <span class="nav-dot"></span></div>
+  <div class="nav-tab sale-only" id="nav-proderr" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ผลิต</div>
+  <div class="nav-tab sale-only" id="nav-shiperr" data-tab="shiperr" onclick="goTab('shiperr',this)">🚛 Error ขนส่ง</div>
+  <div class="nav-tab admin-manager-only" id="nav-summary" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
+  <div class="nav-tab admin-manager-only" id="nav-dashboard" data-tab="dashboard" onclick="goTab('dashboard',this)" style="display:none;">📈 Dashboard</div>
+  <div class="nav-tab admin-manager-only" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ระบบสต็อก</div>
+  <div class="nav-tab" id="nav-customers" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
+  <div class="nav-tab admin-only" id="nav-settings" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
 </div>
 
 <!-- ================================================================ SECTION: ส่ง Order ================================================================ -->
@@ -521,10 +641,22 @@ body.role-admin .sale-hint{display:none!important;}
           <option>ระหว่างขนส่ง</option>
           <option>ส่งครบ</option>
         </select>
-        <button class="btn btn-export btn-sm" onclick="exportOrdersCSV()">📥 Export CSV</button>
-        <button class="btn btn-sm" style="background:#16A34A;color:#fff;" onclick="exportOrdersXLSX()">📊 Export Excel</button>
+        <button class="btn btn-export btn-sm desk-export-btn" onclick="exportOrdersCSV()">📥 Export CSV</button>
+        <button class="btn btn-sm desk-export-btn" style="background:#16A34A;color:#fff;" onclick="exportOrdersXLSX()">📊 Export Excel</button>
+        <div class="toolbar-mob-row">
+          <button class="btn btn-danger btn-sm" style="flex:1;" onclick="goTab('proderr',document.getElementById('nav-proderr'))">🏭 Error ผลิต</button>
+          <button class="btn btn-danger btn-sm" style="flex:1;" onclick="goTab('shiperr',document.getElementById('nav-shiperr'))">🚛 ขนส่ง</button>
+          <button class="btn btn-sm mob-export-btn" style="background:#059669;color:#fff;" onclick="openMobExportSheet()">📥 Export</button>
+        </div>
+        <div class="toolbar-mob-row">
+          <input type="search" placeholder="🔍 ค้นหา Order / ลูกค้า..." oninput="document.getElementById('orderSearch').value=this.value;renderOrders()" style="flex:2;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;outline:none;font-family:inherit;"/>
+          <select onchange="document.getElementById('statusFilter').value=this.value;renderOrders()" style="flex:1;padding:9px 8px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:12px;outline:none;background:#fff;">
+            <option value="">ทุกสถานะ</option>
+            <option>รับ Order แล้ว</option><option>กำลังผลิต</option><option>ผลิตเสร็จแล้ว</option><option>พร้อมส่ง</option><option>ส่งครบ</option>
+          </select>
+        </div>
       </div>
-      <div class="table-wrap">
+      <div id="ordersTableWrap" class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
@@ -542,6 +674,7 @@ body.role-admin .sale-hint{display:none!important;}
           <tbody id="ordersBody"></tbody>
         </table>
       </div>
+      <div id="ordersMobile" style="padding:10px 12px 4px;"></div>
     </div>
   </div>
 </div>
@@ -653,7 +786,7 @@ body.role-admin .sale-hint{display:none!important;}
       </div>
     </div>
 
-    <!-- ── ประวัติการผลิต ── -->
+    <!-- ── ประวัติการผลิต (marker) ── -->
     <div class="card">
       <div class="card-header">
         <div class="card-title">📋 ประวัติการผลิต</div>
@@ -662,7 +795,7 @@ body.role-admin .sale-hint{display:none!important;}
       <div class="toolbar">
         <input type="search" class="search-inp" id="prodLogSearch" placeholder="🔍 ค้นหาเลข Order / ชื่อลูกค้า / ชนิดเสา..." oninput="renderProdLogHistory()" style="max-width:380px;"/>
       </div>
-      <div class="table-wrap">
+      <div id="prodLogTableWrap" class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
@@ -679,6 +812,7 @@ body.role-admin .sale-hint{display:none!important;}
           <tbody id="prodLogBody"></tbody>
         </table>
       </div>
+      <div id="prodLogMobile" style="padding:10px 12px 4px;"></div>
     </div>
 
   </div>
@@ -725,6 +859,56 @@ body.role-admin .sale-hint{display:none!important;}
           <button class="btn btn-danger" onclick="submitShipErr()">💾 บันทึก Error ขนส่ง</button>
           <button class="btn btn-ghost" onclick="clearShip()">🗑 ล้าง</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ SECTION: DASHBOARD ================================================================ -->
+<div id="sec-dashboard" class="section">
+  <div class="db-wrap">
+    <div class="db-filter-row">
+      <div class="db-filter-title">📈 Dashboard ผู้บริหาร</div>
+      <div class="db-period-group">
+        <button class="db-period-btn" onclick="dbSetPeriod(7)"   id="dbp7">7 วัน</button>
+        <button class="db-period-btn active" onclick="dbSetPeriod(30)"  id="dbp30">30 วัน</button>
+        <button class="db-period-btn" onclick="dbSetPeriod(90)"  id="dbp90">3 เดือน</button>
+        <button class="db-period-btn" onclick="dbSetPeriod(365)" id="dbp365">1 ปี</button>
+      </div>
+    </div>
+    <div class="db-kpi-grid" id="dbKpis"></div>
+    <div class="db-charts-row">
+      <div class="db-card">
+        <div class="db-card-title"><span id="dbTrendTitle">Orders รายสัปดาห์</span></div>
+        <div style="position:relative;height:180px;"><canvas id="dbChartTrend" role="img" aria-label="Orders trend chart"></canvas></div>
+      </div>
+      <div class="db-card">
+        <div class="db-card-title">สถานะ Orders</div>
+        <div id="dbStatusLegend" class="db-legend"></div>
+        <div style="position:relative;height:150px;"><canvas id="dbChartStatus" role="img" aria-label="Order status donut chart"></canvas></div>
+      </div>
+    </div>
+    <div class="db-charts-row2">
+      <div class="db-card">
+        <div class="db-card-title">ประสิทธิภาพ Sale</div>
+        <div id="dbSaleChart"></div>
+      </div>
+      <div class="db-card">
+        <div class="db-card-title">สุขภาพสต็อก</div>
+        <div id="dbStockChart"></div>
+      </div>
+    </div>
+    <div class="db-charts-row2">
+      <div class="db-card">
+        <div class="db-card-title">Top ลูกค้า (Orders สูงสุด)</div>
+        <table class="db-table">
+          <thead><tr><th>#</th><th>ลูกค้า</th><th>Orders</th><th>มูลค่า</th></tr></thead>
+          <tbody id="dbTopCustomers"></tbody>
+        </table>
+      </div>
+      <div class="db-card">
+        <div class="db-card-title">ประเภทเสาที่สั่งมากสุด</div>
+        <div id="dbTopPiles"></div>
       </div>
     </div>
   </div>
@@ -799,12 +983,13 @@ body.role-admin .sale-hint{display:none!important;}
         </select>
         <span class="toolbar-note" id="logCount"></span>
       </div>
-      <div class="table-wrap">
+      <div id="stockLogTableWrap" class="table-wrap">
         <table class="log-table">
           <thead><tr><th>วันเวลา</th><th>ประเภท</th><th>ชนิดเสา</th><th>จำนวน</th><th>สต็อกหลัง</th><th>อ้างอิง</th><th>ผู้บันทึก</th><th>หมายเหตุ</th></tr></thead>
           <tbody id="stockLogBody"></tbody>
         </table>
       </div>
+      <div id="stockLogMobile" style="padding:10px 12px 4px;"></div>
       <div id="logPagination" style="display:flex;gap:8px;align-items:center;padding:10px 16px;border-top:1px solid #F1F5F9;flex-wrap:wrap;"></div>
     </div>
   </div>
@@ -1155,6 +1340,45 @@ body.role-admin .sale-hint{display:none!important;}
   </div>
 </div>
 
+<!-- ================================================================ MOBILE BOTTOM NAV ================================================================ -->
+<div class="mob-nav">
+  <div class="mob-nav-item sale-only active" id="mnav-form" onclick="goTab('form',document.getElementById('nav-form'))">
+    <span class="mob-nav-icon">📱</span><span>ส่ง Order</span>
+  </div>
+  <div class="mob-nav-item" id="mnav-status" onclick="goTab('status',document.getElementById('nav-status'))">
+    <span class="mob-nav-icon">📋</span><span>สถานะ</span>
+    <div class="mob-nav-badge" id="mnav-status-badge"></div>
+  </div>
+  <div class="mob-nav-item sale-only" id="mnav-proderr" onclick="goTab('proderr',document.getElementById('nav-proderr'))">
+    <span class="mob-nav-icon">🏭</span><span>ผลิต</span>
+  </div>
+  <div class="mob-nav-item" id="mnav-stock" onclick="goTab('stock',document.getElementById('nav-stock'))">
+    <span class="mob-nav-icon">📦</span><span>สต็อก</span>
+  </div>
+  <div class="mob-nav-item" id="mnav-more" onclick="openMobMore()">
+    <span class="mob-nav-icon">⋯</span><span>เพิ่มเติม</span>
+  </div>
+</div>
+
+<!-- MOBILE MORE SHEET -->
+<div class="mob-more-overlay" id="mobMoreOverlay" onclick="closeMobMore()">
+  <div class="mob-more-sheet" onclick="event.stopPropagation()">
+    <div class="mob-more-handle"></div>
+    <div class="mob-more-title">เมนูทั้งหมด</div>
+    <div id="mobMoreList"></div>
+  </div>
+</div>
+
+<!-- MOBILE EXPORT SHEET -->
+<div class="mob-more-overlay" id="mobExportOverlay" onclick="closeMobExportSheet()">
+  <div class="mob-more-sheet" onclick="event.stopPropagation()">
+    <div class="mob-more-handle"></div>
+    <div class="mob-more-title">Export ข้อมูล</div>
+    <div class="mob-more-item" onclick="closeMobExportSheet();exportOrdersCSV()"><span class="mob-more-icon">📥</span><span>Export CSV</span></div>
+    <div class="mob-more-item" onclick="closeMobExportSheet();exportOrdersXLSX()"><span class="mob-more-icon">📊</span><span>Export Excel</span></div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -1219,6 +1443,7 @@ function applyRole(role) {
     badge.className     = 'role-badge role-' + role;
     badge.style.display = 'inline-block';
   }
+  applyPermissions();
   // ปรับ default tab ตาม role
   if (role === 'manager') {
     const sumTab = document.querySelector('[data-tab="summary"]');
@@ -1347,19 +1572,26 @@ let _fbReady = false;
 const _fbReadyCallbacks = [];
 function onFbReady(fn) { if (_fbReady) fn(); else _fbReadyCallbacks.push(fn); }
 
-// Show loading overlay until Firebase syncs
-document.addEventListener('DOMContentLoaded', () => {
-  const overlay = document.createElement('div');
-  overlay.id = 'fbLoadOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(30,58,138,0.92);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
-  overlay.innerHTML = '<div style="font-size:48px;">🔥</div>'
-    + '<div style="color:#fff;font-size:18px;font-weight:800;">กำลังเชื่อมต่อ Firebase...</div>'
-    + '<div style="color:rgba(255,255,255,0.7);font-size:13px;" id="fbLoadMsg">โหลดข้อมูลจาก Cloud</div>';
-  document.body.appendChild(overlay);
-});
+// Firebase overlay: created in startFirebaseListeners after login
 
 // ── Subscribe realtime listeners ──────────────────────────────
 function startFirebaseListeners() {
+  // Show overlay NOW (after login), not on page load
+  if (!document.getElementById('fbLoadOverlay')) {
+    const overlay = document.createElement('div');
+    overlay.id = 'fbLoadOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(30,58,138,0.92);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+    overlay.innerHTML = '<div style="font-size:48px;">🔥</div>'
+      + '<div style="color:#fff;font-size:18px;font-weight:800;">กำลังเชื่อมต่อ Firebase...</div>'
+      + '<div style="color:rgba(255,255,255,0.7);font-size:13px;">โหลดข้อมูลจาก Cloud</div>';
+    document.body.appendChild(overlay);
+  }
+  // Safety timeout — force-remove overlay after 12s
+  setTimeout(() => {
+    const el = document.getElementById('fbLoadOverlay');
+    if (el) { el.remove(); _fbReady = true; _fbReadyCallbacks.forEach(fn => fn()); _fbReadyCallbacks.length = 0; }
+  }, 12000);
+
   let loadCount = 0;
   const TOTAL = 9;
   function checkDone() {
@@ -1707,12 +1939,71 @@ function fillCustomerFromDB() {
 }
 
 // ── Navigation ─────────────────────────────────────────────────
+
+// ── Permission System ──────────────────────────────────────────
+const ALL_PERMISSIONS = [
+  { group:'📋 Orders', key:'view_orders',      label:'ดู/ค้นหา Orders' },
+  { group:'📋 Orders', key:'create_order',     label:'สร้าง Order ใหม่' },
+  { group:'📋 Orders', key:'change_order_status', label:'เปลี่ยนสถานะ Order' },
+  { group:'📋 Orders', key:'edit_order',       label:'แก้ไข/ลบ Order' },
+  { group:'🏭 ผลิต',   key:'view_production',  label:'ดูหน้าผลิต' },
+  { group:'🏭 ผลิต',   key:'log_production',   label:'บันทึกการผลิต' },
+  { group:'🚛 ขนส่ง',  key:'view_shipping',    label:'ดู Error ขนส่ง' },
+  { group:'🚛 ขนส่ง',  key:'log_shipping',     label:'บันทึก Error ขนส่ง' },
+  { group:'📦 สต็อก',  key:'view_stock',       label:'ดูสต็อก' },
+  { group:'📦 สต็อก',  key:'edit_stock',       label:'เพิ่ม/เบิกสต็อก' },
+  { group:'👥 ลูกค้า', key:'view_customers',   label:'ดูฐานข้อมูลลูกค้า' },
+  { group:'📊 รายงาน', key:'view_summary',     label:'ดูสรุปภาพรวม' },
+  { group:'📊 รายงาน', key:'view_dashboard',   label:'ดู Executive Dashboard' },
+  { group:'⚙️ ระบบ',   key:'view_settings',    label:'ดูการตั้งค่า' },
+];
+const DEFAULT_ROLE_PERMS = {
+  admin:   { view_orders:true,create_order:true,change_order_status:true,edit_order:true,view_production:true,log_production:true,view_shipping:true,log_shipping:true,view_stock:true,edit_stock:true,view_customers:true,view_summary:true,view_dashboard:true,view_settings:true },
+  manager: { view_orders:true,view_production:true,view_shipping:true,view_stock:true,view_customers:true,view_summary:true,view_dashboard:true },
+  sale:    { view_orders:true,create_order:true,change_order_status:true,view_production:true,log_production:true,view_shipping:true,log_shipping:true,view_stock:true,view_customers:true },
+};
+let _userPerms = {};
+
+function canDo(key) {
+  if (_currentRole === 'admin') return true;
+  return !!_userPerms[key];
+}
+
+function showNav(id, visible) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = visible ? '' : 'none';
+  const mId = 'mnav-' + id.replace('nav-','');
+  const mel = document.getElementById(mId);
+  if (mel) mel.style.display = visible ? '' : 'none';
+}
+
+function applyPermissions() {
+  const perms = DEFAULT_ROLE_PERMS[_currentRole] || DEFAULT_ROLE_PERMS.sale;
+  _userPerms = Object.assign({}, perms);
+  // Show/hide nav tabs based on permissions
+  showNav('nav-form',      _currentRole !== 'manager');
+  showNav('nav-proderr',   canDo('view_production'));
+  showNav('nav-shiperr',   canDo('view_shipping'));
+  showNav('nav-summary',   canDo('view_summary'));
+  showNav('nav-dashboard', canDo('view_dashboard'));
+  showNav('nav-stock',     canDo('view_stock'));
+  showNav('nav-customers', canDo('view_customers'));
+  showNav('nav-settings',  canDo('view_settings'));
+}
+
 function goTab(name, el) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-' + name).classList.add('active');
   if (el) el.classList.add('active');
-  if (name === 'status')    { document.getElementById('tab-status').classList.remove('has-new'); renderOrders(); }
+  // Sync mobile bottom nav
+  document.querySelectorAll('.mob-nav-item').forEach(t => t.classList.remove('active'));
+  const mnavEl = document.getElementById('mnav-' + name);
+  if (mnavEl) mnavEl.classList.add('active');
+  else { const mm = document.getElementById('mnav-more'); if (mm) mm.classList.add('active'); }
+  // Render dashboard on switch
+  if (name === 'dashboard') { renderDashboard(); }
+  if (name === 'status')    { document.getElementById('nav-status')?.classList.remove('has-new'); renderOrders(); }
   if (name === 'proderr')   { renderActiveProd(); renderProdSection(); renderProdLogHistory(); }
   if (name === 'shiperr')   { renderShipFull(); }
   if (name === 'summary')   { renderSummary(); }
@@ -1989,6 +2280,8 @@ function renderOrders() {
   const tbody = document.getElementById('ordersBody');
   if (!orders.length) {
     tbody.innerHTML = '<tr class="table-empty"><td colspan="9">' + (query||statusF ? 'ไม่พบผลลัพธ์ที่ค้นหา' : 'ยังไม่มี Order — ไปกรอกที่แท็บ "📱 ส่ง Order" ก่อนนะครับ') + '</td></tr>';
+    const _mobOrdEmpty = document.getElementById('ordersMobile');
+    if (_mobOrdEmpty) _mobOrdEmpty.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;">'+(query||statusF?'ไม่พบผลลัพธ์ที่ค้นหา':'ยังไม่มี Order')+'</div>';
     return;
   }
 
@@ -2104,6 +2397,50 @@ function renderOrders() {
     }
   });
   tbody.innerHTML = rows.join('');
+
+  // ── Mobile Order Cards ──────────────────────────────────────
+  const _mobOrd = document.getElementById('ordersMobile');
+  if (_mobOrd) {
+    const cards = [];
+    orders.forEach((o, oi) => {
+      const items    = getOrderItems(o);
+      const tq       = getOrderTotalQty(o);
+      const totalDel = getOrderDelivered(o);
+      const pct      = tq > 0 ? Math.round(totalDel/tq*100) : 0;
+      const barC     = pct>=100?'#22C55E':pct>=50?'#F59E0B':'#EF4444';
+      const relErr   = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
+      const hasErr   = relErr.length > 0;
+      const noteText = hasErr
+        ? '⚠️ '+relErr[relErr.length-1].errorType+(relErr.length>1?' (+' + (relErr.length-1) + ')':'')
+        : (o.sale||'') + (o.note && o.note!=='-' ? ' · '+o.note.slice(0,28)+(o.note.length>28?'…':'') : '');
+      const dlBadge  = deadlineBadge(o.deliveryDateISO, pct);
+      const cardCls  = hasErr ? 'mob-oc err-oc' : (oi===0&&!query&&!statusF ? 'mob-oc new-oc' : 'mob-oc');
+      const stCls    = statusClass(o.status||'รับ Order แล้ว');
+      const stLabel  = o.status||'รับ Order แล้ว';
+      const isMulti  = items.length > 1;
+      const pileDisp = isMulti ? items.length+'<br><span style="font-size:10px;">ชนิด</span>' : (items[0]?.pileType||o.pileType||'-');
+      const valDisp  = o.orderValue > 0 ? '฿'+o.orderValue.toLocaleString('th-TH') : '';
+      let btns = '';
+      if ((o.status||'รับ Order แล้ว')==='รับ Order แล้ว') btns += `<button onclick="acceptOrder('${o.orderNum}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🏭 รับ</button>`;
+      if ((o.status||'รับ Order แล้ว')==='ส่งครบ') btns += `<button onclick="closeBill('${o.orderNum}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>`;
+      btns += `<button onclick="openEditOrder('${o.orderNum}')" style="padding:5px 10px;font-size:12px;background:#EFF6FF;color:#1E40AF;border:none;border-radius:8px;cursor:pointer;">✏️</button>`;
+      cards.push(`<div class="${cardCls}">
+        <div class="mob-oc-top"><span class="mob-oc-num">${o.orderNum}</span><span class="mob-oc-status status-sel ${stCls}">${stLabel}</span></div>
+        <div class="mob-oc-cust">${o.customer}<span class="mob-oc-tel">${o.tel?' · '+o.tel:''}</span>${valDisp?'<span style="margin-left:auto;font-size:12px;color:#166534;font-weight:700;">'+valDisp+'</span>':''}</div>
+        <div class="mob-oc-div"></div>
+        <div class="mob-oc-mid">
+          <div class="mob-oc-pile"><div class="mob-oc-pile-type">${pileDisp}</div><div class="mob-oc-pile-qty">${tq} ต้น</div></div>
+          <div class="mob-oc-info">
+            <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt">ส่งแล้ว ${totalDel}/${tq} ต้น</span><span style="font-size:12px;font-weight:700;">${pct}%</span></div>
+            <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${pct}%;background:${barC};"></div></div>
+            <div class="mob-oc-meta"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
+          </div>
+        </div>
+        <div class="mob-oc-bottom"><span class="mob-oc-note">${noteText}</span>${btns}</div>
+      </div>`);
+    });
+    _mobOrd.innerHTML = cards.join('');
+  }
 }
 
 function updateOrderStatus(orderNum, selectEl) {
@@ -2527,6 +2864,35 @@ function renderProdLogHistory() {
       + '<td>'+stockBadge+'</td>'
       + '</tr>';
   }).join('');
+
+  // ── Mobile Prod Log Cards ──────────────────────────────────
+  const _mobProd = document.getElementById('prodLogMobile');
+  if (_mobProd) {
+    if (!logs.length) {
+      _mobProd.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;">ยังไม่มีประวัติการผลิต</div>';
+    } else {
+      _mobProd.innerHTML = logs.map(l => {
+        const net    = l.qtyNet !== undefined ? l.qtyNet : l.qtyProduced || 0;
+        const defect = l.qtyDefect || 0;
+        const custFull = getOrders().find(o=>o.orderNum===l.orderNum)?.customer||'';
+        const custLine = custFull ? ` <span style="font-size:11px;color:#64748B;font-weight:400;">· ${custFull}</span>` : '';
+        const excessLine = (l.qtyExcess||0) > 0
+          ? `<div style="margin-top:6px;font-size:11px;background:#FEF9C3;color:#854D0E;padding:3px 8px;border-radius:6px;text-align:center;font-weight:700;">⚠️ เกิน ${l.qtyExcess} ต้น</div>` : '';
+        const stockLine = l.addedToStock
+          ? `<div style="margin-top:6px;font-size:11px;background:#DCFCE7;color:#166534;padding:3px 8px;border-radius:6px;text-align:center;font-weight:700;">✅ เพิ่มสต็อกแล้ว</div>` : '';
+        return `<div class="mob-pc">
+          <div class="mob-pc-top"><span class="mob-pc-order">${l.orderNum}${custLine}</span><span class="mob-pc-date">${l.date}</span></div>
+          <div class="mob-pc-pile">${l.pileType}</div>
+          <div class="mob-pc-stats">
+            <div class="mob-pc-stat"><div class="mob-pc-val" style="color:#1E40AF;">${l.qtyProduced}</div><div class="mob-pc-lbl">ผลิตได้</div></div>
+            <div class="mob-pc-stat"><div class="mob-pc-val" style="color:${defect>0?'#DC2626':'#94A3B8'};">${defect}</div><div class="mob-pc-lbl">เสีย</div></div>
+            <div class="mob-pc-stat"><div class="mob-pc-val" style="color:#166534;">${net}</div><div class="mob-pc-lbl">พร้อมส่ง</div></div>
+          </div>${excessLine}${stockLine}
+        </div>`;
+      }).join('');
+    }
+  }
+
 }
 
 // ── Render Error Tables ────────────────────────────────────────
@@ -2894,6 +3260,28 @@ function renderStockLog(resetPage) {
         <td style="${bg}">${e.note}</td>
       </tr>`;
     }).join('');
+  }
+
+
+  // ── Mobile Stock Log Cards ─────────────────────────────────
+  const _mobStock = document.getElementById('stockLogMobile');
+  if (_mobStock) {
+    if (!pageLog.length) {
+      _mobStock.innerHTML = `<div style="text-align:center;padding:40px 20px;color:#94A3B8;">${total===0?'ยังไม่มีประวัติ':'ไม่พบผลลัพธ์ที่ค้นหา'}</div>`;
+    } else {
+      _mobStock.innerHTML = pageLog.map((e,i) => {
+        const isIn=e.typeVal.includes('รับเข้า'), isOut=e.typeVal.includes('เบิกออก');
+        const tagCls = isIn ? 'mob-lc-in' : isOut ? 'mob-lc-out' : 'mob-lc-adj';
+        const qColor = isIn ? '#166534' : isOut ? '#991B1B' : '#6D28D9';
+        const label  = e.typeVal.split('(')[0].trim();
+        const refPart = e.ref ? ` · ${e.ref}` : '';
+        return `<div class="mob-lc">
+          <span class="mob-lc-tag ${tagCls}">${label}</span>
+          <div class="mob-lc-info"><div class="mob-lc-pile">${e.name}</div><div class="mob-lc-date">${e.ts}${refPart}</div></div>
+          <div class="mob-lc-right"><div class="mob-lc-qty" style="color:${qColor};">${e.qtyDisplay}</div><div class="mob-lc-after">คงเหลือ ${e.newStock}</div></div>
+        </div>`;
+      }).join('');
+    }
   }
 
   // Pagination
@@ -3997,6 +4385,195 @@ document.addEventListener('DOMContentLoaded', function() {
   var el = document.getElementById('f_order_date');
   if (el && !el.value) el.value = new Date().toISOString().slice(0, 10);
 });
+
+
+// ── Dashboard ──────────────────────────────────────────────────
+let _dbPeriod = 30;
+let _dbChartTrend = null;
+let _dbChartStatus = null;
+
+function dbSetPeriod(days) {
+  _dbPeriod = days;
+  document.querySelectorAll('.db-period-btn').forEach(b => b.classList.remove('active'));
+  const map = {7:'dbp7',30:'dbp30',90:'dbp90',365:'dbp365'};
+  const el = document.getElementById(map[days]);
+  if (el) el.classList.add('active');
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const days = _dbPeriod;
+  const cutoff = Date.now() - days * 864e5;
+  let orders = getOrders().filter(o => {
+    const ts = o.createdAt || 0;
+    return ts >= cutoff;
+  });
+  // also check history
+  const hist = getHistory ? getHistory() : [];
+  const allForDb = [
+    ...getOrders(),
+    ...hist
+  ].filter(o => (o.createdAt||0) >= cutoff || (o.closedAt||0) >= cutoff);
+
+  // KPI
+  const total   = allForDb.length;
+  const done    = allForDb.filter(o => ['ส่งครบ','จบแล้ว'].includes(o.status||'')).length;
+  const active  = getOrders().filter(o => !['ส่งครบ','จบบิลแล้ว'].includes(o.status||'')).length;
+  const totalV  = allForDb.reduce((s,o) => s+(o.orderValue||0), 0);
+  const _cfg    = getConfig();
+  const stock   = getStock();
+  const lowStock = Object.entries(stock).filter(([,qty]) => qty < (_cfg.stockLow||50)).length;
+  const prodErrs = getProdErrs ? getProdErrs().filter(e => (e.ts||0) >= cutoff).length : 0;
+
+  const kpis = [
+    { label:'Orders ทั้งหมด', val:total, sub:'ช่วง '+days+' วัน', color:'blue',   icon:'📋' },
+    { label:'ส่งสำเร็จ',      val:done,  sub:total>0?Math.round(done/total*100)+'%':'', color:'green',  icon:'✅' },
+    { label:'ค้างอยู่',        val:active, sub:'orders ที่ยังเปิดอยู่', color:'amber',  icon:'⏳' },
+    { label:'มูลค่ารวม',      val:'฿'+totalV.toLocaleString('th-TH'), sub:'', color:'purple', icon:'💰' },
+    { label:'Error ผลิต',     val:prodErrs, sub:'รายการที่มีปัญหา', color:prodErrs>0?'red':'teal', icon:'🏭' },
+    { label:'สต็อกต่ำ',       val:lowStock, sub:'ประเภทที่ใกล้หมด', color:lowStock>0?'red':'teal', icon:'📦' },
+  ];
+  const kpiEl = document.getElementById('dbKpis');
+  if (!kpiEl) return;
+  kpiEl.innerHTML = kpis.map(k =>
+    `<div class="db-kpi ${k.color}"><div class="db-kpi-label">${k.icon} ${k.label}</div><div class="db-kpi-val">${k.val}</div>${k.sub?`<div class="db-kpi-sub">${k.sub}</div>`:''}</div>`
+  ).join('');
+
+  // Trend chart
+  const buckets = days <= 30 ? 'week' : 'month';
+  const trendData = _dbBucketOrders(allForDb, days, buckets);
+  const titleEl = document.getElementById('dbTrendTitle');
+  if (titleEl) titleEl.textContent = 'Orders ราย'+(buckets==='week'?'สัปดาห์':'เดือน');
+  if (_dbChartTrend) { _dbChartTrend.destroy(); _dbChartTrend = null; }
+  const ctxT = document.getElementById('dbChartTrend');
+  if (ctxT && typeof Chart !== 'undefined') {
+    _dbChartTrend = new Chart(ctxT, {
+      type:'bar',
+      data:{ labels:trendData.labels, datasets:[{ label:'Orders', data:trendData.counts, backgroundColor:'#3B82F6', borderRadius:5 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}}}, x:{ticks:{font:{size:10}}} } }
+    });
+  }
+
+  // Status donut
+  const statusMap = {};
+  allForDb.forEach(o => { const s=o.status||'ไม่ระบุ'; statusMap[s]=(statusMap[s]||0)+1; });
+  const sLabels = Object.keys(statusMap), sData = sLabels.map(k=>statusMap[k]);
+  const sPal = ['#3B82F6','#22C55E','#F59E0B','#A855F7','#14B8A6','#EF4444','#64748B'];
+  const legEl = document.getElementById('dbStatusLegend');
+  if (legEl) legEl.innerHTML = sLabels.map((l,i)=>`<span class="db-legend-item"><span class="db-legend-dot" style="background:${sPal[i%sPal.length]};"></span>${l} (${sData[i]})</span>`).join('');
+  if (_dbChartStatus) { _dbChartStatus.destroy(); _dbChartStatus = null; }
+  const ctxS = document.getElementById('dbChartStatus');
+  if (ctxS && sLabels.length && typeof Chart !== 'undefined') {
+    _dbChartStatus = new Chart(ctxS, {
+      type:'doughnut',
+      data:{ labels:sLabels, datasets:[{ data:sData, backgroundColor:sPal.slice(0,sLabels.length), borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'60%' }
+    });
+  }
+
+  // Sale performance
+  const saleMap = {};
+  allForDb.forEach(o => {
+    const s=o.sale||'ไม่ระบุ';
+    if (!saleMap[s]) saleMap[s]={count:0,val:0};
+    saleMap[s].count++; saleMap[s].val+=(o.orderValue||0);
+  });
+  const saleEntries = Object.entries(saleMap).sort((a,b)=>b[1].count-a[1].count);
+  const maxC = saleEntries.length ? saleEntries[0][1].count : 1;
+  const saleEl = document.getElementById('dbSaleChart');
+  if (saleEl) saleEl.innerHTML = saleEntries.map(([name,d])=>
+    `<div class="db-bar-row"><div class="db-bar-name" title="${name}">${name}</div><div class="db-bar-bg"><div class="db-bar-fill" style="width:${Math.round(d.count/maxC*100)}%;background:#3B82F6;"></div></div><div class="db-bar-num">${d.count}</div></div>`
+  ).join('') || '<div class="db-empty">ยังไม่มีข้อมูล</div>';
+
+  // Stock health
+  const pileTypes = Object.keys(stock);
+  const maxQty = Math.max(...Object.values(stock), 1);
+  const stEl = document.getElementById('dbStockChart');
+  if (stEl) stEl.innerHTML = pileTypes.length ? pileTypes.map(p => {
+    const qty=stock[p], pct=Math.round(qty/maxQty*100);
+    const color=qty<(_cfg.stockLow||50)?'#EF4444':qty<(_cfg.stockWarn||150)?'#F59E0B':'#22C55E';
+    return `<div class="db-bar-row"><div class="db-bar-name" title="${p}">${p}</div><div class="db-bar-bg"><div class="db-bar-fill" style="width:${pct}%;background:${color};"></div></div><div class="db-bar-num">${qty}</div></div>`;
+  }).join('') : '<div class="db-empty">ยังไม่มีสต็อก</div>';
+
+  // Top customers
+  const custMap = {};
+  allForDb.forEach(o => {
+    const c=o.customer||'ไม่ระบุ';
+    if (!custMap[c]) custMap[c]={count:0,val:0};
+    custMap[c].count++; custMap[c].val+=(o.orderValue||0);
+  });
+  const topCust = Object.entries(custMap).sort((a,b)=>b[1].count-a[1].count).slice(0,6);
+  const custEl = document.getElementById('dbTopCustomers');
+  if (custEl) custEl.innerHTML = topCust.length
+    ? topCust.map(([name,d],i)=>`<tr><td style="color:#94A3B8;font-weight:700;">${i+1}</td><td style="font-weight:600;">${name}</td><td style="text-align:center;">${d.count}</td><td>฿${d.val.toLocaleString('th-TH')}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="db-empty">ยังไม่มีข้อมูล</td></tr>';
+
+  // Top pile types
+  const pileMap = {};
+  allForDb.forEach(o => {
+    const items = o.items ? o.items : (o.pileType ? [{pileType:o.pileType,qty:getOrderTotalQty?getOrderTotalQty(o):o.qty||0}] : []);
+    items.forEach(it => { const p=it.pileType||it.pile||''; if(p) pileMap[p]=(pileMap[p]||0)+(it.qty||0); });
+  });
+  const topPiles = Object.entries(pileMap).sort((a,b)=>b[1]-a[1]);
+  const maxP = topPiles.length ? topPiles[0][1] : 1;
+  const pileEl = document.getElementById('dbTopPiles');
+  if (pileEl) pileEl.innerHTML = topPiles.map(([name,qty])=>
+    `<div class="db-bar-row"><div class="db-bar-name" title="${name}">${name}</div><div class="db-bar-bg"><div class="db-bar-fill" style="width:${Math.round(qty/maxP*100)}%;background:#A855F7;"></div></div><div class="db-bar-num">${qty.toLocaleString()}</div></div>`
+  ).join('') || '<div class="db-empty">ยังไม่มีข้อมูล</div>';
+}
+
+function _dbBucketOrders(orders, days, mode) {
+  const now = Date.now();
+  const labels = [], counts = [];
+  if (mode === 'week') {
+    const weeks = Math.min(Math.ceil(days/7), 12);
+    for (let i=weeks-1; i>=0; i--) {
+      const start=now-(i+1)*7*864e5, end=now-i*7*864e5;
+      labels.push(new Date(start).toLocaleDateString('th-TH',{day:'numeric',month:'short'}));
+      counts.push(orders.filter(o=>(o.createdAt||0)>=start&&(o.createdAt||0)<end).length);
+    }
+  } else {
+    const months = Math.min(Math.ceil(days/30), 12);
+    for (let i=months-1; i>=0; i--) {
+      const d=new Date(); d.setMonth(d.getMonth()-i);
+      labels.push(d.toLocaleDateString('th-TH',{month:'short',year:'2-digit'}));
+      counts.push(orders.filter(o=>{const od=new Date(o.createdAt||0);return od.getMonth()===d.getMonth()&&od.getFullYear()===d.getFullYear();}).length);
+    }
+  }
+  return { labels, counts };
+}
+
+// ── Mobile More Sheet ──────────────────────────────────────────
+const _mobMoreConfig = {
+  'nav-shiperr':   { icon:'🚛', label:'Error ขนส่ง',      tab:'shiperr' },
+  'nav-summary':   { icon:'📊', label:'สรุปภาพรวม',        tab:'summary' },
+  'nav-customers': { icon:'👥', label:'ลูกค้า',            tab:'customers' },
+  'nav-settings':  { icon:'⚙️', label:'ตั้งค่าระบบ',       tab:'settings' },
+};
+function openMobMore() {
+  const list = document.getElementById('mobMoreList');
+  if (!list) return;
+  list.innerHTML = '';
+  Object.entries(_mobMoreConfig).forEach(([navId, cfg]) => {
+    const el = document.getElementById(navId);
+    if (!el || el.style.display === 'none') return;
+    const item = document.createElement('div');
+    item.className = 'mob-more-item';
+    item.innerHTML = `<span class="mob-more-icon">${cfg.icon}</span><span>${cfg.label}</span>`;
+    item.onclick = () => { goTab(cfg.tab, el); closeMobMore(); };
+    list.appendChild(item);
+  });
+  document.getElementById('mobMoreOverlay').classList.add('open');
+}
+function closeMobMore() {
+  document.getElementById('mobMoreOverlay').classList.remove('open');
+}
+function openMobExportSheet() {
+  document.getElementById('mobExportOverlay').classList.add('open');
+}
+function closeMobExportSheet() {
+  document.getElementById('mobExportOverlay').classList.remove('open');
+}
 
 </script>
 </body>
