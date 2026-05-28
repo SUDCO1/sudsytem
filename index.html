@@ -683,7 +683,6 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
         </div>
       </div>
       <div class="toolbar">
-        <button class="btn btn-danger btn-sm desk-only-btn" onclick="goTab('proderr',document.querySelector('[data-tab=proderr]'))">🏭 Error ผลิต</button>
         <button class="btn btn-danger btn-sm desk-only-btn" onclick="goTab('shiperr',document.querySelector('[data-tab=shiperr]'))">⚠️ Error ผลิต</button>
         <input type="search" class="search-inp" id="orderSearch" placeholder="🔍 ค้นหาลูกค้า / เลข Order..." oninput="renderOrders()"/>
         <select class="filter-sel" id="statusFilter" onchange="renderOrders()">
@@ -3785,9 +3784,10 @@ function saveRolePerms() {
   // Save roles list too
   const rolesData = _permRoles.filter(r => !r.locked).map(r => ({ id:r.id, label:r.label, color:r.color }));
   const db = firebase.database();
+  const rolesPayload = rolesData.length > 0 ? rolesData : null;
   Promise.all([
     db.ref('/config/rolePerms').set(newPerms),
-    db.ref('/config/customRoles').set(rolesData),
+    db.ref('/config/customRoles').set(rolesPayload),
   ]).then(() => {
     _savedRolePerms = newPerms;
     if (_currentRole !== 'admin') {
@@ -3795,7 +3795,10 @@ function saveRolePerms() {
       applyPermissions();
     }
     showToast('✅ บันทึกสิทธิ์เรียบร้อย!');
-  }).catch(() => showToast('❌ บันทึกไม่สำเร็จ'));
+  }).catch(err => {
+    console.error('saveRolePerms error:', err);
+    showToast('❌ บันทึกไม่สำเร็จ: ' + (err.message || err.code || 'ดู Console'));
+  });
 }
 
 function loadRolePerms(cb) {
