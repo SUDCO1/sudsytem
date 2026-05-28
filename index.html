@@ -7,11 +7,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <!-- ══════════════════════════════════════════════════════════════
-     FIREBASE SDK
+     Firebase SDK (v9 compat)
      ══════════════════════════════════════════════════════════════ -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 /* ============================================================ BASE ============================================================ */
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -529,22 +529,29 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
 </style>
 <body>
 
-<!-- ================================================================ LOGIN SCREEN ================================================================ -->
+<!-- ================================================================ LOGIN SCREEN (Demo: hidden immediately) ================================================================ -->
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
     <div class="login-logo">🏗️</div>
-    <div class="login-title">ระบบดิจิทัลเสาเข็ม</div>
+    <div class="login-title" id="loginTitle">ระบบดิจิทัลเสาเข็ม</div>
     <div class="login-sub">กรุณาเข้าสู่ระบบเพื่อใช้งาน</div>
-    <div class="login-field">
-      <label>📧 อีเมล</label>
-      <input type="email" id="loginEmail" placeholder="email@example.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div style="margin-top:24px;text-align:left;">
+      <label style="font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:6px;">อีเมล</label>
+      <input type="email" id="loginEmail" placeholder="your@email.com"
+        style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;outline:none;font-family:inherit;"
+        onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()"/>
     </div>
-    <div class="login-field">
-      <label>🔒 รหัสผ่าน</label>
-      <input type="password" id="loginPass" placeholder="รหัสผ่าน" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <div style="margin-top:14px;text-align:left;">
+      <label style="font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:6px;">รหัสผ่าน</label>
+      <input type="password" id="loginPass" placeholder="••••••••"
+        style="width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;outline:none;font-family:inherit;"
+        onkeydown="if(event.key==='Enter')doLogin()"/>
     </div>
-    <button class="login-btn" id="loginBtn" onclick="doLogin()">🔑 เข้าสู่ระบบ</button>
-    <div class="login-err" id="loginErr">❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่</div>
+    <div id="loginErr" class="login-err" style="margin-top:10px;"></div>
+    <button id="loginBtn" onclick="doLogin()"
+      style="margin-top:18px;width:100%;padding:13px;background:linear-gradient(135deg,#1E40AF,#1D4ED8);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">
+      🔑 เข้าสู่ระบบ
+    </button>
   </div>
 </div>
 
@@ -553,18 +560,14 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
   <div class="hdr-logo" id="hdrEmoji">🏗️</div>
   <div class="hdr-info">
     <div class="hdr-title" id="hdrTitle">ระบบดิจิทัล — บริษัทเสาเข็ม</div>
-    <div class="hdr-sub">Digital Order Management System · v5-Firebase · <span id="hdrUserEmail" style="opacity:0.8;"></span></div>
+    <div class="hdr-sub">Digital Order Management System · <span id="hdrUserEmail" style="opacity:0.8;"></span></div>
   </div>
   <span class="role-badge" id="hdrRoleBadge" style="display:none;"></span>
   <div class="hdr-badge">Orders <span class="badge-count" id="headerCount">0</span></div>
   <button onclick="doLogout()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">ออกจากระบบ</button>
 </div>
 
-<!-- DEMO BAR -->
-<div class="demo-bar">
-  🔥 <b>Firebase Mode</b> — ข้อมูลซิงค์แบบ Real-time ข้ามทุกเครื่อง · v5-Firebase
-  <button class="demo-bar-btn admin-only" onclick="clearDemo()">🗑 ล้างข้อมูลทดสอบ</button>
-</div>
+
 
 <!-- NAV -->
 <div class="app-nav">
@@ -674,12 +677,13 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
 
 <!-- ================================================================ SECTION: สถานะ Order ================================================================ -->
 <div id="sec-status" class="section">
-  <div class="app-content">
+  <div class="app-content stack">
+    <!-- ── Toolbar card ── -->
     <div class="card">
       <div class="card-header">
         <div>
           <div class="card-title">📋 ติดตามสถานะ Order</div>
-          <div class="card-sub">เปลี่ยนสถานะผ่าน dropdown · คลิกตัวเลข "ส่งแล้ว" เพื่ออัปเดตจำนวน</div>
+          <div class="card-sub">จัดกลุ่มตามชนิดเสา · คลิกตัวเลข "ส่งแล้ว" เพื่ออัปเดตจำนวน</div>
         </div>
       </div>
       <div class="toolbar">
@@ -688,34 +692,19 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
         <select class="filter-sel" id="statusFilter" onchange="renderOrders()">
           <option value="">สถานะ: ทั้งหมด</option>
           <option>รับ Order แล้ว</option>
-          <option>รับออเดอร์</option>
-          <option>ยืนยัน Order</option>
+          <option>ยืนยัน Order แล้ว</option>
           <option>กำลังผลิต</option>
           <option>พร้อมส่ง</option>
           <option>ระหว่างขนส่ง</option>
-          <option>ส่งครบ</option>
+          <option>ส่งแล้วบางส่วน</option>
+          <option>ส่งครบแล้ว</option>
         </select>
       </div>
-      <div id="ordersTableWrap" class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>เลข Order</th>
-              <th>ลูกค้า</th>
-              <th>ชนิด / จำนวน</th>
-              <th>ส่งแล้ว ✎</th>
-              <th>ความคืบหน้า</th>
-              <th>กำหนดส่ง</th>
-              <th>สถานะ Workflow</th>
-              <th>มูลค่า</th>
-              <th>Sale / หมายเหตุ</th>
-            </tr>
-          </thead>
-          <tbody id="ordersBody"></tbody>
-        </table>
-      </div>
-      <div id="ordersMobile" style="padding:10px 12px 4px;"></div>
     </div>
+    <!-- ── Pile-grouped cards (desktop) ── -->
+    <div id="ordersGrouped"></div>
+    <!-- ── Mobile cards ── -->
+    <div id="ordersMobile" style="padding:4px 0;display:none;"></div>
   </div>
 </div>
 
@@ -792,10 +781,51 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
             <div style="font-size:11px;color:#64748B;font-weight:700;margin-bottom:6px;">วันที่ผลิต</div>
             <input type="date" id="fp_date"/>
           </div>
+          <div class="field full-col">
+            <label class="field-label">หมายเหตุผลิตเสีย <span style="font-weight:400;color:#94A3B8;">(ไม่บังคับ)</span></label>
+            <input type="text" id="fp_defect_note" placeholder="เช่น เบ้าแตก, คอนกรีตไม่ได้มาตรฐาน, ผสมผิดสัดส่วน..."/>
+          </div>
         </div>
         <div class="form-actions" style="margin-top:16px;">
           <button class="btn btn-success" onclick="submitFinishProd()" style="background:#166534;">✅ บันทึกและเพิ่มสต็อก</button>
           <button class="btn btn-ghost" onclick="closeFinishProd()">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ฟอร์มผลิตเพิ่มสต็อก (ไม่มี Order) ── -->
+    <div class="card" id="freeProdFormCard" style="display:none;border:2px solid #93C5FD;">
+      <div class="card-header" style="justify-content:space-between;background:#EFF6FF;border-radius:10px 10px 0 0;">
+        <div>
+          <div class="card-title" style="color:#1D4ED8;">📦 ผลิตเพิ่มสต็อก</div>
+          <div class="card-sub">ผลิตโดยไม่อิง Order — เพิ่มสต็อกทันทีเมื่อผลิตเสร็จ</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="closeFreeProdForm()">✕ ปิด</button>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label class="field-label">ชนิดเสา <span class="req">*</span></label>
+            <select id="fprod_pile" class="select-inp">
+              <option value="">— เลือกชนิดเสา —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">สเปค / ความยาว <span style="font-weight:400;color:#94A3B8;">(ไม่บังคับ)</span></label>
+            <input type="text" id="fprod_length" placeholder="เช่น 6m, 9m, 6/9/12"/>
+          </div>
+          <div class="field">
+            <label class="field-label">จำนวนที่เทลงราง (ต้น) <span class="req">*</span></label>
+            <input type="number" id="fprod_qty" min="1" placeholder="เช่น 50"/>
+          </div>
+          <div class="field">
+            <label class="field-label">หมายเหตุ <span style="font-weight:400;color:#94A3B8;">(ไม่บังคับ)</span></label>
+            <input type="text" id="fprod_note" placeholder="เช่น ผลิตไว้สำรอง, ชุดที่ 1"/>
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top:16px;">
+          <button class="btn btn-primary" onclick="submitFreeProd()" style="background:#1D4ED8;">🏭 บันทึกเริ่มเท</button>
+          <button class="btn btn-ghost" onclick="closeFreeProdForm()">ยกเลิก</button>
         </div>
       </div>
     </div>
@@ -807,6 +837,7 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
           <div class="card-title">🏭 ออเดอร์สำหรับฝ่ายผลิต</div>
           <div class="card-sub">ออเดอร์ที่ฝ่ายผลิตรับแล้ว — กด "🏭 เริ่มเท" เมื่อเทลงราง → กด "✅ ผลิตเสร็จ" เมื่อยกออกจากราง</div>
         </div>
+        <button class="btn btn-sm" onclick="openFreeProdForm()" style="margin-left:auto;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #93C5FD;white-space:nowrap;flex-shrink:0;">📦 ผลิตเพิ่มสต็อก</button>
       </div>
       <div id="prodOrdersTableWrap" class="table-wrap">
         <table class="data-table">
@@ -871,7 +902,7 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
       </div>
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>วันที่</th><th>เลข Order</th><th>ประเภท Error</th><th>เสีย (ต้น)</th><th>สาเหตุ</th><th>การแก้ไข</th><th>ผู้บันทึก</th></tr></thead>
+          <thead><tr><th>วันที่</th><th>เลข Order</th><th>ประเภท Error</th><th>เสีย (ต้น)</th><th>สาเหตุ</th><th>การแก้ไข</th><th>ผู้บันทึก</th><th></th></tr></thead>
           <tbody id="prodErrHistBody"></tbody>
         </table>
       </div>
@@ -1428,19 +1459,23 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
 <!-- ================================================================ JAVASCRIPT ================================================================ -->
 <script>
 // ══════════════════════════════════════════════════════════════
-// ── FIREBASE CONFIG ───────────────────────────────────────────
+// ── DEMO MODE CONFIG ─────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+// ⚙️  FIREBASE CONFIG — วางค่าจาก Firebase Console ที่นี่
+//    Project Settings → General → Your apps → Web app → firebaseConfig
+// ════════════════════════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey:            "AIzaSyAFUHGfFrVqgLErFmP5HHTudg6NQbI_c3Y",
-  authDomain:        "sud-demo-eb117.firebaseapp.com",
-  databaseURL:       "https://sud-demo-eb117-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:         "sud-demo-eb117",
-  storageBucket:     "sud-demo-eb117.firebasestorage.app",
-  messagingSenderId: "617606554251",
-  appId:             "1:617606554251:web:2f9cdf210b4460900baa8e"
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId:             "YOUR_APP_ID"
 };
+// ════════════════════════════════════════════════════════════════
 
-// Init Firebase
 firebase.initializeApp(firebaseConfig);
 const db   = firebase.database();
 const auth = firebase.auth();
@@ -1454,20 +1489,10 @@ const K_USER_ROLES = 'sud/userRoles';
 let _currentUser  = null;
 let _currentRole  = null; // 'admin' | 'manager' | 'sale'
 
-// Secondary Firebase app สำหรับสร้าง account ใหม่โดยไม่ logout admin
-let _secondaryApp  = null;
-let _secondaryAuth = null;
+// Secondary auth — ใช้ secondary Firebase App เพื่อสร้าง user โดยไม่ logout admin
 function getSecondaryAuth() {
-  if (!_secondaryAuth) {
-    try {
-      _secondaryApp  = firebase.initializeApp(firebaseConfig, 'secondary_' + Date.now());
-      _secondaryAuth = _secondaryApp.auth();
-    } catch(e) {
-      _secondaryApp  = firebase.app('secondary');
-      _secondaryAuth = _secondaryApp.auth();
-    }
-  }
-  return _secondaryAuth;
+  try { return firebase.app('secondary').auth(); }
+  catch(e) { return firebase.initializeApp(firebaseConfig, 'secondary').auth(); }
 }
 
 function getRoleLabel(role) {
@@ -1547,6 +1572,8 @@ function doLogin() {
 
 function doLogout() {
   if (!confirm('ออกจากระบบใช่ไหมครับ?')) return;
+  // Sign out secondary app too (ถ้ามี)
+  try { firebase.app('secondary').auth().signOut(); } catch(e) {}
   auth.signOut();
 }
 
@@ -2308,6 +2335,16 @@ function editLength(orderNum) {
 }
 
 // ── Render Orders ──────────────────────────────────────────────
+// ── Pile color palette ─────────────────────────────────────────
+const PILE_PALETTE = [
+  { border:'#3B82F6', bg:'#EFF6FF', text:'#1D4ED8' },
+  { border:'#A855F7', bg:'#FAF5FF', text:'#7E22CE' },
+  { border:'#F59E0B', bg:'#FFFBEB', text:'#92400E' },
+  { border:'#EF4444', bg:'#FFF1F2', text:'#991B1B' },
+  { border:'#22C55E', bg:'#F0FDF4', text:'#166534' },
+  { border:'#14B8A6', bg:'#F0FDFA', text:'#0F766E' },
+];
+
 function renderOrders() {
   const query    = (document.getElementById('orderSearch')?.value || '').trim().toLowerCase();
   const statusF  = document.getElementById('statusFilter')?.value || '';
@@ -2320,170 +2357,148 @@ function renderOrders() {
   if (query)   orders = orders.filter(o => o.customer.toLowerCase().includes(query) || o.orderNum.toLowerCase().includes(query) || (o.tel||'').includes(query));
   if (statusF) orders = orders.filter(o => (o.status || 'รับ Order แล้ว') === statusF);
 
-  const tbody = document.getElementById('ordersBody');
+  // ─── Desktop: pile-grouped cards ────────────────────────────
+  const container = document.getElementById('ordersGrouped');
+  if (container) {
+    if (!orders.length) {
+      container.innerHTML = '<div class="card"><div style="text-align:center;padding:40px;color:#94A3B8;font-size:14px;">'+(query||statusF?'ไม่พบผลลัพธ์ที่ค้นหา':'ยังไม่มี Order — ไปกรอกที่แท็บ "📱 ส่ง Order" ก่อนนะครับ')+'</div></div>';
+    } else {
+      // Group order items by pile type
+      const pileGroups  = {};
+      const pileOrderArr = [];
+      orders.forEach(o => {
+        getOrderItems(o).forEach((it, idx) => {
+          const pile = it.pileType || o.pileType || '(ไม่ระบุ)';
+          if (!pileGroups[pile]) { pileGroups[pile] = []; pileOrderArr.push(pile); }
+          pileGroups[pile].push({ o, it, idx });
+        });
+      });
+      // Sort pile order by config order
+      const cfgPiles = (_cfg.pileTypes || []);
+      pileOrderArr.sort((a,b) => {
+        const ai = cfgPiles.indexOf(a), bi = cfgPiles.indexOf(b);
+        return (ai===-1?99:ai) - (bi===-1?99:bi);
+      });
+
+      let html = '';
+      pileOrderArr.forEach((pile, pi) => {
+        const pal    = PILE_PALETTE[pi % PILE_PALETTE.length];
+        const entries = pileGroups[pile];
+        const totalQty = entries.reduce((s,{it}) => s+(it.qty||0), 0);
+        const totalDel = entries.reduce((s,{it}) => s+(it.delivered||0), 0);
+        const stockTotal = _stock[pile] || 0;
+        const reserved   = _res[pile]  || 0;
+        const avail      = stockTotal - reserved;
+        const availColor = avail < 0 ? '#991B1B' : avail < (_cfg.stockLow||15) ? '#854D0E' : '#166534';
+
+        html += `<div class="card" style="border-left:4px solid ${pal.border};">
+          <div class="card-header" style="background:${pal.bg};border-radius:10px 10px 0 0;">
+            <div style="width:12px;height:12px;border-radius:50%;background:${pal.border};flex-shrink:0;"></div>
+            <div>
+              <div class="card-title" style="color:${pal.text};">${pile}</div>
+              <div class="card-sub">${entries.length} รายการ · สั่งรวม <strong>${totalQty}</strong> ต้น · ส่งแล้ว <strong>${totalDel}</strong> ต้น</div>
+            </div>
+            <div style="margin-left:auto;text-align:right;font-size:12px;flex-shrink:0;">
+              <div style="font-weight:700;color:${availColor};">คลังคงเหลือ: ${avail} ต้น</div>
+              <div style="font-size:10px;color:#94A3B8;">ทั้งหมด ${stockTotal} · จอง ${reserved}</div>
+            </div>
+          </div>
+          <div class="table-wrap"><table class="data-table">
+            <thead><tr>
+              <th>เลข Order</th><th>ลูกค้า</th><th>สเปค</th>
+              <th>สั่ง</th><th>ส่งแล้ว ✎</th><th>คืบหน้า</th>
+              <th>กำหนดส่ง</th><th>มูลค่า</th><th>สถานะ</th><th>Sale / หมายเหตุ</th>
+            </tr></thead><tbody>`;
+
+        entries.forEach(({o, it, idx}) => {
+          const del   = it.delivered !== undefined ? it.delivered : (o.delivered||0);
+          const rem   = it.qty - del;
+          const iPct  = it.qty>0 ? Math.round(del/it.qty*100) : 0;
+          const iBarC = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
+          const iPctC = iPct>=100?'#166534':iPct>=50?'#92400E':'#991B1B';
+          const relErr  = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
+          const errNote = relErr.length > 0
+            ? '⚠️ ' + relErr[relErr.length-1].errorType
+            : (o.sale||'') + (o.note && o.note!=='-' ? ' · '+o.note.slice(0,18)+(o.note.length>18?'…':'') : '');
+          const noteStyle   = relErr.length > 0 ? 'color:#854D0E;' : '';
+          const dlBadge     = deadlineBadge(o.deliveryDateISO, iPct);
+          const isMultiItem = o.items && o.items.length > 1;
+          const editCall    = isMultiItem ? `editItemDelivered('${o.orderNum}',${idx})` : `editDelivered('${o.orderNum}')`;
+          const lenDisp     = (it.length && it.length!=='-') ? it.length : '<span style="color:#CBD5E1;">—</span>';
+          const valDisp     = o.orderValue > 0 ? o.orderValue.toLocaleString('th-TH')+' ฿' : '—';
+          const rowCls      = deadlineRowClass(o.deliveryDateISO, iPct);
+
+          html += `<tr class="${rowCls}">
+            <td><span class="order-id">${o.orderNum}</span>${isMultiItem?`<br><span style="font-size:10px;color:#94A3B8;">[${idx+1}/${o.items.length}]</span>`:''}</td>
+            <td><strong>${o.customer}</strong>${o.tel?`<br><span style="font-size:11px;color:#64748B;">${o.tel}</span>`:''}</td>
+            <td style="font-size:12px;">${lenDisp}</td>
+            <td><strong>${it.qty}</strong></td>
+            <td><span class="edit-cell" onclick="${editCall}">${del} / ${it.qty}</span><br><span style="font-size:11px;color:${rem>0?'#854D0E':'#166534'};">เหลือ ${rem}</span></td>
+            <td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${iPct}%;background:${iBarC};"></div></div><span class="prog-pct" style="color:${iPctC};">${iPct}%</span></div></td>
+            <td style="font-size:12px;">${o.deliveryDate}${dlBadge}</td>
+            <td style="font-size:12px;color:#166534;font-weight:600;">${valDisp}</td>
+            <td>${statusSelectHTML(o.orderNum, o.status||'รับ Order แล้ว')}</td>
+            <td style="${noteStyle};font-size:12px;">${errNote}
+              ${(o.status||'รับ Order แล้ว')==='รับ Order แล้ว'?`<br><button onclick="acceptOrder('${o.orderNum}')" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:6px;cursor:pointer;">🏭 รับ</button>`:''}
+              ${(o.status||'รับ Order แล้ว')==='ส่งครบ'||o.status==='ส่งครบแล้ว'?`<br><button onclick="closeBill('${o.orderNum}')" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;">🔴 จบบิล</button>`:''}
+              <div class="act-row"><button class="act-btn act-edit" onclick="openEditOrder('${o.orderNum}')">✏️ แก้ไข</button><button class="act-btn act-del" onclick="deleteOrder('${o.orderNum}')">🗑 ลบ</button></div>
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table></div></div>';
+      });
+      container.innerHTML = html;
+    }
+  }
+
+  // ─── Mobile: existing card layout ───────────────────────────
+  const _mobOrd = document.getElementById('ordersMobile');
+  if (!_mobOrd) return;
   if (!orders.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="9">' + (query||statusF ? 'ไม่พบผลลัพธ์ที่ค้นหา' : 'ยังไม่มี Order — ไปกรอกที่แท็บ "📱 ส่ง Order" ก่อนนะครับ') + '</td></tr>';
-    const _mobOrdEmpty = document.getElementById('ordersMobile');
-    if (_mobOrdEmpty) _mobOrdEmpty.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;">'+(query||statusF?'ไม่พบผลลัพธ์ที่ค้นหา':'ยังไม่มี Order')+'</div>';
+    _mobOrd.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;">'+(query||statusF?'ไม่พบผลลัพธ์ที่ค้นหา':'ยังไม่มี Order')+'</div>';
     return;
   }
 
-  const rows = [];
+
+  const cards = [];
   orders.forEach((o, oi) => {
     const items    = getOrderItems(o);
-    const isMulti  = o.items && o.items.length > 1;
     const tq       = getOrderTotalQty(o);
     const totalDel = getOrderDelivered(o);
-    const pct  = tq > 0 ? Math.round(totalDel/tq*100) : 0;
-    const barC = pct>=100?'#22C55E':pct>=50?'#F59E0B':'#EF4444';
-    const pctC = pct>=100?'#166534':pct>=50?'#92400E':'#991B1B';
-
-    const relErr  = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
-    const errNote = relErr.length > 0
-      ? '⚠️ ' + relErr[relErr.length-1].errorType + (relErr.length>1?' (+' + (relErr.length-1) + ')':'')
-      : (o.sale||'') + (o.note && o.note!=='-' ? ' · '+o.note.slice(0,20)+(o.note.length>20?'…':'') : '');
-    const noteStyle = relErr.length > 0 ? 'color:#854D0E;' : '';
-    const dlBadge   = deadlineBadge(o.deliveryDateISO, pct);
-    const rowHL     = oi===0 && !query && !statusF ? 'new-row' : deadlineRowClass(o.deliveryDateISO, pct);
-    const valDisp   = o.orderValue > 0 ? o.orderValue.toLocaleString('th-TH') + ' ฿' : '-';
-
-    if (!isMulti) {
-      // ── Single-item row ────────────────────────────────────
-      const it  = items[0];
-      const del = it.delivered !== undefined ? it.delivered : (o.delivered||0);
-      const rem = it.qty - del;
-      const iPct  = it.qty>0 ? Math.round(del/it.qty*100) : 0;
-      const iBarC = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
-      const iPctC = iPct>=100?'#166534':iPct>=50?'#92400E':'#991B1B';
-      const lenDisp = o.length && o.length!=='-'
-        ? '<span class="edit-cell" onclick="editLength(\x27'+o.orderNum+'\x27)" style="font-size:10px;color:#3B82F6;">'+o.length+' ✎</span>'
-        : '<span class="edit-cell" onclick="editLength(\x27'+o.orderNum+'\x27)" style="font-size:10px;color:#CBD5E1;">+ รายละเอียดเสา</span>';
-      const _orderSpec1 = it.length||o.length||'';
-      const avail = getSpecAwareAvail(o.pileType, _orderSpec1, _res);
-      let stockBadge = '';
-      if (avail<_cfg.stockLow) stockBadge='<br><span style="font-size:10px;background:#FEE2E2;color:#991B1B;border-radius:4px;padding:1px 5px;">🚨 คลัง '+avail+' ต้น</span>';
-      else if (avail<_cfg.stockWarn) stockBadge='<br><span style="font-size:10px;background:#FEF9C3;color:#854D0E;border-radius:4px;padding:1px 5px;">⚠️ คลัง '+avail+' ต้น</span>';
-      stockBadge += getSimilarSpecHint(o.pileType, _orderSpec1);
-      const prodDone = getTotalProduced(o.orderNum, o.pileType||it.pileType||'');
-      const prodBadge = prodDone > 0
-        ? '<br><span style="font-size:10px;background:#D1FAE5;color:#065F46;padding:1px 5px;border-radius:4px;font-weight:700;">🏭 ผลิตแล้ว '+prodDone+' ต้น</span>'
-        : '';
-      rows.push('<tr class="'+rowHL+'">'
-        +'<td><span class="order-id">'+o.orderNum+'</span></td>'
-        +'<td><strong>'+o.customer+'</strong><br><span style="font-size:11px;color:#64748B;">'+o.tel+'</span></td>'
-        +'<td style="font-size:12px;">'+o.pileType+' '+lenDisp+'<br><strong>'+it.qty+' ต้น</strong>'+stockBadge+prodBadge+'</td>'
-        +'<td><span class="edit-cell" onclick="editDelivered(\x27'+o.orderNum+'\x27)">'+del+' / '+it.qty+'</span><br><span style="font-size:11px;color:'+(rem>0?'#854D0E':'#166534')+';">เหลือ '+rem+' ต้น</span></td>'
-        +'<td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:'+iPct+'%;background:'+iBarC+';"></div></div><span class="prog-pct" style="color:'+iPctC+';">'+iPct+'%</span></div></td>'
-        +'<td>'+o.deliveryDate+dlBadge+'</td>'
-        +'<td>'+statusSelectHTML(o.orderNum, o.status||'รับ Order แล้ว')+'</td>'
-        +'<td style="font-size:12px;color:#166534;font-weight:600;">'+valDisp+'</td>'
-        +'<td style="'+noteStyle+';font-size:12px;">'
-        +errNote
-        +((o.status||'รับ Order แล้ว')==='รับ Order แล้ว' ? '<br><button onclick="acceptOrder(\''+o.orderNum+'\')" style="margin-top:5px;padding:3px 10px;font-size:11px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">🏭 รับออเดอร์</button>' : '')
-        +((o.status||'รับ Order แล้ว')==='ส่งครบ' ? '<br><button onclick="closeBill(\'' + o.orderNum + '\')" style="margin-top:5px;padding:3px 10px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>' : '')
-        +'<div class="act-row"><button class="act-btn act-edit" onclick="openEditOrder(\''+o.orderNum+'\')">✏️ แก้ไข</button>'
-        +'<button class="act-btn act-del" onclick="deleteOrder(\''+o.orderNum+'\')">🗑 ลบ</button></div>'
-        +'</td>'
-        +'</tr>');
-    } else {
-      // ── Multi-item: each item gets its own row (rowspan shared cols) ──
-      const rspan = items.length;
-      items.forEach((it, idx) => {
-        const del  = it.delivered || 0;
-        const rem  = it.qty - del;
-        const iPct  = it.qty>0 ? Math.round(del/it.qty*100) : 0;
-        const iBarC = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
-        const iPctC = iPct>=100?'#166534':iPct>=50?'#92400E':'#991B1B';
-        const lenPart = it.length && it.length!=='-' ? ' <span style="font-size:10px;color:#94A3B8;">· '+it.length+'</span>' : '';
-        const _orderSpecM = it.length||'';
-        const avail = getSpecAwareAvail(it.pileType, _orderSpecM, _res);
-        let badge = '';
-        if (avail<_cfg.stockLow) badge=' <span style="font-size:10px;background:#FEE2E2;color:#991B1B;border-radius:4px;padding:1px 5px;">🚨'+avail+'</span>';
-        else if (avail<_cfg.stockWarn) badge=' <span style="font-size:10px;background:#FEF9C3;color:#854D0E;border-radius:4px;padding:1px 5px;">⚠️'+avail+'</span>';
-        badge += getSimilarSpecHint(it.pileType, _orderSpecM);
-        const prodDoneIt = getTotalProduced(o.orderNum, it.pileType||'');
-        const prodBadgeIt = prodDoneIt > 0
-          ? ' <span style="font-size:10px;background:#D1FAE5;color:#065F46;border-radius:4px;padding:1px 5px;font-weight:700;">🏭 '+prodDoneIt+'</span>'
-          : '';
-        const cls = idx===0 ? rowHL : 'sub-row';
-        let r = '<tr class="'+cls+'">';
-        if (idx===0) {
-          r += '<td rowspan="'+rspan+'" style="vertical-align:top;padding-top:10px;border-right:2px solid #E2E8F0;">'
-             + '<span class="order-id">'+o.orderNum+'</span>'
-             + '<br><span style="font-size:10px;color:#94A3B8;font-weight:600;">'+rspan+' ชนิด</span></td>';
-          r += '<td rowspan="'+rspan+'" style="vertical-align:top;padding-top:10px;">'
-             + '<strong>'+o.customer+'</strong><br><span style="font-size:11px;color:#64748B;">'+o.tel+'</span></td>';
-        }
-        r += '<td style="font-size:12px;padding-left:'+(idx>0?'24':'12')+'px;">'
-           + '<span style="font-size:10px;font-weight:700;color:#94A3B8;">['+(idx+1)+'/'+rspan+']</span> '
-           + it.pileType+lenPart+badge+prodBadgeIt
-           + '<br><strong>'+it.qty+' ต้น</strong></td>';
-        r += '<td><span class="edit-cell" onclick="editItemDelivered(\x27'+o.orderNum+'\x27,'+idx+')" title="คลิกเพื่ออัปเดต">'+del+' / '+it.qty+'</span>'
-           + '<br><span style="font-size:11px;color:'+(rem>0?'#854D0E':'#166534')+';">เหลือ '+rem+'</span></td>';
-        r += '<td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:'+iPct+'%;background:'+iBarC+';"></div></div>'
-           + '<span class="prog-pct" style="color:'+iPctC+';">'+iPct+'%</span></div></td>';
-        if (idx===0) {
-          r += '<td rowspan="'+rspan+'" style="vertical-align:top;padding-top:10px;">'+o.deliveryDate+dlBadge+'</td>';
-          r += '<td rowspan="'+rspan+'" style="vertical-align:top;padding-top:8px;">'+statusSelectHTML(o.orderNum, o.status||'รับ Order แล้ว')+'</td>';
-          r += '<td rowspan="'+rspan+'" style="font-size:12px;color:#166534;font-weight:600;vertical-align:top;padding-top:10px;">'+valDisp+'</td>'; // BugFix#5: color #166634→#166534
-          r += '<td rowspan="'+rspan+'" style="'+noteStyle+';font-size:12px;vertical-align:top;padding-top:10px;">'
-             + errNote
-             + ((o.status||'รับ Order แล้ว')==='รับ Order แล้ว' ? '<br><button onclick="acceptOrder(\''+o.orderNum+'\')" style="margin-top:5px;padding:3px 10px;font-size:11px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">🏭 รับออเดอร์</button>' : '')
-             + ((o.status||'รับ Order แล้ว')==='ส่งครบ' ? '<br><button onclick="closeBill(\'' + o.orderNum + '\')" style="margin-top:5px;padding:3px 10px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>' : '')
-             + '<div class="act-row"><button class="act-btn act-edit" onclick="openEditOrder(\''+o.orderNum+'\')">✏️ แก้ไข</button>'
-             + '<button class="act-btn act-del" onclick="deleteOrder(\''+o.orderNum+'\')">🗑 ลบ</button></div>'
-             + '</td>';
-        }
-        r += '</tr>';
-        rows.push(r);
-      });
-    }
-  });
-  tbody.innerHTML = rows.join('');
-
-  // ── Mobile Order Cards ──────────────────────────────────────
-  const _mobOrd = document.getElementById('ordersMobile');
-  if (_mobOrd) {
-    const cards = [];
-    orders.forEach((o, oi) => {
-      const items    = getOrderItems(o);
-      const tq       = getOrderTotalQty(o);
-      const totalDel = getOrderDelivered(o);
-      const pct      = tq > 0 ? Math.round(totalDel/tq*100) : 0;
-      const barC     = pct>=100?'#22C55E':pct>=50?'#F59E0B':'#EF4444';
-      const relErr   = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
-      const hasErr   = relErr.length > 0;
-      const noteText = hasErr
-        ? '⚠️ '+relErr[relErr.length-1].errorType+(relErr.length>1?' (+' + (relErr.length-1) + ')':'')
-        : (o.sale||'') + (o.note && o.note!=='-' ? ' · '+o.note.slice(0,28)+(o.note.length>28?'…':'') : '');
-      const dlBadge  = deadlineBadge(o.deliveryDateISO, pct);
-      const cardCls  = hasErr ? 'mob-oc err-oc' : (oi===0&&!query&&!statusF ? 'mob-oc new-oc' : 'mob-oc');
-      const stCls    = statusClass(o.status||'รับ Order แล้ว');
-      const stLabel  = o.status||'รับ Order แล้ว';
-      const isMulti  = items.length > 1;
-      const pileDisp = isMulti ? items.length+'<br><span style="font-size:10px;">ชนิด</span>' : (items[0]?.pileType||o.pileType||'-');
-      const valDisp  = o.orderValue > 0 ? '฿'+o.orderValue.toLocaleString('th-TH') : '';
-      let btns = '';
-      if ((o.status||'รับ Order แล้ว')==='รับ Order แล้ว') btns += `<button onclick="acceptOrder('${o.orderNum}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🏭 รับ</button>`;
-      if ((o.status||'รับ Order แล้ว')==='ส่งครบ') btns += `<button onclick="closeBill('${o.orderNum}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>`;
-      btns += `<button onclick="openEditOrder('${o.orderNum}')" style="padding:5px 10px;font-size:12px;background:#EFF6FF;color:#1E40AF;border:none;border-radius:8px;cursor:pointer;">✏️</button>`;
-      cards.push(`<div class="${cardCls}">
-        <div class="mob-oc-top"><span class="mob-oc-num">${o.orderNum}</span><span class="mob-oc-status status-sel ${stCls}">${stLabel}</span></div>
-        <div class="mob-oc-cust">${o.customer}<span class="mob-oc-tel">${o.tel?' · '+o.tel:''}</span>${valDisp?'<span style="margin-left:auto;font-size:12px;color:#166534;font-weight:700;">'+valDisp+'</span>':''}</div>
-        <div class="mob-oc-div"></div>
-        <div class="mob-oc-mid">
-          <div class="mob-oc-pile"><div class="mob-oc-pile-type">${pileDisp}</div><div class="mob-oc-pile-qty">${tq} ต้น</div></div>
-          <div class="mob-oc-info">
-            <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt">ส่งแล้ว ${totalDel}/${tq} ต้น</span><span style="font-size:12px;font-weight:700;">${pct}%</span></div>
-            <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${pct}%;background:${barC};"></div></div>
-            <div class="mob-oc-meta"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
-          </div>
+    const pct      = tq > 0 ? Math.round(totalDel/tq*100) : 0;
+    const barC     = pct>=100?'#22C55E':pct>=50?'#F59E0B':'#EF4444';
+    const relErr   = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
+    const hasErr   = relErr.length > 0;
+    const noteText = hasErr
+      ? '⚠️ '+relErr[relErr.length-1].errorType+(relErr.length>1?' (+' + (relErr.length-1) + ')':'')
+      : (o.sale||'') + (o.note && o.note!=='-' ? ' · '+o.note.slice(0,28)+(o.note.length>28?'…':'') : '');
+    const dlBadge  = deadlineBadge(o.deliveryDateISO, pct);
+    const cardCls  = hasErr ? 'mob-oc err-oc' : (oi===0&&!query&&!statusF ? 'mob-oc new-oc' : 'mob-oc');
+    const stCls    = statusClass(o.status||'รับ Order แล้ว');
+    const stLabel  = o.status||'รับ Order แล้ว';
+    const isMulti  = items.length > 1;
+    const pileDisp = isMulti ? items.length+'<br><span style="font-size:10px;">ชนิด</span>' : (items[0]?.pileType||o.pileType||'-');
+    const valDisp  = o.orderValue > 0 ? '฿'+o.orderValue.toLocaleString('th-TH') : '';
+    let btns = '';
+    if ((o.status||'รับ Order แล้ว')==='รับ Order แล้ว') btns += `<button onclick="acceptOrder('${o.orderNum}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🏭 รับ</button>`;
+    if ((o.status||'รับ Order แล้ว')==='ส่งครบ') btns += `<button onclick="closeBill('${o.orderNum}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>`;
+    btns += `<button onclick="openEditOrder('${o.orderNum}')" style="padding:5px 10px;font-size:12px;background:#EFF6FF;color:#1E40AF;border:none;border-radius:8px;cursor:pointer;">✏️</button>`;
+    cards.push(`<div class="${cardCls}">
+      <div class="mob-oc-top"><span class="mob-oc-num">${o.orderNum}</span><span class="mob-oc-status status-sel ${stCls}">${stLabel}</span></div>
+      <div class="mob-oc-cust">${o.customer}<span class="mob-oc-tel">${o.tel?' · '+o.tel:''}</span>${valDisp?'<span style="margin-left:auto;font-size:12px;color:#166534;font-weight:700;">'+valDisp+'</span>':''}</div>
+      <div class="mob-oc-div"></div>
+      <div class="mob-oc-mid">
+        <div class="mob-oc-pile"><div class="mob-oc-pile-type">${pileDisp}</div><div class="mob-oc-pile-qty">${tq} ต้น</div></div>
+        <div class="mob-oc-info">
+          <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt">ส่งแล้ว ${totalDel}/${tq} ต้น</span><span style="font-size:12px;font-weight:700;">${pct}%</span></div>
+          <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${pct}%;background:${barC};"></div></div>
+          <div class="mob-oc-meta"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
         </div>
-        <div class="mob-oc-bottom"><span class="mob-oc-note">${noteText}</span>${btns}</div>
-      </div>`);
-    });
-    _mobOrd.innerHTML = cards.join('');
-  }
+      </div>
+      <div class="mob-oc-bottom"><span class="mob-oc-note">${noteText}</span>${btns}</div>
+    </div>`);
+  });
+  _mobOrd.innerHTML = cards.join('');
 }
 
 function updateOrderStatus(orderNum, selectEl) {
@@ -2627,9 +2642,10 @@ function renderProdSection() {
          + '</td>';
       const itLen = (it.length||o.length||'-').replace(/'/g,"\\'");
       const inProd = getProdActive().find(a => a.orderNum === o.orderNum && a.pileType === pileType);
-      r += '<td>'
+      r += '<td style="white-space:nowrap;">'
          + (inProd
-           ? '<button class="btn btn-sm" style="font-size:11px;padding:5px 12px;background:#FEF3C7;color:#92400E;border:1.5px solid #FDE68A;white-space:nowrap;cursor:default;">🏭 กำลังผลิตอยู่...</button>'
+           ? '<span style="font-size:11px;padding:3px 8px;background:#FEF3C7;color:#92400E;border:1.5px solid #FDE68A;border-radius:6px;display:inline-block;margin-bottom:4px;">🏭 กำลังผลิตอยู่...</span>'
+             + '<br><button class="btn btn-sm" onclick="openStartProdForm(\''+o.orderNum+'\',\''+pileType.replace(/'/g,"\\'")+'\','+it.qty+',\''+itLen+'\')" style="font-size:10px;padding:3px 8px;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;margin-top:2px;white-space:nowrap;">➕ เริ่มเทเพิ่ม</button>'
            : '<button class="btn btn-sm" onclick="openStartProdForm(\''+o.orderNum+'\',\''+pileType.replace(/'/g,"\\'")+'\','+it.qty+',\''+itLen+'\')" style="font-size:11px;padding:5px 12px;background:#D1FAE5;color:#065F46;border:1.5px solid #6EE7B7;white-space:nowrap;">🏭 เริ่มเท</button>')
          + '</td>';
       r += '</tr>';
@@ -2675,7 +2691,8 @@ function renderProdSection() {
             </div>
           </div>
           ${inProd
-            ? `<div style="background:#FEF3C7;color:#92400E;border:1.5px solid #FDE68A;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;">🏭 กำลังผลิตอยู่...</div>`
+            ? `<div style="background:#FEF3C7;color:#92400E;border:1.5px solid #FDE68A;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;margin-bottom:6px;">🏭 กำลังผลิตอยู่...</div>
+               <button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${it.qty},'${itLen}')" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;padding:8px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">➕ เริ่มเทเพิ่ม</button>`
             : `<button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${it.qty},'${itLen}')" style="width:100%;background:#D1FAE5;color:#065F46;border:1.5px solid #6EE7B7;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">🏭 เริ่มเท</button>`
           }
         </div>`;
@@ -2710,9 +2727,12 @@ function renderActiveProd() {
     list.forEach(a => {
       const elapsed = fmtElapsed(a.startedAt);
       const specLine = (a.length && a.length !== '-') ? a.length + ' · ' : '';
+      const orderLabel = a.isStockProd
+        ? '<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border-radius:4px;padding:2px 7px;font-weight:700;">📦 ผลิตเพิ่มสต็อก</span>'
+        : '<span class="ap-order">' + a.orderNum + '</span>';
       html += '<div class="active-prod-card">'
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
-        +   '<div><div class="ap-order">' + a.orderNum + '</div>'
+        +   '<div><div>' + orderLabel + '</div>'
         +   '<div class="ap-pile">' + a.pileType + '</div>'
         +   '<div style="font-size:11px;color:#92400E;margin-top:2px;">' + specLine + '<strong>' + (a.qtyCasting || a.qtyRequired) + ' ต้น</strong> ในราง</div></div>'
         +   '<div style="text-align:right;">'
@@ -2742,10 +2762,46 @@ function renderActiveProd() {
   }, 60000);
 }
 
+// ── Free Production (ผลิตเพิ่มสต็อก ไม่มี Order) ──────────────
+function openFreeProdForm() {
+  const cfg = getConfig();
+  const sel = document.getElementById('fprod_pile');
+  const piles = cfg.pileTypes && cfg.pileTypes.length ? cfg.pileTypes : [];
+  sel.innerHTML = '<option value="">— เลือกชนิดเสา —</option>'
+    + piles.map(p => `<option value="${p}">${p}</option>`).join('');
+  document.getElementById('fprod_qty').value    = '';
+  document.getElementById('fprod_length').value = '';
+  document.getElementById('fprod_note').value   = '';
+  const card = document.getElementById('freeProdFormCard');
+  card.style.display = '';
+  card.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+function closeFreeProdForm() {
+  document.getElementById('freeProdFormCard').style.display = 'none';
+}
+function submitFreeProd() {
+  const pileType = document.getElementById('fprod_pile').value.trim();
+  const length   = (document.getElementById('fprod_length').value || '-').trim() || '-';
+  const qty      = parseInt(document.getElementById('fprod_qty').value) || 0;
+  const note     = document.getElementById('fprod_note').value.trim();
+  if (!pileType) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
+  if (qty < 1)   { showToast('⚠️ กรุณากรอกจำนวนที่เทลงราง'); return; }
+  const list = getProdActive();
+  list.push({
+    id: genVid(),
+    orderNum: 'STOCK',
+    isStockProd: true,
+    pileType, length, qtyRequired: 0, qtyCasting: qty, note,
+    startedAt: Date.now(),
+    startedBy: (_currentUser && _currentUser.email) || '-'
+  });
+  saveProdActive(list);
+  closeFreeProdForm();
+  showToast('🏭 เริ่มเทแล้ว — ' + pileType + ' · ' + qty + ' ต้น (สต็อก)');
+  renderActiveProd(); renderProdSection();
+}
+
 function openStartProdForm(orderNum, pileType, qtyRequired, length) {
-  if (getProdActive().find(a => a.orderNum === orderNum && a.pileType === pileType)) {
-    showToast('🏭 มีรายการนี้อยู่ในรางแล้ว'); return;
-  }
   document.getElementById('spf_order').value    = orderNum;
   document.getElementById('spf_pile').value     = pileType;
   document.getElementById('spf_length').value   = length || '-';
@@ -2786,6 +2842,7 @@ function openFinishProd(activeId) {
   const qty = a.qtyCasting || a.qtyRequired;
   document.getElementById('fp_active_id').value      = activeId;
   document.getElementById('fp_defect').value         = '';
+  document.getElementById('fp_defect_note').value    = '';
   document.getElementById('fp_date').value           = new Date().toISOString().slice(0,10);
   document.getElementById('fp_produced_display').textContent = qty;
   document.getElementById('fp_defect_display').textContent   = '0';
@@ -2820,9 +2877,10 @@ function submitFinishProd() {
   const activeId = document.getElementById('fp_active_id').value;
   const a = getProdActive().find(x => x.id === activeId);
   if (!a) return;
-  const dateISO  = document.getElementById('fp_date').value;
-  const defect   = Math.max(0, parseInt(document.getElementById('fp_defect').value) || 0);
-  const qty      = a.qtyCasting || a.qtyRequired;
+  const dateISO    = document.getElementById('fp_date').value;
+  const defect     = Math.max(0, parseInt(document.getElementById('fp_defect').value) || 0);
+  const defectNote = (document.getElementById('fp_defect_note')?.value || '').trim();
+  const qty        = a.qtyCasting || a.qtyRequired;
   if (!dateISO) { showToast('⚠️ กรุณากรอกวันที่'); return; }
   if (defect > qty) { showToast('⚠️ จำนวนเสียมากกว่าผลิตได้'); return; }
 
@@ -2840,7 +2898,10 @@ function submitFinishProd() {
   const stockToAdd  = newExcess - prevExcess;
 
   const logs = getProdLog();
-  logs.unshift({ timestamp: nowTs(), orderNum: a.orderNum, pileType: a.pileType, length: a.length,
+  logs.unshift({ timestamp: nowTs(),
+    orderNum: a.isStockProd ? 'STOCK' : a.orderNum,
+    isStockProd: a.isStockProd || false,
+    pileType: a.pileType, length: a.length,
     dateISO, date: isoToThai(dateISO), qtyRequired: required, qtyProduced: qty,
     qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0 });
   saveProdLog(logs);
@@ -2871,7 +2932,7 @@ function submitFinishProd() {
       order: a.orderNum,
       errorType: '🏭 เสียระหว่างผลิต',
       qty: defect,
-      cause: 'เสียระหว่างผลิต ' + a.pileType + specNote,
+      cause: 'เสียระหว่างผลิต ' + a.pileType + specNote + (defectNote ? ' · ' + defectNote : ''),
       fix: '-',
       staff: (_currentUser && _currentUser.email) || '-'
     });
@@ -2888,8 +2949,9 @@ function submitFinishProd() {
     const newMain = (getStock()[a.pileType] || 0);
     logArr.unshift({ ts: nowTs(), typeVal: '🏭 ผลิตเสร็จ (รับเข้าสต็อก)', name: a.pileType,
       qty: netQty, newStock: newMain, qtyDisplay: '+' + netQty,
-      ref: a.orderNum, staff: (_currentUser && _currentUser.email) || '-',
-      note: '🤖 Auto: ผลิตจาก ' + a.orderNum + (specLabel !== '-' ? ' สเปค ' + specLabel : '') + (defect > 0 ? ' (เสีย ' + defect + ' ต้น)' : '') });
+      ref: a.isStockProd ? 'ผลิตเพิ่มสต็อก' : a.orderNum,
+      staff: (_currentUser && _currentUser.email) || '-',
+      note: '🤖 Auto: ' + (a.isStockProd ? 'ผลิตเพิ่มสต็อก' : 'ผลิตจาก ' + a.orderNum) + (specLabel !== '-' ? ' สเปค ' + specLabel : '') + (defect > 0 ? ' (เสีย ' + defect + ' ต้น)' : '') });
     saveStockLog(logArr);
     showToast('🏭 เพิ่มสต็อก ' + a.pileType + ' +' + netQty + ' ต้น' + (defect > 0 ? ' (เสีย ' + defect + ')' : ''));
   }
@@ -2946,26 +3008,32 @@ function renderProdLogHistory() {
     return;
   }
   tbody.innerHTML = logs.map(l => {
-    const net = l.qtyNet !== undefined ? l.qtyNet : l.qtyProduced || 0;
-    const defect = l.qtyDefect || 0;
-    const custName = orderMap[l.orderNum] ? orderMap[l.orderNum] : '';
-    const custBadge = custName
-      ? '<br><span style="font-size:10px;color:#64748B;">'+getOrders().find(o=>o.orderNum===l.orderNum)?.customer+'</span>'
-      : '';
+    // backward compat: old demo data uses qty/defect/finishDate instead of qtyProduced/qtyDefect/date
+    const produced = l.qtyProduced !== undefined ? l.qtyProduced : (l.qty || 0);
+    const net      = l.qtyNet      !== undefined ? l.qtyNet      : produced;
+    const defect   = l.qtyDefect   !== undefined ? l.qtyDefect   : (l.defect || 0);
+    const dateStr  = l.date || l.finishDate || l.startDate || '—';
+    const isStock  = l.isStockProd || l.orderNum === 'STOCK';
+    const orderCell = isStock
+      ? '<span style="font-size:11px;background:#EFF6FF;color:#1D4ED8;border-radius:4px;padding:2px 7px;font-weight:700;">📦 สต็อก</span>'
+      : '<span class="order-id">'+l.orderNum+'</span>'
+        + (orderMap[l.orderNum]
+          ? '<br><span style="font-size:10px;color:#64748B;">'+getOrders().find(o=>o.orderNum===l.orderNum)?.customer+'</span>'
+          : '');
     const defectBadge = defect > 0
       ? '<span style="color:#DC2626;font-weight:700;">'+defect+' ต้น</span>'
       : '<span style="color:#94A3B8;">0</span>';
     const excessBadge = (l.qtyExcess||0) > 0
       ? '<span style="color:#DC2626;font-weight:700;">+' + l.qtyExcess + ' ต้น</span>'
       : '<span style="color:#94A3B8;">-</span>';
-    const stockBadge = l.addedToStock
+    const stockBadge = (l.addedToStock || isStock)
       ? '<span style="font-size:11px;background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-weight:700;">✅ เพิ่มสต็อกแล้ว</span>'
       : '<span style="color:#94A3B8;">-</span>';
     return '<tr>'
-      + '<td>'+l.date+'</td>'
-      + '<td><span class="order-id">'+l.orderNum+'</span>'+custBadge+'</td>'
+      + '<td>'+dateStr+'</td>'
+      + '<td>'+orderCell+'</td>'
       + '<td style="font-weight:600;">'+l.pileType+'</td>'
-      + '<td><strong style="color:#1E40AF;">'+l.qtyProduced+' ต้น</strong></td>'
+      + '<td><strong style="color:#1E40AF;">'+produced+' ต้น</strong></td>'
       + '<td>'+defectBadge+'</td>'
       + '<td><strong style="color:#166534;">'+net+' ต้น</strong></td>'
       + '<td>'+excessBadge+'</td>'
@@ -2980,19 +3048,23 @@ function renderProdLogHistory() {
       _mobProd.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;">ยังไม่มีประวัติการผลิต</div>';
     } else {
       _mobProd.innerHTML = logs.map(l => {
-        const net    = l.qtyNet !== undefined ? l.qtyNet : l.qtyProduced || 0;
-        const defect = l.qtyDefect || 0;
-        const custFull = getOrders().find(o=>o.orderNum===l.orderNum)?.customer||'';
+        const produced = l.qtyProduced !== undefined ? l.qtyProduced : (l.qty || 0);
+        const net    = l.qtyNet    !== undefined ? l.qtyNet    : produced;
+        const defect = l.qtyDefect !== undefined ? l.qtyDefect : (l.defect || 0);
+        const dateStr = l.date || l.finishDate || l.startDate || '—';
+        const isStock = l.isStockProd || l.orderNum === 'STOCK';
+        const orderDisp = isStock ? '📦 ผลิตเพิ่มสต็อก' : l.orderNum;
+        const custFull = isStock ? '' : (getOrders().find(o=>o.orderNum===l.orderNum)?.customer||'');
         const custLine = custFull ? ` <span style="font-size:11px;color:#64748B;font-weight:400;">· ${custFull}</span>` : '';
         const excessLine = (l.qtyExcess||0) > 0
           ? `<div style="margin-top:6px;font-size:11px;background:#FEF9C3;color:#854D0E;padding:3px 8px;border-radius:6px;text-align:center;font-weight:700;">⚠️ เกิน ${l.qtyExcess} ต้น</div>` : '';
-        const stockLine = l.addedToStock
+        const stockLine = (l.addedToStock || isStock)
           ? `<div style="margin-top:6px;font-size:11px;background:#DCFCE7;color:#166534;padding:3px 8px;border-radius:6px;text-align:center;font-weight:700;">✅ เพิ่มสต็อกแล้ว</div>` : '';
         return `<div class="mob-pc">
-          <div class="mob-pc-top"><span class="mob-pc-order">${l.orderNum}${custLine}</span><span class="mob-pc-date">${l.date}</span></div>
+          <div class="mob-pc-top"><span class="mob-pc-order">${orderDisp}${custLine}</span><span class="mob-pc-date">${dateStr}</span></div>
           <div class="mob-pc-pile">${l.pileType}</div>
           <div class="mob-pc-stats">
-            <div class="mob-pc-stat"><div class="mob-pc-val" style="color:#1E40AF;">${l.qtyProduced}</div><div class="mob-pc-lbl">ผลิตได้</div></div>
+            <div class="mob-pc-stat"><div class="mob-pc-val" style="color:#1E40AF;">${produced}</div><div class="mob-pc-lbl">ผลิตได้</div></div>
             <div class="mob-pc-stat"><div class="mob-pc-val" style="color:${defect>0?'#DC2626':'#94A3B8'};">${defect}</div><div class="mob-pc-lbl">เสีย</div></div>
             <div class="mob-pc-stat"><div class="mob-pc-val" style="color:#166534;">${net}</div><div class="mob-pc-lbl">พร้อมส่ง</div></div>
           </div>${excessLine}${stockLine}
@@ -3016,10 +3088,10 @@ function renderProdFull() {
 function renderProdErrHistory() {
   const errs = getProdErrs(), tbody = document.getElementById('prodErrHistBody');
   if (!tbody) return;
-  if (!errs.length) { tbody.innerHTML = `<tr class="table-empty"><td colspan="7">ยังไม่มี Error ผลิต</td></tr>`; return; }
-  tbody.innerHTML = errs.map(e => {
+  if (!errs.length) { tbody.innerHTML = `<tr class="table-empty"><td colspan="8">ยังไม่มี Error ผลิต</td></tr>`; return; }
+  tbody.innerHTML = errs.map((e, idx) => {
     const qd = e.qty > 0 ? `<span style="color:#991B1B;font-weight:700;">${e.qty}</span>` : `<span style="color:#94A3B8;">-</span>`;
-    return `<tr><td>${e.date}</td><td><span class="order-id">${e.order}</span></td><td><span class="chip ch-prod">${e.errorType}</span></td><td>${qd}</td><td>${e.cause}</td><td style="color:${e.fix!=='-'?'#166534':'#854D0E'};">${e.fix}</td><td>${e.staff}</td></tr>`;
+    return `<tr><td>${e.date}</td><td><span class="order-id">${e.order}</span></td><td><span class="chip ch-prod">${e.errorType}</span></td><td>${qd}</td><td>${e.cause}</td><td style="color:${e.fix!=='-'?'#166534':'#854D0E'};">${e.fix}</td><td>${e.staff}</td><td><button class="act-btn act-edit" onclick="openEditProdErr(${idx})">✏️ แก้ไข</button></td></tr>`;
   }).join('');
 }
 
@@ -3058,11 +3130,20 @@ function getMonthlyData(orders, months=6) {
   const now = new Date();
   return Array.from({length:months}, (_,i) => {
     const d = new Date(now.getFullYear(), now.getMonth()-(months-1-i), 1);
-    const mStr = pad(d.getMonth()+1);
-    const yStr = String(d.getFullYear()-543).slice(-2);
+    const mIdx  = d.getMonth();
+    const yFull = d.getFullYear();
     const count = orders.filter(o => {
-      const parts = (o.timestamp||'').split(' ')[0].split('/');
-      return parts.length===3 && parts[1]===mStr && parts[2]===yStr;
+      // 1) timestamp เป็น Unix ms (number)
+      if (o.timestamp && typeof o.timestamp === 'number') {
+        const od = new Date(o.timestamp);
+        return od.getMonth() === mIdx && od.getFullYear() === yFull;
+      }
+      // 2) dateAdded เป็น ISO string "2026-04-10"
+      if (o.dateAdded) {
+        const p = o.dateAdded.split('-');
+        if (p.length === 3) return parseInt(p[1])-1 === mIdx && parseInt(p[0]) === yFull;
+      }
+      return false;
     }).length;
     return { l: THAI_MONTHS[d.getMonth()], v: count };
   });
@@ -3138,7 +3219,16 @@ function renderSummary() {
   const monthly = getMonthlyData(orders);
   const statusMap = {};
   orders.forEach(o => { const s = o.status||'รับ Order แล้ว'; statusMap[s] = (statusMap[s]||0)+1; });
-  const statusData = STATUS_STEPS.map(s => ({ l:s.val.replace('รับ Order แล้ว','รับใหม่').replace('ยืนยัน Order','ยืนยัน').replace('ระหว่างขนส่ง','ขนส่ง'), v:statusMap[s.val]||0 })).filter(d=>d.v>0);
+  // ใช้สถานะที่มีจริงในออเดอร์ ไม่ต้องผูกกับ STATUS_STEPS เพื่อกัน mismatch ชื่อ
+  const STATUS_ORDER = ['รับ Order แล้ว','รับออเดอร์','ยืนยัน Order แล้ว','ยืนยัน Order','กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง','ส่งแล้วบางส่วน','ส่งครบแล้ว','ส่งครบ'];
+  const knownOrder = Object.keys(statusMap).sort((a,b) => {
+    const ai = STATUS_ORDER.indexOf(a), bi = STATUS_ORDER.indexOf(b);
+    return (ai===-1?99:ai) - (bi===-1?99:bi);
+  });
+  const statusData = knownOrder.map(s => ({
+    l: s.replace('รับ Order แล้ว','รับใหม่').replace('ยืนยัน Order แล้ว','ยืนยันแล้ว').replace('ยืนยัน Order','ยืนยัน').replace('ระหว่างขนส่ง','ขนส่ง').replace('ส่งแล้วบางส่วน','ส่งบางส่วน').replace('ส่งครบแล้ว','ส่งครบ'),
+    v: statusMap[s]
+  })).filter(d=>d.v>0);
 
   document.getElementById('chartsRow').innerHTML =
     '<div class="chart-card"><div class="chart-title">📊 Orders ต่อเดือน (6 เดือนล่าสุด)</div>' + svgBarChart(monthly, '#3B82F6') + '</div>' +
@@ -4905,6 +4995,99 @@ function closeMobExportSheet() {
   document.getElementById('mobExportOverlay').classList.remove('open');
 }
 
+// ── Edit Prod Error ────────────────────────────────────────────
+function thaiDateToISO(thai) {
+  if (!thai || thai === '-') return '';
+  const parts = thai.split('/');
+  if (parts.length < 3) return '';
+  const d = parts[0].padStart(2,'0');
+  const m = parts[1].padStart(2,'0');
+  let y = parseInt(parts[2]);
+  let ceYear;
+  if (y > 2400) {
+    ceYear = y - 543; // full Buddhist era e.g. 2569 → 2026
+  } else if (y > 543) {
+    ceYear = y; // already CE
+  } else {
+    // 2-digit short form: y = (CeYear-543) % 100
+    const base = new Date().getFullYear() - 543;
+    const century = Math.floor(base / 100) * 100;
+    ceYear = century + y + 543;
+  }
+  return `${ceYear}-${m}-${d}`;
+}
+function openEditProdErr(idx) {
+  const errs = getProdErrs();
+  const e = errs[idx];
+  if (!e) return;
+  document.getElementById('epe_idx').value   = idx;
+  document.getElementById('epe_qty').value   = e.qty || 0;
+  document.getElementById('epe_cause').value = e.cause || '';
+  document.getElementById('epe_fix').value   = (e.fix && e.fix !== '-') ? e.fix : '';
+  document.getElementById('epe_date').value  = thaiDateToISO(e.date);
+  document.getElementById('epeOrderLabel').textContent = (e.order || '') + (e.date ? ' · ' + e.date : '');
+  document.getElementById('editProdErrOverlay').style.display = 'flex';
+}
+function closeEditProdErr() {
+  document.getElementById('editProdErrOverlay').style.display = 'none';
+}
+function saveEditProdErr() {
+  const idx     = parseInt(document.getElementById('epe_idx').value);
+  const qty     = Math.max(0, parseInt(document.getElementById('epe_qty').value) || 0);
+  const cause   = document.getElementById('epe_cause').value.trim();
+  const fix     = document.getElementById('epe_fix').value.trim();
+  const dateISO = document.getElementById('epe_date').value;
+  if (!cause) { showToast('⚠️ กรุณากรอกสาเหตุ'); return; }
+  const errs = getProdErrs();
+  if (!errs[idx]) { showToast('⚠️ ไม่พบรายการ'); return; }
+  errs[idx].qty   = qty;
+  errs[idx].cause = cause;
+  errs[idx].fix   = fix || '-';
+  if (dateISO) errs[idx].date = isoToThai(dateISO);
+  saveProdErrs(errs);
+  closeEditProdErr();
+  renderProdFull(); renderProdErrHistory();
+  showToast('✅ แก้ไข Error ผลิตแล้ว');
+}
 </script>
+
+<!-- ═══ MODAL: แก้ไข Error ผลิต ═══ -->
+<div id="editProdErrOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:2000;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:520px;box-shadow:0 8px 40px rgba(0,0,0,0.2);overflow:hidden;margin:auto;">
+    <div style="background:linear-gradient(135deg,#DC2626 0%,#991B1B 100%);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:#fff;">✏️ แก้ไข Error ผลิต</div>
+        <div id="epeOrderLabel" style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:3px;"></div>
+      </div>
+      <button onclick="closeEditProdErr()" style="background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);color:#fff;font-size:18px;font-weight:700;border-radius:8px;cursor:pointer;padding:4px 12px;line-height:1;">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <input type="hidden" id="epe_idx"/>
+      <div class="form-grid">
+        <div class="field">
+          <label class="field-label">จำนวนเสีย (ต้น)</label>
+          <input type="number" id="epe_qty" min="0" placeholder="0"/>
+        </div>
+        <div class="field">
+          <label class="field-label">วันที่ผลิต</label>
+          <input type="date" id="epe_date"/>
+        </div>
+        <div class="field full-col">
+          <label class="field-label">สาเหตุ <span class="req">*</span></label>
+          <input type="text" id="epe_cause" placeholder="ระบุสาเหตุที่เสีย..."/>
+        </div>
+        <div class="field full-col">
+          <label class="field-label">การแก้ไข / หมายเหตุ</label>
+          <input type="text" id="epe_fix" placeholder="เช่น ทิ้งและผลิตใหม่, รอตรวจสอบ..."/>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:20px;">
+        <button class="btn btn-danger" onclick="saveEditProdErr()">💾 บันทึกการแก้ไข</button>
+        <button class="btn btn-ghost" onclick="closeEditProdErr()">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
