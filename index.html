@@ -638,9 +638,21 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
                 <label class="field-label">จำนวน (ต้น) <span class="req">*</span></label>
                 <input type="number" id="f_qty" placeholder="60" min="1"/>
               </div>
-              <div class="field" style="min-width:110px;flex:1;">
-                <label class="field-label">รายละเอียดเสา</label>
-                <input type="text" id="f_len" placeholder="เช่น 6ม.เสริมเหล็ก, 9ม.ไม่เสริม"/>
+              <div class="field" style="min-width:90px;flex:1;">
+                <label class="field-label">ความยาว</label>
+                <input type="text" id="f_length" placeholder="เช่น 6m, 9m"/>
+              </div>
+              <div class="field" style="min-width:80px;flex:1;">
+                <label class="field-label">เชื่อม</label>
+                <input type="text" id="f_weld" placeholder="เช่น มี, ไม่มี"/>
+              </div>
+              <div class="field" style="min-width:90px;flex:1;">
+                <label class="field-label">เหล็กเสริม</label>
+                <input type="text" id="f_steel" placeholder="เช่น DB12"/>
+              </div>
+              <div class="field" style="min-width:80px;flex:1;">
+                <label class="field-label">ลวด</label>
+                <input type="text" id="f_wire" placeholder="เช่น 4mm"/>
               </div>
               <div class="field" style="align-self:flex-end;">
                 <button class="btn btn-ghost btn-sm" onclick="addOrderItem()" style="white-space:nowrap;">+ เพิ่มรายการ</button>
@@ -740,10 +752,35 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
         <input type="hidden" id="spf_required"/>
         <div class="form-grid">
           <div class="field">
+            <label class="field-label">วันที่ผลิต</label>
+            <input type="date" id="spf_date"/>
+          </div>
+          <div class="field">
+            <label class="field-label">เลน <span class="req">*</span></label>
+            <input type="text" id="spf_lane" placeholder="เช่น 1, 2, A"/>
+          </div>
+          <div class="field">
             <label class="field-label">จำนวนที่เทลงราง (ต้น) <span class="req">*</span></label>
             <input type="number" id="spf_qty" min="1" placeholder="เช่น 50"/>
           </div>
           <div class="field">
+            <label class="field-label">ท้อง</label>
+            <input type="text" id="spf_tong" placeholder="เช่น มี, ไม่มี"/>
+          </div>
+          <div class="field full-col">
+            <label class="field-label">ลูกตั้ง</label>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div class="field" style="flex:1;margin:0;">
+                <label class="field-label" style="font-size:11px;color:#94A3B8;">จำนวน</label>
+                <input type="number" id="spf_stand_qty" min="0" placeholder="เช่น 4"/>
+              </div>
+              <div class="field" style="flex:1;margin:0;">
+                <label class="field-label" style="font-size:11px;color:#94A3B8;">ขนาด</label>
+                <input type="text" id="spf_stand_size" placeholder="เช่น DB12"/>
+              </div>
+            </div>
+          </div>
+          <div class="field full-col">
             <label class="field-label">หมายเหตุ (ไม่บังคับ)</label>
             <input type="text" id="spf_note" placeholder="เช่น ชุดที่ 1, เทตอนเช้า"/>
           </div>
@@ -811,14 +848,39 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
             </select>
           </div>
           <div class="field">
-            <label class="field-label">สเปค / ความยาว <span style="font-weight:400;color:#94A3B8;">(ไม่บังคับ)</span></label>
-            <input type="text" id="fprod_length" placeholder="เช่น 6m, 9m, 6/9/12"/>
+            <label class="field-label">ความยาว <span style="font-weight:400;color:#94A3B8;">(สำหรับสต็อกสเปค)</span></label>
+            <input type="text" id="fprod_length" placeholder="เช่น 6m, 9m"/>
+          </div>
+          <div class="field">
+            <label class="field-label">วันที่ผลิต</label>
+            <input type="date" id="fprod_date"/>
+          </div>
+          <div class="field">
+            <label class="field-label">เลน</label>
+            <input type="text" id="fprod_lane" placeholder="เช่น 1, 2, A"/>
           </div>
           <div class="field">
             <label class="field-label">จำนวนที่เทลงราง (ต้น) <span class="req">*</span></label>
             <input type="number" id="fprod_qty" min="1" placeholder="เช่น 50"/>
           </div>
           <div class="field">
+            <label class="field-label">ท้อง</label>
+            <input type="text" id="fprod_tong" placeholder="เช่น มี, ไม่มี"/>
+          </div>
+          <div class="field full-col">
+            <label class="field-label">ลูกตั้ง</label>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div class="field" style="flex:1;margin:0;">
+                <label class="field-label" style="font-size:11px;color:#94A3B8;">จำนวน</label>
+                <input type="number" id="fprod_stand_qty" min="0" placeholder="เช่น 4"/>
+              </div>
+              <div class="field" style="flex:1;margin:0;">
+                <label class="field-label" style="font-size:11px;color:#94A3B8;">ขนาด</label>
+                <input type="text" id="fprod_stand_size" placeholder="เช่น DB12"/>
+              </div>
+            </div>
+          </div>
+          <div class="field full-col">
             <label class="field-label">หมายเหตุ <span style="font-weight:400;color:#94A3B8;">(ไม่บังคับ)</span></label>
             <input type="text" id="fprod_note" placeholder="เช่น ผลิตไว้สำรอง, ชุดที่ 1"/>
           </div>
@@ -2100,15 +2162,21 @@ function renderOrderItemsDraft() {
   const totalVal = orderItemsDraft.reduce((s,it) => s+(it.value||0), 0);
   const rows = orderItemsDraft.map((it,i) => {
     const valDisp = it.value > 0 ? it.value.toLocaleString('th-TH') + ' ฿' : '—';
-    const lenDisp = it.length && it.length !== '-' ? it.length + '' : '—';
+    const lenDisp   = it.length && it.length !== '-' ? it.length : '—';
+    const weldDisp  = it.weld  && it.weld  !== '-' ? it.weld  : '—';
+    const steelDisp = it.steel && it.steel !== '-' ? it.steel : '—';
+    const wireDisp  = it.wire  && it.wire  !== '-' ? it.wire  : '—';
     return '<tr><td style="font-weight:600;">' + it.pileType + '</td>'
       + '<td style="font-weight:700;color:#1E293B;">' + it.qty + ' ต้น</td>'
       + '<td style="color:#64748B;">' + lenDisp + '</td>'
+      + '<td style="color:#64748B;">' + weldDisp + '</td>'
+      + '<td style="color:#64748B;">' + steelDisp + '</td>'
+      + '<td style="color:#64748B;">' + wireDisp + '</td>'
       + '<td style="color:#166534;">' + valDisp + '</td>'
       + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
   }).join('');
   listEl.innerHTML = '<table class="items-draft-table"><thead><tr>'
-    + '<th>ชนิดเสา</th><th>จำนวน</th><th>รายละเอียดเสา</th><th>มูลค่า</th><th></th>'
+    + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>มูลค่า</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>';
   if (box) {
     box.className = 'order-value-box has-value';
@@ -2123,14 +2191,20 @@ function renderOrderItemsDraft() {
 function addOrderItem() {
   const type = document.getElementById('f_type').value;
   const qty  = parseInt(document.getElementById('f_qty').value) || 0;
-  const len  = (document.getElementById('f_len').value || '').trim();
+  const len   = (document.getElementById('f_length').value || '').trim();
+  const weld  = (document.getElementById('f_weld').value  || '').trim();
+  const steel = (document.getElementById('f_steel').value || '').trim();
+  const wire  = (document.getElementById('f_wire').value  || '').trim();
   if (!type) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
   if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (ต้น)'); return; }
   const value = calcOrderValue(type, qty);
-  orderItemsDraft.push({ pileType: type, qty, length: len || '-', value });
+  orderItemsDraft.push({ pileType: type, qty, length: len || '-', weld: weld || '-', steel: steel || '-', wire: wire || '-', value });
   document.getElementById('f_type').selectedIndex = 0;
-  document.getElementById('f_qty').value = '';
-  document.getElementById('f_len').value = '';
+  document.getElementById('f_qty').value    = '';
+  document.getElementById('f_length').value = '';
+  document.getElementById('f_weld').value   = '';
+  document.getElementById('f_steel').value  = '';
+  document.getElementById('f_wire').value   = '';
   renderOrderItemsDraft();
 }
 
@@ -2233,7 +2307,7 @@ function submitOrder() {
     + pileLabel + ' · รวม ' + totalQty + ' ต้น' + valPart
     + '<br>📍 ' + site + '<br>📅 วันส่ง: ' + order.deliveryDate;
 
-  document.getElementById('tab-status').classList.add('has-new');
+  const navStatus = document.getElementById('nav-status'); if (navStatus) navStatus.classList.add('has-new');
   updateHeaderCount();
   orderItemsDraft = [];
   btn.disabled = false; btn.textContent = '✓ ส่ง Order';
@@ -2250,12 +2324,14 @@ function autoSaveCustomer(name, tel, addr) {
 }
 
 function resetFormOnly() {
-  ['f_customer','f_tel','f_qty','f_len','f_cust_addr','f_order_num'].forEach(id => document.getElementById(id).value = '');
-  ['f_sale','f_type','f_cust_lookup'].forEach(id => document.getElementById(id).selectedIndex = 0);
+  ['f_customer','f_tel','f_qty','f_length','f_weld','f_steel','f_wire','f_cust_addr','f_order_num'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['f_sale','f_type','f_cust_lookup'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
   orderItemsDraft = [];
   renderOrderItemsDraft();
   var todayEl = document.getElementById('f_order_date');
   if (todayEl) todayEl.value = new Date().toISOString().slice(0, 10);
+  var submitBtn = document.getElementById('submitBtn');
+  if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '✓ ส่ง Order'; }
 }
 function resetForm() {
   document.getElementById('formView').style.display    = 'block';
@@ -2425,7 +2501,13 @@ function renderOrders() {
           const dlBadge     = deadlineBadge(o.deliveryDateISO, iPct);
           const isMultiItem = o.items && o.items.length > 1;
           const editCall    = isMultiItem ? `editItemDelivered('${o.orderNum}',${idx})` : `editDelivered('${o.orderNum}')`;
-          const lenDisp     = (it.length && it.length!=='-') ? it.length : '<span style="color:#CBD5E1;">—</span>';
+          const specParts   = [
+            it.length && it.length!=='-' ? it.length : null,
+            it.weld   && it.weld!=='-'   ? '🔗 '+it.weld   : null,
+            it.steel  && it.steel!=='-'  ? '🔩 '+it.steel  : null,
+            it.wire   && it.wire!=='-'   ? '〰 '+it.wire   : null,
+          ].filter(Boolean);
+          const lenDisp     = specParts.length ? specParts.join('<br>') : '<span style="color:#CBD5E1;">—</span>';
           const valDisp     = o.orderValue > 0 ? o.orderValue.toLocaleString('th-TH')+' ฿' : '—';
           const rowCls      = deadlineRowClass(o.deliveryDateISO, iPct);
 
@@ -2634,7 +2716,13 @@ function renderProdSection() {
            + '</td>';
       }
       r += '<td style="font-size:13px;font-weight:600;">'+pileType+'</td>';
-      r += '<td style="font-size:12px;color:#374151;">'+(it.length||o.length||'-')+'</td>';
+      const prodSpecParts = [
+        (it.length||o.length||'-')!=='-' ? (it.length||o.length) : null,
+        it.weld  && it.weld!=='-'  ? '🔗 '+it.weld  : null,
+        it.steel && it.steel!=='-' ? '🔩 '+it.steel : null,
+        it.wire  && it.wire!=='-'  ? '〰 '+it.wire  : null,
+      ].filter(Boolean);
+      r += '<td style="font-size:12px;color:#374151;">'+(prodSpecParts.length?prodSpecParts.join('<br>'):'-')+'</td>';
       r += '<td><strong style="color:#1E40AF;">'+it.qty+' ต้น</strong></td>';
       r += '<td>'
          + '<span style="font-weight:700;color:'+(totalProduced>=it.qty?'#166534':'#374151')+';">'+totalProduced+' ต้น</span>'
@@ -2770,9 +2858,14 @@ function openFreeProdForm() {
   const piles = cfg.pileTypes && cfg.pileTypes.length ? cfg.pileTypes : [];
   sel.innerHTML = '<option value="">— เลือกชนิดเสา —</option>'
     + piles.map(p => `<option value="${p}">${p}</option>`).join('');
-  document.getElementById('fprod_qty').value    = '';
-  document.getElementById('fprod_length').value = '';
-  document.getElementById('fprod_note').value   = '';
+  document.getElementById('fprod_qty').value        = '';
+  document.getElementById('fprod_length').value     = '';
+  document.getElementById('fprod_note').value       = '';
+  document.getElementById('fprod_lane').value       = '';
+  document.getElementById('fprod_tong').value       = '';
+  document.getElementById('fprod_stand_qty').value  = '';
+  document.getElementById('fprod_stand_size').value = '';
+  document.getElementById('fprod_date').value = new Date().toISOString().slice(0, 10);
   const card = document.getElementById('freeProdFormCard');
   card.style.display = '';
   card.scrollIntoView({ behavior:'smooth', block:'start' });
@@ -2781,10 +2874,15 @@ function closeFreeProdForm() {
   document.getElementById('freeProdFormCard').style.display = 'none';
 }
 function submitFreeProd() {
-  const pileType = document.getElementById('fprod_pile').value.trim();
-  const length   = (document.getElementById('fprod_length').value || '-').trim() || '-';
-  const qty      = parseInt(document.getElementById('fprod_qty').value) || 0;
-  const note     = document.getElementById('fprod_note').value.trim();
+  const pileType  = document.getElementById('fprod_pile').value.trim();
+  const length    = (document.getElementById('fprod_length').value || '').trim() || '-';
+  const qty       = parseInt(document.getElementById('fprod_qty').value) || 0;
+  const note      = document.getElementById('fprod_note').value.trim();
+  const prodDate  = document.getElementById('fprod_date').value || new Date().toISOString().slice(0, 10);
+  const lane      = document.getElementById('fprod_lane').value.trim();
+  const tong      = document.getElementById('fprod_tong').value.trim();
+  const standQty  = parseInt(document.getElementById('fprod_stand_qty').value) || 0;
+  const standSize = document.getElementById('fprod_stand_size').value.trim();
   if (!pileType) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
   if (qty < 1)   { showToast('⚠️ กรุณากรอกจำนวนที่เทลงราง'); return; }
   const list = getProdActive();
@@ -2792,7 +2890,7 @@ function submitFreeProd() {
     id: genVid(),
     orderNum: 'STOCK',
     isStockProd: true,
-    pileType, length, qtyRequired: 0, qtyCasting: qty, note,
+    pileType, length, qtyRequired: 0, qtyCasting: qty, note, prodDate, lane, tong, standQty, standSize,
     startedAt: Date.now(),
     startedBy: (_currentUser && _currentUser.email) || '-'
   });
@@ -2807,8 +2905,13 @@ function openStartProdForm(orderNum, pileType, qtyRequired, length) {
   document.getElementById('spf_pile').value     = pileType;
   document.getElementById('spf_length').value   = length || '-';
   document.getElementById('spf_required').value = qtyRequired;
-  document.getElementById('spf_qty').value      = qtyRequired || '';
-  document.getElementById('spf_note').value     = '';
+  document.getElementById('spf_qty').value        = qtyRequired || '';
+  document.getElementById('spf_note').value       = '';
+  document.getElementById('spf_lane').value       = '';
+  document.getElementById('spf_tong').value       = '';
+  document.getElementById('spf_stand_qty').value  = '';
+  document.getElementById('spf_stand_size').value = '';
+  document.getElementById('spf_date').value = new Date().toISOString().slice(0, 10);
   const specLabel = (length && length !== '-') ? ' · ' + length : '';
   document.getElementById('spfSub').textContent = orderNum + ' — ' + pileType + specLabel + ' (ต้องผลิต ' + qtyRequired + ' ต้น)';
   document.getElementById('startProdFormCard').style.display = '';
@@ -2823,10 +2926,15 @@ function submitStartProd() {
   const length    = document.getElementById('spf_length').value || '-';
   const required  = parseInt(document.getElementById('spf_required').value) || 0;
   const qtyCasting = parseInt(document.getElementById('spf_qty').value) || 0;
-  const note      = document.getElementById('spf_note').value.trim();
+  const note       = document.getElementById('spf_note').value.trim();
+  const prodDate   = document.getElementById('spf_date').value || new Date().toISOString().slice(0, 10);
+  const lane       = document.getElementById('spf_lane').value.trim();
+  const tong       = document.getElementById('spf_tong').value.trim();
+  const standQty   = parseInt(document.getElementById('spf_stand_qty').value) || 0;
+  const standSize  = document.getElementById('spf_stand_size').value.trim();
   if (qtyCasting < 1) { showToast('⚠️ กรุณากรอกจำนวนที่เทลงราง'); return; }
   const list = getProdActive();
-  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, note, startedAt: Date.now(), startedBy: (_currentUser && _currentUser.email) || '-' });
+  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, note, prodDate, lane, tong, standQty, standSize, startedAt: Date.now(), startedBy: (_currentUser && _currentUser.email) || '-' });
   saveProdActive(list);
   // อัปเดตสถานะออเดอร์ → กำลังผลิต
   const orders = getOrders();
@@ -2944,7 +3052,14 @@ function submitFinishProd() {
 
   // เพิ่มสต็อก
   if (netQty > 0) {
-    const specLabel = a.length !== '-' ? a.length : '-';
+    // สร้าง spec label จากทุก field ที่มี
+    const _specParts = [
+      a.length && a.length !== '-' ? a.length : null,
+      a.weld   && a.weld   !== '-' ? a.weld   : null,
+      a.steel  && a.steel  !== '-' ? a.steel  : null,
+      a.wire   && a.wire   !== '-' ? a.wire   : null,
+    ].filter(Boolean);
+    const specLabel = _specParts.length ? _specParts.join('/') : '-';
     addToSpecStock(a.pileType, specLabel, netQty);
     const logArr = getStockLog() || [];
     const newMain = (getStock()[a.pileType] || 0);
