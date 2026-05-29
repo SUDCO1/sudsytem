@@ -5300,9 +5300,7 @@ function adminClearHistory(type) {
     all:          'ประวัติทั้งหมด',
   };
   const label = labels[type] || type;
-  if (!confirm('⚠️ ยืนยันลบ "' + label + '" ?
-
-ข้อมูลจะหายถาวร ไม่สามารถกู้คืนได้ครับ')) return;
+  if (!confirm('⚠️ ยืนยันลบ "' + label + '" ?\n\nข้อมูลจะหายถาวร ไม่สามารถกู้คืนได้ครับ')) return;
 
   if (type === 'prodLog' || type === 'all') {
     db.ref(K_PROD_LOG).set({});
