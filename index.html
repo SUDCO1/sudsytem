@@ -1250,7 +1250,58 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
-    <!-- ── ROLE PERMISSION CARD (admin only) ── -->
+    <!-- ── ADMIN DELETE HISTORY CARD ── -->
+    <div class="card admin-only" style="margin-top:20px;border:2px solid #FEE2E2;">
+      <div class="card-header" style="background:#FFF5F5;">
+        <div>
+          <div class="card-title" style="color:#DC2626;">🗑️ ลบประวัติ (Admin เท่านั้น)</div>
+          <div class="card-sub">ลบข้อมูลออกจากระบบถาวร — ไม่สามารถกู้คืนได้</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;">
+
+          <div style="border:1.5px solid #E2E8F0;border-radius:10px;padding:14px;">
+            <div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:4px;">📋 ประวัติการผลิต</div>
+            <div style="font-size:11px;color:#64748B;margin-bottom:12px;">ลบ log ผลิตทั้งหมด</div>
+            <button onclick="adminClearHistory('prodLog')" class="btn btn-danger btn-sm" style="width:100%;">🗑 ลบประวัติผลิต</button>
+          </div>
+
+          <div style="border:1.5px solid #E2E8F0;border-radius:10px;padding:14px;">
+            <div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:4px;">📦 ประวัติสต็อก (รับ/เบิก)</div>
+            <div style="font-size:11px;color:#64748B;margin-bottom:12px;">ลบ log รับเข้า-เบิกออกทั้งหมด</div>
+            <button onclick="adminClearHistory('stockLog')" class="btn btn-danger btn-sm" style="width:100%;">🗑 ลบประวัติสต็อก</button>
+          </div>
+
+          <div style="border:1.5px solid #E2E8F0;border-radius:10px;padding:14px;">
+            <div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:4px;">⚠️ Error ผลิต</div>
+            <div style="font-size:11px;color:#64748B;margin-bottom:12px;">ลบ log ของเสียระหว่างผลิต</div>
+            <button onclick="adminClearHistory('prodErr')" class="btn btn-danger btn-sm" style="width:100%;">🗑 ลบ Error ผลิต</button>
+          </div>
+
+          <div style="border:1.5px solid #E2E8F0;border-radius:10px;padding:14px;">
+            <div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:4px;">🚛 Error ขนส่ง</div>
+            <div style="font-size:11px;color:#64748B;margin-bottom:12px;">ลบ log ปัญหาการขนส่ง</div>
+            <button onclick="adminClearHistory('shipErr')" class="btn btn-danger btn-sm" style="width:100%;">🗑 ลบ Error ขนส่ง</button>
+          </div>
+
+          <div style="border:1.5px solid #E2E8F0;border-radius:10px;padding:14px;">
+            <div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:4px;">📁 ประวัติ Order</div>
+            <div style="font-size:11px;color:#64748B;margin-bottom:12px;">ลบ Order ที่จบแล้ว (ส่งครบ/ยกเลิก)</div>
+            <button onclick="adminClearHistory('orderHistory')" class="btn btn-danger btn-sm" style="width:100%;">🗑 ลบประวัติ Order</button>
+          </div>
+
+          <div style="border:1.5px solid #FEE2E2;border-radius:10px;padding:14px;background:#FFF5F5;">
+            <div style="font-size:13px;font-weight:700;color:#DC2626;margin-bottom:4px;">⚠️ ล้างข้อมูลทั้งหมด</div>
+            <div style="font-size:11px;color:#64748B;margin-bottom:12px;">ลบประวัติทุกประเภทพร้อมกัน</div>
+            <button onclick="adminClearHistory('all')" class="btn btn-danger btn-sm" style="width:100%;background:#7F1D1D;">🗑 ล้างทั้งหมด</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+        <!-- ── ROLE PERMISSION CARD (admin only) ── -->
     <div class="card admin-only" style="margin-top:20px;">
       <div class="card-header">
         <div>
@@ -5236,6 +5287,48 @@ function saveEditProdErr() {
   renderProdFull(); renderProdErrHistory();
   showToast('✅ แก้ไข Error ผลิตแล้ว');
 }
+// ════════════════════════════════════════════════════════════════
+//  ADMIN: ลบประวัติ
+// ════════════════════════════════════════════════════════════════
+function adminClearHistory(type) {
+  const labels = {
+    prodLog:      'ประวัติการผลิต',
+    stockLog:     'ประวัติสต็อก (รับ/เบิก)',
+    prodErr:      'Error ผลิต',
+    shipErr:      'Error ขนส่ง',
+    orderHistory: 'ประวัติ Order',
+    all:          'ประวัติทั้งหมด',
+  };
+  const label = labels[type] || type;
+  if (!confirm('⚠️ ยืนยันลบ "' + label + '" ?
+
+ข้อมูลจะหายถาวร ไม่สามารถกู้คืนได้ครับ')) return;
+
+  if (type === 'prodLog' || type === 'all') {
+    db.ref(K_PROD_LOG).set({});
+  }
+  if (type === 'stockLog' || type === 'all') {
+    db.ref(K_STOCK_LOG).set({});
+  }
+  if (type === 'prodErr' || type === 'all') {
+    db.ref(K_PROD_ERR).set({});
+  }
+  if (type === 'shipErr' || type === 'all') {
+    db.ref(K_SHIP_ERR).set({});
+  }
+  if (type === 'orderHistory' || type === 'all') {
+    db.ref(K_HISTORY).set({});
+  }
+
+  showToast('🗑 ลบ ' + label + ' เรียบร้อยแล้ว');
+
+  // re-render ที่เกี่ยวข้อง
+  if (typeof renderProdLogHistory === 'function') renderProdLogHistory();
+  if (typeof renderStockLog      === 'function') renderStockLog(true);
+  if (typeof renderProdErrHistory=== 'function') renderProdErrHistory();
+  if (typeof renderOrders        === 'function') renderOrders();
+}
+
 </script>
 
 <!-- ═══ MODAL: แก้ไข Error ผลิต ═══ -->
