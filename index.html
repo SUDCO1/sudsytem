@@ -3220,7 +3220,7 @@ function renderProdLogHistory() {
     ].filter(Boolean);
     const detailCell = detailParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+detailParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
     const delBtn = _currentRole==='admin'
-      ? '<button onclick="adminDeleteLog(\'prodLog\','+l.timestamp+')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;" title="ลบรายการนี้">🗑</button>'
+      ? '<button onclick="adminDeleteLog(\'prodLog\',\''+l._fbKey+'\')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;" title="ลบรายการนี้">🗑</button>'
       : '';
     return '<tr>'
       + '<td>'+dateStr+'</td>'
@@ -3286,7 +3286,7 @@ function renderProdErrHistory() {
   if (!errs.length) { tbody.innerHTML = `<tr class="table-empty"><td colspan="8">ยังไม่มี Error ผลิต</td></tr>`; return; }
   tbody.innerHTML = errs.map((e, idx) => {
     const qd = e.qty > 0 ? `<span style="color:#991B1B;font-weight:700;">${e.qty}</span>` : `<span style="color:#94A3B8;">-</span>`;
-    return `<tr><td>${e.date}</td><td><span class="order-id">${e.order}</span></td><td><span class="chip ch-prod">${e.errorType}</span></td><td>${qd}</td><td>${e.cause}</td><td style="color:${e.fix!=='-'?'#166534':'#854D0E'};">${e.fix}</td><td>${e.staff}</td><td><button class="act-btn act-edit" onclick="openEditProdErr(${idx})">✏️ แก้ไข</button></td><td>${_currentRole==='admin'?'<button onclick="adminDeleteLog(\'prodErr\','+e.timestamp+')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;">🗑</button>':''}</td></tr>`;
+    return `<tr><td>${e.date}</td><td><span class="order-id">${e.order}</span></td><td><span class="chip ch-prod">${e.errorType}</span></td><td>${qd}</td><td>${e.cause}</td><td style="color:${e.fix!=='-'?'#166534':'#854D0E'};">${e.fix}</td><td>${e.staff}</td><td><button class="act-btn act-edit" onclick="openEditProdErr(${idx})">✏️ แก้ไข</button></td><td>${_currentRole==='admin'?'<button onclick="adminDeleteLog(\'prodErr\',\''+e._fbKey+'\')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;">🗑</button>':''}</td></tr>`;
   }).join('');
 }
 
@@ -3644,7 +3644,7 @@ function renderStockLog(resetPage) {
       const isNewest=(rawLog && _logPage===0 && i===0);
       const bg=isNewest?'background:#F0FDF4;':'';
       const delBtnS = _currentRole==='admin'
-        ? '<button onclick="adminDeleteLog(\'stockLog\','+e.ts+')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;" title="ลบรายการนี้">🗑</button>'
+        ? '<button onclick="adminDeleteLog(\'stockLog\',\''+e._fbKey+'\')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;" title="ลบรายการนี้">🗑</button>'
         : '';
       return `<tr>
         <td style="${bg}">${e.ts}</td>
@@ -5299,21 +5299,11 @@ function saveEditProdErr() {
 // ════════════════════════════════════════════════════════════════
 //  ADMIN: ลบประวัติ
 // ════════════════════════════════════════════════════════════════
-function adminDeleteLog(type, ts) {
+function adminDeleteLog(type, fbKey) {
   if (!confirm('ลบรายการนี้?')) return;
-  if (type === 'prodLog') {
-    const logs = getProdLog().filter(l => l.timestamp !== ts);
-    saveProdLog(logs);
-    renderProdLogHistory();
-  } else if (type === 'stockLog') {
-    const logs = (getStockLog()||[]).filter(l => l.ts !== ts);
-    saveStockLog(logs);
-    renderStockLog(true);
-  } else if (type === 'prodErr') {
-    const errs = getProdErrs().filter(e => e.timestamp !== ts);
-    saveProdErrs(errs);
-    renderProdFull(); renderProdErrHistory();
-  }
+  if (type === 'prodLog')   db.ref(K_PROD_LOG   + '/' + fbKey).remove();
+  else if (type === 'stockLog') db.ref(K_STOCK_LOG + '/' + fbKey).remove();
+  else if (type === 'prodErr')  db.ref(K_PROD_ERR  + '/' + fbKey).remove();
   showToast('🗑 ลบรายการแล้ว');
 }
 
