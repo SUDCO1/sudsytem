@@ -1022,7 +1022,7 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
       <div class="db-card">
         <div class="db-card-title">Top ลูกค้า (Orders สูงสุด)</div>
         <table class="db-table">
-          <thead><tr><th>#</th><th>ลูกค้า</th><th>Orders</th><th>มูลค่า</th></tr></thead>
+          <thead><tr><th>#</th><th>ลูกค้า</th><th>Orders</th></tr></thead>
           <tbody id="dbTopCustomers"></tbody>
         </table>
       </div>
@@ -1049,7 +1049,7 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
       </div>
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>เลข Order</th><th>วันที่จบ</th><th>ลูกค้า</th><th>รายการ</th><th>จำนวน</th><th>มูลค่า</th><th>Sale</th></tr></thead>
+          <thead><tr><th>เลข Order</th><th>วันที่จบ</th><th>ลูกค้า</th><th>รายการ</th><th>จำนวน</th><th>Sale</th></tr></thead>
           <tbody id="histSummaryBody"></tbody>
         </table>
       </div>
@@ -1142,7 +1142,7 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
       </div>
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>เลข Order</th><th>วันที่จบ</th><th>รายการ</th><th>ส่งแล้ว</th><th>มูลค่า</th><th>Sale</th></tr></thead>
+          <thead><tr><th>เลข Order</th><th>วันที่จบ</th><th>รายการ</th><th>ส่งแล้ว</th><th>Sale</th></tr></thead>
           <tbody id="histBody"></tbody>
         </table>
       </div>
@@ -1410,13 +1410,15 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
         <div class="sd-stat-row" id="sdStats"></div>
       </div>
 
-      <!-- Spec inventory -->
+      <!-- เสาลูกค้า / เสาค้างสต็อก inside modal -->
       <div class="sd-section">
-        <div class="sd-section-title" style="display:flex;align-items:center;justify-content:space-between;">
-          <span>📊 สต็อกแยกตามสเปค</span>
-          <span id="sdSpecCount" style="font-size:11px;color:#94A3B8;font-weight:400;text-transform:none;letter-spacing:0;"></span>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:12px;font-weight:800;color:#1E40AF;letter-spacing:.5px;">🟢 เสาลูกค้า (Online)</div>
+          <button onclick="openAddCustPoleModalFor(_sdCurrentPile)" style="padding:3px 10px;font-size:11px;font-weight:700;background:#3B82F6;color:#fff;border:none;border-radius:6px;cursor:pointer;">➕ เพิ่ม</button>
         </div>
-        <div id="sdSpecGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;"></div>
+        <div id="sdCpPanelOnline" style="margin-bottom:18px;"></div>
+        <div style="font-size:12px;font-weight:800;color:#475569;letter-spacing:.5px;margin-bottom:8px;">⚫ เสาค้างสต็อก</div>
+        <div id="sdCpPanelOffline"></div>
       </div>
 
       <!-- History for this pile type -->
@@ -1483,6 +1485,27 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
 
     <div class="sd-footer">
       <button class="btn btn-ghost" onclick="closeStockDetail()">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add CustPole Modal -->
+<div id="cpModal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.45);align-items:center;justify-content:center;" onclick="if(event.target===this)closeCpModal()">
+  <div style="background:#fff;border-radius:16px;padding:28px;width:min(420px,94vw);box-shadow:0 8px 40px rgba(0,0,0,.22);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div style="font-size:16px;font-weight:800;color:#1E293B;">➕ เพิ่มเสาลูกค้า</div>
+      <button onclick="closeCpModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#94A3B8;">✕</button>
+    </div>
+    <div style="display:grid;gap:12px;">
+      <div class="field"><label class="field-label">เลข Order <span class="req">*</span></label><input type="text" id="cp_order" placeholder="เช่น I18-183"/></div>
+      <div class="field"><label class="field-label">ชนิดเสา <span class="req">*</span></label><select id="cp_pileType" class="filter-sel" style="width:100%;"><option value="">— เลือก —</option></select></div>
+      <div class="field"><label class="field-label">รายละเอียด/สเปค</label><input type="text" id="cp_spec" placeholder="เช่น 8.00ม/ไม่เชื่อม"/></div>
+      <div class="field"><label class="field-label">จำนวน (ต้น) <span class="req">*</span></label><input type="number" id="cp_qty" min="1" placeholder="0"/></div>
+      <div class="field"><label class="field-label">หมายเหตุ</label><input type="text" id="cp_note" placeholder="ไม่บังคับ"/></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeCpModal()">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="submitCustPole()">💾 บันทึก</button>
     </div>
   </div>
 </div>
@@ -1767,6 +1790,7 @@ const K_CONFIG    = 'sud/config';
 const K_CUSTOMERS = 'sud/customers';
 const K_HISTORY   = 'sud/orderHistory';
 const K_VAR_FB    = 'sud/stockVariants';
+const K_CUST_POLES = 'sud/customerPoles';
 const K_PROD_LOG    = 'sud/prodLog';
 const K_PROD_ACTIVE = 'sud/prodActive';
 
@@ -1774,7 +1798,7 @@ const K_PROD_ACTIVE = 'sud/prodActive';
 const _cache = {
   orders:[], prodErrors:[], shipErrors:[], orderCounter:0,
   stock:{}, stockLog:[], config:null, customers:[], orderHistory:[],
-  stockVariants:{}, prodLog:[], prodActive:[]
+  stockVariants:{}, prodLog:[], prodActive:[], custPoles:[]
 };
 let _fbReady = false;
 const _fbReadyCallbacks = [];
@@ -1874,6 +1898,11 @@ function startFirebaseListeners() {
   db.ref(K_VAR_FB).on('value', snap => {
     _cache.stockVariants = snap.val() || {};
   });
+  db.ref(K_CUST_POLES).on('value', snap => {
+    const v = snap.val();
+    _cache.custPoles = v ? Object.values(v) : [];
+    if (_fbReady) renderSdCustPoles();
+  });
 }
 
 // ── Helper: array → Firebase object (keyed by _fbKey or index) ─
@@ -1895,6 +1924,17 @@ const getShipErrs  = () => _cache.shipErrors;
 const getCustomers = () => _cache.customers;
 const getHistory   = () => _cache.orderHistory;
 const getCtr       = () => _cache.orderCounter;
+const getCustPoles = () => _cache.custPoles;
+function saveSingleCustPole(item) {
+  const key = item._fbKey || db.ref().push().key;
+  item._fbKey = key;
+  db.ref(K_CUST_POLES + '/' + key).set(item);
+}
+function deleteCustPole(id) {
+  const arr = getCustPoles();
+  const item = arr.find(x => x.id === id);
+  if (item && item._fbKey) db.ref(K_CUST_POLES + '/' + item._fbKey).remove();
+}
 
 function getStock() {
   if (Object.keys(_cache.stock).length === 0) {
@@ -2251,7 +2291,7 @@ function renderOrderItemsDraft() {
       + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
   }).join('');
   listEl.innerHTML = '<table class="items-draft-table"><thead><tr>'
-    + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>มูลค่า</th><th></th>'
+    + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>';
   if (box) {
     box.className = 'order-value-box has-value';
@@ -2561,7 +2601,7 @@ function renderOrders() {
             <thead><tr>
               <th>เลข Order</th><th>ลูกค้า</th><th>สเปค</th>
               <th>สั่ง</th><th>ส่งแล้ว ✎</th><th>คืบหน้า</th>
-              <th>กำหนดส่ง</th><th>มูลค่า</th><th>สถานะ</th><th>Sale / หมายเหตุ</th>
+              <th>กำหนดส่ง</th><th>Sale / หมายเหตุ</th>
             </tr></thead><tbody>`;
 
         entries.forEach(({o, it, idx}) => {
@@ -2596,8 +2636,8 @@ function renderOrders() {
             <td><span class="edit-cell" onclick="${editCall}">${del} / ${it.qty}</span><br><span style="font-size:11px;color:${rem>0?'#854D0E':'#166534'};">เหลือ ${rem}</span></td>
             <td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${iPct}%;background:${iBarC};"></div></div><span class="prog-pct" style="color:${iPctC};">${iPct}%</span></div></td>
             <td style="font-size:12px;">${o.deliveryDate}${dlBadge}</td>
-            <td style="font-size:12px;color:#166534;font-weight:600;">${valDisp}</td>
-            <td>${statusSelectHTML(o.orderNum, o.status||'รับ Order แล้ว')}</td>
+            
+            
             <td style="${noteStyle};font-size:12px;">${errNote}
               ${(o.status||'รับ Order แล้ว')==='รับ Order แล้ว'?`<br><button onclick="acceptOrder('${o.orderNum}')" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:6px;cursor:pointer;">🏭 รับ</button>`:''}
               ${(o.status||'รับ Order แล้ว')==='ส่งครบ'||o.status==='ส่งครบแล้ว'?`<br><button onclick="closeBill('${o.orderNum}')" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;">🔴 จบบิล</button>`:''}
@@ -3120,13 +3160,26 @@ function submitFinishProd() {
   if (netQty > 0) {
     // สร้าง spec label จากทุก field ที่มี
     const _specParts = [
-      a.length && a.length !== '-' ? a.length : null,
-      a.weld   && a.weld   !== '-' ? a.weld   : null,
-      a.steel  && a.steel  !== '-' ? a.steel  : null,
-      a.wire   && a.wire   !== '-' ? a.wire   : null,
+      a.length              && a.length              !== '-' ? a.length              : null,
+      itemSpecs.weld        && itemSpecs.weld         !== '-' ? itemSpecs.weld        : null,
+      itemSpecs.steel       && itemSpecs.steel        !== '-' ? itemSpecs.steel       : null,
+      itemSpecs.wire        && itemSpecs.wire         !== '-' ? itemSpecs.wire        : null,
     ].filter(Boolean);
     const specLabel = _specParts.length ? _specParts.join('/') : '-';
     addToSpecStock(a.pileType, specLabel, netQty);
+
+    // Auto: สร้าง entry เมื่อผลิตเสร็จ
+    saveSingleCustPole({
+      id: 'cp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      orderNum: a.isStockProd ? '' : a.orderNum,
+      pileType: a.pileType,
+      spec: specLabel !== '-' ? specLabel : '',
+      qty: netQty,
+      online: !a.isStockProd,   // ผลิตตาม Order → เสาลูกค้า (online), ผลิตเพิ่มสต็อก → เสาค้างสต็อก (offline)
+      createdAt: Date.now(),
+      note: 'Auto: ' + (a.isStockProd ? 'ผลิตเพิ่มสต็อก' : 'ผลิตเสร็จ') + (defect > 0 ? ' (เสีย ' + defect + ' ต้น)' : '')
+    });
+
     const logArr = getStockLog() || [];
     const newMain = (getStock()[a.pileType] || 0);
     logArr.unshift({ ts: nowTs(), typeVal: '🏭 ผลิตเสร็จ (รับเข้าสต็อก)', name: a.pileType,
@@ -3523,6 +3576,161 @@ function quickFillStock(name) {
   // open modal directly
   openStockDetail(name);
 }
+
+
+// ── CustPoles helpers ─────────────────────────────────────────
+function cpSpecChips(specStr) {
+  if (!specStr || specStr === '-') return '<span style="color:#CBD5E1;">—</span>';
+  const DEFS = [
+    { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8' },
+    { icon:'🔗', bg:'#FEF9C3', tc:'#854D0E' },
+    { icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9' },
+    { icon:'〰', bg:'#DCFCE7', tc:'#166534' },
+    { icon:'📝', bg:'#F1F5F9', tc:'#475569' },
+  ];
+  const parts = String(specStr).split('/').filter(Boolean);
+  if (!parts.length) return '<span style="color:#CBD5E1;">—</span>';
+  return '<div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;">' +
+    parts.map((v,i) => {
+      const d = DEFS[i] || DEFS[4];
+      return `<span style="background:${d.bg};color:${d.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">${d.icon} ${escHtml(v)}</span>`;
+    }).join('') + '</div>';
+}
+
+function renderSdCustPoles() {
+  const pileName = _sdCurrentPile;
+  if (!pileName) return;
+  const all     = getCustPoles().filter(x => x.pileType === pileName);
+  const online  = all.filter(x => x.online !== false);
+  const offline = all.filter(x => x.online === false);
+
+  const onPanel  = document.getElementById('sdCpPanelOnline');
+  const offPanel = document.getElementById('sdCpPanelOffline');
+  if (!onPanel) return;
+
+  // ── compact card style (same as spec cards) ──
+  const CARD_WRAP = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;';
+
+  // Online
+  if (!online.length) {
+    onPanel.innerHTML = '<div style="text-align:center;padding:16px;color:#94A3B8;font-size:12px;">ยังไม่มีเสาลูกค้า · กด ➕ เพิ่ม</div>';
+  } else {
+    onPanel.innerHTML = '<div style="' + CARD_WRAP + '">' +
+      online.map(p => `
+        <div style="background:#fff;border:1.5px solid #BFDBFE;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+          <div style="font-size:10px;font-weight:700;color:#1E40AF;">📋 ${p.orderNum}</div>
+          <div>${cpSpecChips(p.spec)}</div>
+          <div style="font-size:18px;font-weight:900;color:#1E293B;line-height:1;">${p.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span></div>
+          <div style="display:flex;gap:4px;margin-top:2px;">
+            <button onclick="toggleCpOffline('${p.id}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:5px;cursor:pointer;">📦 ส่งครบ</button>
+            <button onclick="deleteCpEntry('${p.id}')" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>
+          </div>
+        </div>`).join('') + '</div>';
+  }
+
+  // Offline — merge same spec into one card
+  if (!offPanel) return;
+  if (!offline.length) {
+    offPanel.innerHTML = '<div style="text-align:center;padding:16px;color:#94A3B8;font-size:12px;">ยังไม่มีเสาค้างสต็อก</div>';
+  } else {
+    const merged = {};
+    offline.forEach(p => {
+      const key = (p.spec||'ไม่ระบุ').trim();
+      if (!merged[key]) merged[key] = { spec: key, qty: 0, ids: [] };
+      merged[key].qty += (p.qty||0);
+      merged[key].ids.push(p.id);
+    });
+    offPanel.innerHTML = '<div style="' + CARD_WRAP + '">' +
+      Object.values(merged).map(m => {
+        const idsJson = JSON.stringify(m.ids).replace(/"/g,"'");
+        return `
+        <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+          <div>${cpSpecChips(m.spec)}</div>
+          <div style="font-size:18px;font-weight:900;color:#166534;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span></div>
+          <div style="display:flex;gap:4px;margin-top:2px;">
+            <button onclick="toggleCpOnlineAll(${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DCFCE7;color:#166534;border:1px solid #86EFAC;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>
+            <button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>
+          </div>
+        </div>`;
+      }).join('') + '</div>';
+  }
+}
+
+function openAddCustPoleModalFor(pileName) {
+  const cfg = getConfig();
+  const sel = document.getElementById('cp_pileType');
+  sel.innerHTML = '<option value="">— เลือก —</option>' + cfg.pileTypes.map(t => `<option${t===pileName?' selected':''}>${t}</option>`).join('');
+  document.getElementById('cp_order').value = '';
+  document.getElementById('cp_spec').value  = '';
+  document.getElementById('cp_qty').value   = '';
+  document.getElementById('cp_note').value  = '';
+  document.getElementById('cpModal').style.display = 'flex';
+}
+
+function closeCpModal() {
+  document.getElementById('cpModal').style.display = 'none';
+}
+
+function submitCustPole() {
+  const orderNum = document.getElementById('cp_order').value.trim();
+  const pileType = document.getElementById('cp_pileType').value;
+  const spec     = document.getElementById('cp_spec').value.trim();
+  const qty      = parseInt(document.getElementById('cp_qty').value) || 0;
+  const note     = document.getElementById('cp_note').value.trim();
+  if (!orderNum || !pileType || qty <= 0) { alert('กรุณากรอกเลข Order, ชนิดเสา, และจำนวนให้ครบ'); return; }
+  const item = { id: 'cp_'+Date.now(), orderNum, pileType, spec, qty, note, online: true, createdAt: Date.now() };
+  saveSingleCustPole(item);
+  closeCpModal();
+  if (_sdCurrentPile) renderSdCustPoles();
+  showToast('✅ เพิ่มเสาลูกค้า ' + pileType + ' ' + qty + ' ต้น (Order ' + orderNum + ')');
+}
+
+function toggleCpOffline(id) {
+  const arr = getCustPoles();
+  const item = arr.find(x => x.id === id);
+  if (!item) return;
+  if (!confirm('ยืนยันย้าย "' + item.pileType + '" (' + item.qty + ' ต้น) จาก Order ' + item.orderNum + '\nไปยังเสาค้างสต็อก?\n\nเลข Order จะถูกลบออก เหลือแค่รายละเอียดเสา')) return;
+  item.online = false;
+  item.orderNum = '';
+  saveSingleCustPole(item);
+  if (_sdCurrentPile) renderSdCustPoles();
+  showToast('📦 ย้ายไปเสาค้างสต็อกแล้ว');
+}
+
+function toggleCpOnline(id) {
+  const arr = getCustPoles();
+  const item = arr.find(x => x.id === id);
+  if (!item) return;
+  item.online = true;
+  saveSingleCustPole(item);
+  if (_sdCurrentPile) renderSdCustPoles();
+  showToast('🟢 ย้ายกลับเป็นเสาลูกค้าแล้ว');
+}
+
+function toggleCpOnlineAll(ids) {
+  const arr = getCustPoles();
+  ids.forEach(id => {
+    const item = arr.find(x => x.id === id);
+    if (item) { item.online = true; saveSingleCustPole(item); }
+  });
+  if (_sdCurrentPile) renderSdCustPoles();
+  showToast('🟢 ย้ายกลับเสาลูกค้าแล้ว (' + ids.length + ' รายการ)');
+}
+
+function deleteCpEntry(id) {
+  if (!confirm('ยืนยันลบรายการนี้?')) return;
+  deleteCustPole(id);
+  if (_sdCurrentPile) renderSdCustPoles();
+  showToast('🗑 ลบแล้ว');
+}
+
+function deleteCpAll(ids) {
+  if (!confirm('ยืนยันลบทั้งหมด ' + ids.length + ' รายการ?')) return;
+  ids.forEach(id => deleteCustPole(id));
+  if (_sdCurrentPile) renderSdCustPoles();
+  showToast('🗑 ลบแล้ว ' + ids.length + ' รายการ');
+}
+
 
 function renderStockCards() {
   const stock    = getStock(), cfg = getConfig();
@@ -4329,7 +4537,7 @@ function openStockDetail(name) {
     `<div class="sd-stat"><div class="sd-stat-val">${s.val}</div><div class="sd-stat-lbl">${s.lbl}</div></div>`
   ).join('');
 
-  renderSpecGrid();
+  renderSdCustPoles();
   renderDetailLog();
   sdPopulateStaff();
   clearSdLog();
@@ -4657,6 +4865,24 @@ function submitSdLog() {
   saveStock(stock);
   saveStockLog(log);
 
+  // Auto: รับเข้า → สร้าง entry เสาค้างสต็อก
+  if (typeVal === 'in') {
+    const _specParts = [
+      spec  && spec  !=='-' ? spec  : null,
+      weld  && weld  !=='-' ? weld  : null,
+      steel && steel !=='-' ? steel : null,
+      wire  && wire  !=='-' ? wire  : null,
+    ].filter(Boolean);
+    const _specLabel = _specParts.join('/') || spec;
+    saveSingleCustPole({
+      id: 'cp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      orderNum: '', pileType: name,
+      spec: _specLabel, qty, online: false,
+      createdAt: Date.now(),
+      note: note !== '-' ? note : 'รับเข้าสต็อก'
+    });
+  }
+
   clearSdLog();
   renderStockCards();
   populateLogPileFilter();
@@ -4775,7 +5001,7 @@ function renderEditItemsTable() {
   }).join('');
 
   listEl.innerHTML = `<table class="edit-items-table">
-    <thead><tr><th>ชนิดเสา</th><th>จำนวน</th><th>รายละเอียดเสา</th><th>มูลค่า</th><th></th></tr></thead>
+    <thead><tr><th>ชนิดเสา</th><th>จำนวน</th><th>รายละเอียดเสา</th><th></th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 
