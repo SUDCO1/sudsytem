@@ -1293,8 +1293,18 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
           </div>
 
           <div style="border:1.5px solid #FEE2E2;border-radius:10px;padding:14px;background:#FFF5F5;">
+            <div style="font-size:13px;font-weight:700;color:#DC2626;margin-bottom:4px;">🔢 รีเซ็ตจำนวนสต็อก</div>
+            <div style="font-size:11px;color:#64748B;margin-bottom:12px;">ตั้งจำนวนสต็อกทุกชนิดกลับเป็น 0 (ไม่ลบ log)</div>
+            <button onclick="adminClearHistory('stockQty')" class="btn btn-danger btn-sm" style="width:100%;">🔢 รีเซ็ตจำนวนสต็อก</button>
+          </div>
+
+          <div style="border:1.5px solid #FEE2E2;border-radius:10px;padding:14px;background:#FFF5F5;">
             <div style="font-size:13px;font-weight:700;color:#DC2626;margin-bottom:4px;">⚠️ ล้างข้อมูลทั้งหมด</div>
-            <div style="font-size:11px;color:#64748B;margin-bottom:12px;">ลบประวัติทุกประเภทพร้อมกัน</div>
+            <div style="font-size:11px;color:#64748B;margin-bottom:12px;">รีเซ็ต "+จากสต็อก" ในหน้าผลิต (แก้ข้อมูลเก่า)</div>
+            <button onclick="adminClearHistory('stockDelivered')" class="btn btn-danger btn-sm" style="width:100%;background:#92400E;">♻️ รีเซ็ต สต็อกเก่า</button>
+          </div>
+          <div style="background:#FFF1F2;border:1.5px solid #FECACA;border-radius:10px;padding:14px;">
+            <div style="font-size:11px;color:#64748B;margin-bottom:12px;">ลบทุกอย่าง รวมจำนวนสต็อก + เสาลูกค้า</div>
             <button onclick="adminClearHistory('all')" class="btn btn-danger btn-sm" style="width:100%;background:#7F1D1D;">🗑 ล้างทั้งหมด</button>
           </div>
 
@@ -1506,6 +1516,21 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
     <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeCpModal()">ยกเลิก</button>
       <button class="btn btn-primary" onclick="submitCustPole()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ ASSIGN ORDER MODAL ================================================================ -->
+<div id="assignOrderModal" style="display:none;position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,.45);align-items:center;justify-content:center;" onclick="if(event.target===this)closeAssignOrderModal()">
+  <div style="background:#fff;border-radius:16px;padding:28px;width:min(460px,94vw);box-shadow:0 8px 40px rgba(0,0,0,.22);max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:800;color:#1E293B;">↩ ย้ายไปเสาลูกค้า — เลือก Order</div>
+      <button onclick="closeAssignOrderModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#94A3B8;">✕</button>
+    </div>
+    <div style="font-size:12px;color:#64748B;margin-bottom:14px;" id="assignOrderPileInfo"></div>
+    <div id="assignOrderList" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeAssignOrderModal()">ยกเลิก</button>
     </div>
   </div>
 </div>
@@ -2823,8 +2848,9 @@ function renderProdSection() {
     const pilesHtml = items.map(it => {
       const pileType = it.pileType || o.pileType || '-';
       const totalProduced = getTotalProduced(o.orderNum, pileType);
-      const pct = it.qty > 0 ? Math.min(100, Math.round(totalProduced / it.qty * 100)) : 0;
-      const remaining = Math.max(0, it.qty - totalProduced);
+      const stockDelivered = it.stockDelivered || 0;
+      const pct = it.qty > 0 ? Math.min(100, Math.round((totalProduced + stockDelivered) / it.qty * 100)) : 0;
+      const remaining = Math.max(0, it.qty - totalProduced - stockDelivered);
       const excess    = Math.max(0, totalProduced - it.qty);
       const inProd = getProdActive().find(a => a.orderNum === o.orderNum && a.pileType === pileType);
       const itLen  = (it.length||o.length||'-').replace(/'/g,"\\'");
@@ -2845,11 +2871,11 @@ function renderProdSection() {
       return `<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
           <span style="font-size:15px;font-weight:800;color:#1E293B;">${pileType}</span>
-          <span style="font-size:12px;font-weight:700;color:#1E40AF;">${it.qty} ต้น</span>
+          <span style="font-size:12px;font-weight:700;color:${remaining<=0?'#166534':'#1E40AF'};" title="เหลือผลิต">${remaining} ต้น</span>
         </div>
         ${tags ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${tags}</div>` : ''}
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:4px;">
-          <span>ผลิตแล้ว <strong style="color:${pct>=100?'#166534':'#1E293B'};">${totalProduced}</strong> / ${it.qty} ต้น</span>
+          <span>ผลิตแล้ว <strong style="color:${pct>=100?'#166534':'#1E293B'};">${totalProduced}</strong>${stockDelivered > 0 ? ` <span style="color:#2563EB;font-size:10px;">(+${stockDelivered} จากสต็อก)</span>` : ''} / ${it.qty} ต้น</span>
           <span style="font-weight:700;color:${pct>=100?'#166534':'#92400E'};">${pct}%</span>
         </div>
         <div style="height:7px;background:#E2E8F0;border-radius:4px;overflow:hidden;margin-bottom:4px;">
@@ -3611,21 +3637,35 @@ function renderSdCustPoles() {
   // ── compact card style (same as spec cards) ──
   const CARD_WRAP = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;';
 
-  // Online
+  // Online — merge by orderNum + spec
   if (!online.length) {
     onPanel.innerHTML = '<div style="text-align:center;padding:16px;color:#94A3B8;font-size:12px;">ยังไม่มีเสาลูกค้า · กด ➕ เพิ่ม</div>';
   } else {
+    const mergedOn = {};
+    online.forEach(p => {
+      const key = (p.orderNum||'ไม่ระบุ') + '|||' + (p.spec||'');
+      if (!mergedOn[key]) mergedOn[key] = { orderNum: p.orderNum||'ไม่ระบุ', spec: p.spec||'', qty: 0, fromStockQty: 0, ids: [] };
+      mergedOn[key].qty += (p.qty||0);
+      if (p.fromStock) mergedOn[key].fromStockQty += (p.qty||0);
+      mergedOn[key].ids.push(p.id);
+    });
     onPanel.innerHTML = '<div style="' + CARD_WRAP + '">' +
-      online.map(p => `
+      Object.values(mergedOn).map(m => {
+        const idsJson   = JSON.stringify(m.ids).replace(/"/g,"'");
+        const orderEsc  = escHtml(m.orderNum).replace(/'/g,"\\'");
+        const pileEsc   = escHtml(pileName).replace(/'/g,"\\'");
+        return `
         <div style="background:#fff;border:1.5px solid #BFDBFE;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
-          <div style="font-size:10px;font-weight:700;color:#1E40AF;">📋 ${p.orderNum}</div>
-          <div>${cpSpecChips(p.spec)}</div>
-          <div style="font-size:18px;font-weight:900;color:#1E293B;line-height:1;">${p.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span></div>
+          <div style="font-size:10px;font-weight:700;color:#1E40AF;">📋 ${escHtml(m.orderNum)}</div>
+          <div>${cpSpecChips(m.spec)}</div>
+          <div style="font-size:18px;font-weight:900;color:#1E293B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span>${m.fromStockQty > 0 ? ` <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">สต็อกเก่า ${m.fromStockQty}</span>` : ''}</div>
           <div style="display:flex;gap:4px;margin-top:2px;">
-            <button onclick="toggleCpOffline('${p.id}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:5px;cursor:pointer;">📦 ส่งครบ</button>
-            <button onclick="deleteCpEntry('${p.id}')" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>
+            <button onclick="shipCpToOrder('${orderEsc}','${pileEsc}',${m.qty},${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:5px;cursor:pointer;">🚚 ส่ง</button>
+            <button onclick="toggleCpOfflineAll(${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:5px;cursor:pointer;">🔒 ปิดงาน</button>
+            <button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>
           </div>
-        </div>`).join('') + '</div>';
+        </div>`;
+      }).join('') + '</div>';
   }
 
   // Offline — merge same spec into one card
@@ -3644,11 +3684,11 @@ function renderSdCustPoles() {
       Object.values(merged).map(m => {
         const idsJson = JSON.stringify(m.ids).replace(/"/g,"'");
         return `
-        <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+        <div style="background:#FFF5F5;border:1.5px solid #FECACA;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
           <div>${cpSpecChips(m.spec)}</div>
-          <div style="font-size:18px;font-weight:900;color:#166534;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span></div>
+          <div style="font-size:18px;font-weight:900;color:#991B1B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span></div>
           <div style="display:flex;gap:4px;margin-top:2px;">
-            <button onclick="toggleCpOnlineAll(${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DCFCE7;color:#166534;border:1px solid #86EFAC;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>
+            <button onclick="openAssignOrderModal(${idsJson},'${(pileName||'').replace(/'/g,"\\'")}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>
             <button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>
           </div>
         </div>`;
@@ -3697,6 +3737,131 @@ function toggleCpOffline(id) {
   showToast('📦 ย้ายไปเสาค้างสต็อกแล้ว');
 }
 
+function toggleCpOfflineAll(ids) {
+  const arr = getCustPoles();
+  const items = ids.map(id => arr.find(x => x.id === id)).filter(Boolean);
+  if (!items.length) return;
+  const first = items[0];
+  if (!confirm('ยืนยันย้าย "' + first.pileType + '" ' + ids.length + ' รายการ (Order ' + first.orderNum + ')\nไปยังเสาค้างสต็อก?\n\nเลข Order จะถูกลบออก เหลือแค่รายละเอียดเสา')) return;
+  items.forEach(item => { item.online = false; item.orderNum = ''; saveSingleCustPole(item); });
+  if (_sdCurrentPile) { renderSdCustPoles(); openStockDetail(_sdCurrentPile); }
+  showToast('📦 ย้ายไปเสาค้างสต็อกแล้ว (' + ids.length + ' รายการ)');
+}
+
+function shipCpToOrder(orderNum, pileType, maxQty, ids) {
+  const orders = getOrders();
+  const o = orders.find(x => x.orderNum === orderNum);
+  if (!o) { alert('ไม่พบ Order ' + orderNum); return; }
+
+  // หา item ที่ตรงกับ pileType
+  const itemIdx = o.items ? o.items.findIndex(it => it.pileType === pileType) : -1;
+  if (itemIdx < 0) { alert('ไม่พบรายการ ' + pileType + ' ใน Order ' + orderNum); return; }
+  const item = o.items[itemIdx];
+  const remaining = Math.max(0, (item.qty||0) - (item.delivered||0));
+
+  const newVal = prompt(
+    '🚚 ส่ง ' + pileType + ' — Order ' + orderNum +
+    '\nสั่ง: ' + item.qty + ' ต้น · ส่งแล้ว: ' + (item.delivered||0) + ' ต้น · เหลือ: ' + remaining + ' ต้น' +
+    '\n\nกรอกจำนวนที่ต้องการส่ง (สูงสุด ' + remaining + '):', Math.min(maxQty, remaining)
+  );
+  if (newVal === null) return;
+  const sendQty = Math.min(Math.max(parseInt(newVal)||0, 0), remaining);
+  if (sendQty === 0) { showToast('⚠️ จำนวนต้องมากกว่า 0'); return; }
+
+  const prevDel = item.delivered || 0;
+  item.delivered = prevDel + sendQty;
+  o.delivered = o.items.reduce((s,it) => s+(it.delivered||0), 0);
+  if (o.delivered >= getOrderTotalQty(o)) o.status = 'ส่งครบ';
+  saveOrders(orders);
+
+  // หักสต็อก
+  const stock = getStock(), log = getStockLog() || [];
+  stock[pileType] = Math.max(0, (stock[pileType]||0) - sendQty);
+  log.unshift({ ts:nowTs(), typeVal:'📤 เบิกออก (ส่งของ)', name:pileType, qty:sendQty,
+    newStock:stock[pileType], qtyDisplay:'-'+sendQty, ref:orderNum,
+    staff:o.sale||'-', note:'🚚 ส่ง '+o.customer+' [Order '+orderNum+']' });
+  saveStock(stock); saveStockLog(log);
+
+  // ลด custPoles qty (หักตามลำดับ) และนับ fromStock
+  const allCp = getCustPoles();
+  let left = sendQty, fromStockSent = 0;
+  for (const id of ids) {
+    if (left <= 0) break;
+    const cp = allCp.find(x => x.id === id);
+    if (!cp) continue;
+    const take = Math.min(cp.qty||0, left);
+    if (cp.fromStock) fromStockSent += take;
+    if ((cp.qty||0) <= left) {
+      left -= (cp.qty||0);
+      deleteCustPole(id);
+    } else {
+      cp.qty = (cp.qty||0) - left;
+      left = 0;
+      saveSingleCustPole(cp);
+    }
+  }
+  // อัพเดท stockDelivered เฉพาะที่มาจากสต็อกเก่า
+  item.stockDelivered = (item.stockDelivered || 0) + fromStockSent;
+  saveOrders(orders);
+
+  if (_sdCurrentPile) openStockDetail(_sdCurrentPile);
+  renderOrders(); renderStockCards(); renderStockLog(true);
+  showToast('🚚 ส่ง ' + pileType + ' ' + sendQty + ' ต้น → Order ' + orderNum + ' · ส่งแล้ว ' + item.delivered + '/' + item.qty);
+}
+
+let _assignOrderIds = [], _assignOrderPile = '';
+
+function openAssignOrderModal(ids, pileName) {
+  _assignOrderIds = ids;
+  _assignOrderPile = pileName;
+
+  // หา orders ที่ active (ไม่ใช่ ส่งครบ/ยกเลิก) และมี pileType ตรงกัน
+  const DONE_STATUSES = ['ส่งครบ', 'ยกเลิก'];
+  const orders = getOrders().filter(o => {
+    if (DONE_STATUSES.includes(o.status)) return false;
+    const items = getOrderItems(o);
+    return items.some(it => it.pileType === pileName);
+  });
+
+  document.getElementById('assignOrderPileInfo').textContent =
+    'ชนิดเสา: ' + pileName + ' · กรุณาเลือก Order ที่ต้องการผูก';
+
+  const list = document.getElementById('assignOrderList');
+  if (!orders.length) {
+    list.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:20px;font-size:13px;">ไม่มี Order ที่ active สำหรับ ' + escHtml(pileName) + '</div>';
+  } else {
+    list.innerHTML = orders.map(o => {
+      const items  = getOrderItems(o);
+      const item   = items.find(it => it.pileType === pileName);
+      const rem    = item ? Math.max(0, (item.qty||0) - (item.delivered||0)) : 0;
+      return `<button onclick="confirmAssignOrder('${(o.orderNum||'').replace(/'/g,"\\'")}',${JSON.stringify(ids).replace(/"/g,"'")})"
+        style="width:100%;text-align:left;padding:12px 14px;border:1.5px solid #BFDBFE;border-radius:10px;background:#F0F7FF;cursor:pointer;font-family:inherit;">
+        <div style="font-size:13px;font-weight:800;color:#1E40AF;">📋 ${escHtml(o.orderNum||'-')}</div>
+        <div style="font-size:11px;color:#374151;margin-top:3px;">${escHtml(o.customer||'-')} · ${escHtml(o.status||'-')}</div>
+        <div style="font-size:11px;color:#166534;margin-top:2px;">เหลือส่ง: <strong>${rem}</strong> ต้น</div>
+      </button>`;
+    }).join('');
+  }
+
+  document.getElementById('assignOrderModal').style.display = 'flex';
+}
+
+function closeAssignOrderModal() {
+  document.getElementById('assignOrderModal').style.display = 'none';
+  _assignOrderIds = []; _assignOrderPile = '';
+}
+
+function confirmAssignOrder(orderNum, ids) {
+  const arr = getCustPoles();
+  ids.forEach(id => {
+    const item = arr.find(x => x.id === id);
+    if (item) { item.online = true; item.orderNum = orderNum; item.fromStock = true; saveSingleCustPole(item); }
+  });
+  closeAssignOrderModal();
+  if (_sdCurrentPile) openStockDetail(_sdCurrentPile);
+  showToast('🟢 ย้ายไปเสาลูกค้า Order ' + orderNum + ' (' + ids.length + ' รายการ)');
+}
+
 function toggleCpOnline(id) {
   const arr = getCustPoles();
   const item = arr.find(x => x.id === id);
@@ -3734,32 +3899,51 @@ function deleteCpAll(ids) {
 
 function renderStockCards() {
   const stock    = getStock(), cfg = getConfig();
-  const reserved = getReservedStock();
   const prices   = cfg.pilePrices || {};
+  // คำนวณ custPoles per pile type
+  const cpOnline = {}, cpOffline = {};
+  getCustPoles().forEach(p => {
+    if (!p.pileType) return;
+    if (p.online !== false) cpOnline[p.pileType]  = (cpOnline[p.pileType]  || 0) + (p.qty||0);
+    else                    cpOffline[p.pileType] = (cpOffline[p.pileType] || 0) + (p.qty||0);
+  });
   let totalValue = 0;
   const grid = document.getElementById('stockCardsGrid');
   const cards = cfg.pileTypes.map(name => {
-    const qty   = stock[name] || 0;
-    const res   = reserved[name] || 0;
-    const avail = qty - res;
-    const price = prices[name] || 0;
-    const val   = price > 0 ? qty * price : 0;
+    const qty      = stock[name] || 0;
+    const online   = cpOnline[name]  || 0;
+    const offline  = cpOffline[name] || 0;
+    const total    = online + offline;
+    const price    = prices[name] || 0;
+    const val      = price > 0 ? qty * price : 0;
     totalValue += val;
-    let cls = 'stock-ok', aClass = 'ok';
-    if (avail < cfg.stockLow)  { cls = 'stock-low';  aClass = 'low'; }
-    else if (avail < cfg.stockWarn) { cls = 'stock-warn'; aClass = 'warn'; }
-    const resHtml   = res > 0 ? `<div class="stock-reserved">🔒 จองแล้ว ${res} ต้น</div>` : '';
-    const availHtml = res > 0 ? `<div class="stock-avail ${aClass}">✅ คงเหลือจริง: ${avail} ต้น</div>` : '';
-    const valHtml   = val > 0 ? `<div style="font-size:11px;color:#64748B;margin-bottom:4px;">💰 ${val.toLocaleString('th-TH')} ฿</div>` : '';
-    const ts        = getLastStockTs(name);
-    const tsHtml    = ts ? `<span class="stock-ts">อัปเดต: ${ts}</span>` : `<span class="stock-ts">ยังไม่มีประวัติ</span>`;
-    const quickBtn  = `<button class="stock-quick-btn" onclick="quickFillStock('${name.replace(/'/g,"\'")}')">+ รับเข้า</button>`;
+    // สถานะตาม getReservedStock (ใช้ออเดอร์เป็น basis สำหรับสีขอบ)
+    const res   = (getReservedStock()[name] || 0);
+    const avail = qty - res;
+    let cls = 'stock-ok';
+    if (avail < cfg.stockLow)       cls = 'stock-low';
+    else if (avail < cfg.stockWarn) cls = 'stock-warn';
+    // ตัวเลขหลัก: ถ้ามี custPoles ใช้ total (🟢+🔴) ถ้าไม่มีใช้ stock qty
+    const displayQty = total > 0 ? total : qty;
+    // แสดง custPoles equation: เขียว + แดง (แสดงเฉพาะเมื่อมีทั้งสอง)
+    let cpHtml = '';
+    if (total > 0) {
+      cpHtml = `<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:4px;font-size:12px;font-weight:700;">
+        <span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:5px;">🟢 ${online}</span>
+        <span style="color:#94A3B8;">+</span>
+        <span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:5px;">🔴 ${offline}</span>
+      </div>`;
+    }
+    const valHtml  = val > 0 ? `<div style="font-size:11px;color:#64748B;margin-bottom:4px;">💰 ${val.toLocaleString('th-TH')} ฿</div>` : '';
+    const ts       = getLastStockTs(name);
+    const tsHtml   = ts ? `<span class="stock-ts">อัปเดต: ${ts}</span>` : `<span class="stock-ts">ยังไม่มีประวัติ</span>`;
+    const quickBtn = `<button class="stock-quick-btn" onclick="quickFillStock('${name.replace(/'/g,"\'")}')">+ รับเข้า</button>`;
     const statusChip = `<span class="chip ${avail < cfg.stockLow ? 'ch-err' : avail < cfg.stockWarn ? 'ch-delay' : 'ch-in'}">${avail < cfg.stockLow ? '🚨 ต่ำมาก' : avail < cfg.stockWarn ? '⚠ ใกล้หมด' : '✓ ปกติ'}</span>`;
     return `<div class="stock-card ${cls}" onclick="openStockDetail('${name.replace(/'/g,'\\'+'\'')}')">
       <div class="stock-name">${name}</div>
-      <div class="stock-qty">${qty}</div>
+      <div class="stock-qty">${displayQty}</div>
       <div class="stock-unit">ต้นทั้งหมด</div>
-      ${resHtml}${availHtml}${valHtml}
+      ${cpHtml}${valHtml}
       ${statusChip}
       <div class="stock-card-footer">${tsHtml}${quickBtn}</div>
     </div>`;
@@ -4515,24 +4699,24 @@ let _sdCurrentPile = null;
 
 function openStockDetail(name) {
   _sdCurrentPile = name;
-  const stock    = getStock();
-  const reserved = getReservedStock();
-  const cfg      = getConfig();
-  const qty      = stock[name] || 0;
-  const res      = reserved[name] || 0;
-  const avail    = qty - res;
-  const price    = (cfg.pilePrices||{})[name] || 0;
+  const cfg   = getConfig();
+  const price = (cfg.pilePrices||{})[name] || 0;
 
   document.getElementById('sdTitle').textContent = name;
   document.getElementById('sdSub').textContent   = 'จัดการสต็อกแบบละเอียด · แยกตามสเปค';
 
+  const totalStock = (getStock()[name] || 0);
+  const allCp    = getCustPoles().filter(x => x.pileType === name);
+  const onlineCp  = allCp.filter(x => x.online !== false);
+  const offlineCp = allCp.filter(x => x.online === false);
+  const custQty   = onlineCp.reduce((s,p)  => s+(p.qty||0), 0);
+  const stockQty  = offlineCp.reduce((s,p) => s+(p.qty||0), 0);
+  const orderNums = [...new Set(onlineCp.map(p => p.orderNum).filter(Boolean))];
   const statItems = [
-    { val: qty,   lbl: 'สต็อกรวม (ต้น)' },
-    { val: res,   lbl: 'จองแล้ว (ต้น)' },
-    { val: avail, lbl: 'คงเหลือจริง' },
-    { val: price > 0 ? price.toLocaleString('th-TH')+' ฿' : '-', lbl: 'ราคา/ต้น' },
+    { val: custQty,          lbl: 'เสาลูกค้า (ต้น)' },
+    { val: stockQty,         lbl: 'เสาค้างสต็อก (ต้น)' },
+    { val: orderNums.length, lbl: 'จำนวนสั่ง (ออเดอร์)' },
   ];
-  if (price > 0) statItems.push({ val: (qty*price).toLocaleString('th-TH')+' ฿', lbl: 'มูลค่ารวม' });
   document.getElementById('sdStats').innerHTML = statItems.map(s =>
     `<div class="sd-stat"><div class="sd-stat-val">${s.val}</div><div class="sd-stat-lbl">${s.lbl}</div></div>`
   ).join('');
@@ -5540,7 +5724,10 @@ function adminClearHistory(type) {
     prodErr:      'Error ผลิต',
     shipErr:      'Error ขนส่ง',
     orderHistory: 'ประวัติ Order',
-    all:          'ประวัติทั้งหมด',
+    all:          'ข้อมูลทั้งหมด (รวมจำนวนสต็อก)',
+    stockQty:     'จำนวนสต็อก (รีเซ็ตเป็น 0)',
+    custPoles:    'เสาลูกค้าทั้งหมด',
+    stockDelivered: 'ข้อมูลสต็อกเก่าในหน้าผลิต (stockDelivered)',
   };
   const label = labels[type] || type;
   if (!confirm('⚠️ ยืนยันลบ "' + label + '" ?\n\nข้อมูลจะหายถาวร ไม่สามารถกู้คืนได้ครับ')) return;
@@ -5559,6 +5746,21 @@ function adminClearHistory(type) {
   }
   if (type === 'orderHistory' || type === 'all') {
     db.ref(K_HISTORY).set({});
+  }
+  if (type === 'stockQty' || type === 'all') {
+    db.ref(K_STOCK).set({});
+    db.ref(K_VAR_FB).set({});
+  }
+  if (type === 'custPoles' || type === 'all') {
+    db.ref(K_CUST_POLES).set({});
+  }
+  if (type === 'stockDelivered' || type === 'all') {
+    // ล้าง stockDelivered ออกจากทุก order item
+    const orders = getOrders();
+    orders.forEach(o => {
+      if (o.items) o.items.forEach(it => { delete it.stockDelivered; });
+    });
+    saveOrders(orders);
   }
 
   showToast('🗑 ลบ ' + label + ' เรียบร้อยแล้ว');
