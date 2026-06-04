@@ -2129,7 +2129,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="card-title">🔐 สิทธิ์การเข้าถึงตามตำแหน่ง</div>
           <div class="card-sub">Admin มีสิทธิ์ทุกอย่างเสมอ — ปรับเฉพาะตำแหน่งอื่น</div>
         </div>
-        <span id="permSaveStatus" style="margin-left:auto;font-size:12px;color:#94A3B8;"></span>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+          <span id="permSaveStatus" style="font-size:12px;color:#94A3B8;"></span>
+          <button class="btn btn-primary btn-sm" onclick="saveRolePerms(false)">💾 บันทึกสิทธิ์</button>
+        </div>
       </div>
       <div class="card-body" style="padding:12px 16px 16px;">
         <!-- Role pills -->
@@ -2585,7 +2588,8 @@ auth.onAuthStateChanged(user => {
     if (ls) ls.style.display = 'none';
     // Load role from Firebase DB
     loadRoleFromDB(user.uid, role => {
-      applyRole(role);
+      // โหลด rolePerms จาก Firebase ก่อน เพื่อให้ permission ถูกต้องตั้งแต่ login
+      loadRolePerms(() => { applyRole(role); });
       // Start data sync
       if (!_fbReady) {
         startFirebaseListeners();
@@ -3070,7 +3074,11 @@ function showNav(id, visible) {
 function applyPermissions() {
   if (_currentRole === 'admin') { _userPerms = {}; _applyNav(); return; }
   // Translate new section-level arrays into legacy boolean keys for canDo()
-  const raw = _savedRolePerms?.[_currentRole] || DEFAULT_ROLE_PERMS[_currentRole] || DEFAULT_ROLE_PERMS.sale;
+  // ถ้าโหลด perms มาแล้ว (_savedRolePerms ไม่ใช่ null) ให้ใช้ค่าที่บันทึกไว้เท่านั้น
+  // ถ้ายังไม่เคยโหลด ให้ใช้ DEFAULT เป็น fallback
+  const raw = _savedRolePerms !== null
+    ? (_savedRolePerms[_currentRole] || {})
+    : (DEFAULT_ROLE_PERMS[_currentRole] || DEFAULT_ROLE_PERMS.sale);
   const has = (sec, lv) => {
     const v = raw[sec];
     if (Array.isArray(v)) return v.includes(lv);
@@ -3111,7 +3119,8 @@ function applyPermissions() {
 }
 
 function _applyNav() {
-  showNav('nav-form',      _currentRole !== 'manager');
+  showNav('nav-form',      canDo('create_order'));
+  showNav('nav-status',    canDo('view_orders'));
   showNav('nav-proderr',   canDo('view_production'));
   showNav('nav-shiperr',   canDo('view_shipping'));
   showNav('nav-summary',   canDo('view_summary'));
@@ -5500,6 +5509,7 @@ function _permToggleSale(roleId, val) {
   if (!_savedRolePerms) _savedRolePerms = {};
   if (!_savedRolePerms[roleId]) _savedRolePerms[roleId] = {};
   _savedRolePerms[roleId]['sale'] = val;
+  _renderPermTable();
   _permAutoSave();
 }
 
