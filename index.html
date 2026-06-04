@@ -3355,6 +3355,7 @@ function updateHeaderCount() {
 
 // ── Edit per-item delivery ─────────────────────────────────────
 function editItemDelivered(orderNum, itemIdx) {
+  if (!canDo('edit_order')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไข'); return; }
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o || !o.items || !o.items[itemIdx]) return;
   const item = o.items[itemIdx];
@@ -3524,7 +3525,7 @@ function renderOrders() {
             <td><strong>${o.customer}</strong>${o.tel?`<br><span style="font-size:11px;color:#64748B;">${o.tel}</span>`:''}</td>
             <td style="font-size:12px;">${lenDisp}</td>
             <td><strong>${it.qty}</strong></td>
-            <td><span class="edit-cell" onclick="${editCall}">${del} / ${it.qty}</span><br><span style="font-size:11px;color:${rem>0?'#854D0E':'#166534'};">เหลือ ${rem}</span></td>
+            <td><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''}>${del} / ${it.qty}</span><br><span style="font-size:11px;color:${rem>0?'#854D0E':'#166534'};">เหลือ ${rem}</span></td>
             <td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${iPct}%;background:${iBarC};"></div></div><span class="prog-pct" style="color:${iPctC};">${iPct}%</span></div></td>
             <td style="font-size:12px;">${o.deliveryDate}${dlBadge}</td>
             
@@ -3627,6 +3628,7 @@ function updateOrderStatus(orderNum, selectEl) {
 }
 
 function editDelivered(orderNum) {
+  if (!canDo('edit_order')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไข'); return; }
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
   const tq = getOrderTotalQty(o);
@@ -3700,6 +3702,7 @@ function editDelivered(orderNum) {
 
 // ── Accept Order by Production ─────────────────────────────────
 function acceptOrder(orderNum) {
+  if (!canDo('change_order_status')) { showToast('⛔ คุณไม่มีสิทธิ์เปลี่ยนสถานะ'); return; }
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
   o.status = 'รับออเดอร์';
@@ -5142,6 +5145,7 @@ function showCustHistory(custName) {
 
 // ── Close Bill ─────────────────────────────────────────────────
 function closeBill(orderNum) {
+  if (!canDo('change_order_status')) { showToast('⛔ คุณไม่มีสิทธิ์เปลี่ยนสถานะ'); return; }
   const orders = getOrders();
   const o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
@@ -5224,6 +5228,7 @@ function submitCustomer() {
   showToast(`👥 บันทึกลูกค้า: ${name}`);
 }
 function deleteCustomer(idx) {
+  if (!canDo('delete_customers')) { showToast('⛔ คุณไม่มีสิทธิ์ลบข้อมูลลูกค้า'); return; }
   if (!confirm('ลบลูกค้านี้ออกจากฐานข้อมูล?')) return;
   const custs = getCustomers(); custs.splice(idx,1); saveCustomers(custs);
   renderCustomers(); populateCustLookup();
@@ -6258,7 +6263,7 @@ let _editOrderNum = null;
 let _editItemsDraft = [];
 
 function openEditOrder(orderNum) {
-  if (_currentRole === 'manager') { showToast('👁 Manager ดูได้อย่างเดียว ไม่สามารถแก้ไข Order ได้'); return; }
+  if (!canDo('edit_order')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไข Order'); return; }
   const orders = getOrders();
   const o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
@@ -6437,7 +6442,7 @@ function editOrderOverlayClick(e) {
 // ── DELETE ORDER ──────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════
 function deleteOrder(orderNum) {
-  if (_currentRole !== 'admin') { showToast('⛔ เฉพาะ Admin เท่านั้นที่ลบ Order ได้'); return; }
+  if (!canDo('delete_order')) { showToast('⛔ คุณไม่มีสิทธิ์ลบ Order'); return; }
   const orders = getOrders();
   const o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
@@ -6804,6 +6809,7 @@ function thaiDateToISO(thai) {
   return `${ceYear}-${m}-${d}`;
 }
 function openEditProdErr(idx) {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขข้อมูลฝ่ายผลิต'); return; }
   const errs = getProdErrs();
   const e = errs[idx];
   if (!e) return;
