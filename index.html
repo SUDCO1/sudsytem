@@ -363,28 +363,32 @@ body.role-admin .sale-hint{display:none!important;}
 .perm-color-picker{width:34px;height:34px;border:2px solid #E2E8F0;padding:2px;border-radius:50%;cursor:pointer;background:none;flex-shrink:0;}
 .perm-preview-pill{display:inline-flex;align-items:center;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;transition:all .2s;}
 .perm-form-actions{display:flex;gap:8px;}
-/* Permission table */
-.perm-table{width:100%;border-collapse:collapse;font-size:13px;}
-.perm-table th{background:#F8FAFC;color:#475569;font-weight:700;font-size:11px;padding:10px 14px;text-align:center;border-bottom:2px solid #E2E8F0;white-space:nowrap;}
-.perm-table th:first-child{text-align:left;min-width:200px;}
-.perm-table td{padding:10px 14px;border-bottom:1px solid #F1F5F9;vertical-align:middle;text-align:center;}
-.perm-table td:first-child{text-align:left;font-size:13px;color:#374151;}
-.perm-table tr:last-child td{border-bottom:none;}
-.perm-group-row td{background:#EEF2FF !important;padding:0;cursor:pointer;user-select:none;}
-.perm-group-row:hover td{background:#E0E7FF !important;}
-.perm-group-row-inner{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;font-size:11px;font-weight:800;letter-spacing:.06em;color:#3730A3;text-transform:uppercase;}
-.perm-group-chevron{width:24px;height:24px;border-radius:6px;background:#fff;border:1.5px solid #C7D2FE;display:flex;align-items:center;justify-content:center;font-size:11px;color:#4F46E5;transition:transform .2s;flex-shrink:0;}
-.perm-group-row.collapsed .perm-group-chevron{transform:rotate(-90deg);}
-.perm-item-row.hidden{display:none;}
-/* Toggle switch */
+/* Permission table — pill multi-select */
+.perm-grid-head{display:grid;background:#F8FAFC;border-bottom:2px solid #E2E8F0;padding:10px 14px;}
+.perm-grid-row{display:grid;align-items:center;padding:12px 14px;border-bottom:1px solid #F1F5F9;transition:background .1s;}
+.perm-grid-row:hover{background:#FAFBFF;}
+.perm-grid-row:last-child{border-bottom:none;}
+.perm-col-label{font-weight:600;font-size:12px;color:#64748B;}
+.perm-col-role{text-align:center;font-weight:700;font-size:11px;}
+.perm-sec-label{display:flex;align-items:center;gap:7px;font-weight:700;font-size:13px;color:#1E293B;}
+.perm-level-group{display:flex;justify-content:center;}
+.perm-level-pills{display:inline-flex;border:1.5px solid #E2E8F0;border-radius:7px;overflow:hidden;}
+.perm-pill{padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:#CBD5E1;border:none;transition:all .15s;white-space:nowrap;font-family:inherit;}
+.perm-pill+.perm-pill{border-left:1.5px solid #E2E8F0;}
+.perm-pill:hover:not(.perm-pill-locked){background:#F1F5F9;color:#475569;}
+.perm-pill-view.on{background:#EFF6FF;color:#1D4ED8;}
+.perm-pill-edit.on{background:#FFFBEB;color:#B45309;}
+.perm-pill-delete.on{background:#FFF1F2;color:#BE123C;}
+.perm-pill-locked{opacity:.4;pointer-events:none;}
+/* Toggle (ฝ่ายขาย) */
 .perm-toggle{position:relative;display:inline-block;width:42px;height:22px;}
 .perm-toggle input{opacity:0;width:0;height:0;}
 .perm-slider{position:absolute;cursor:pointer;inset:0;background:#D1D5DB;border-radius:22px;transition:.2s;}
 .perm-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
-input:checked + .perm-slider{background:#1E40AF;}
-input:checked + .perm-slider:before{transform:translateX(20px);}
-input:disabled + .perm-slider{background:#22C55E;cursor:default;}
-input:disabled + .perm-slider:before{transform:translateX(20px);}
+input:checked+.perm-slider{background:#1E40AF;}
+input:checked+.perm-slider:before{transform:translateX(20px);}
+input:disabled+.perm-slider{background:#22C55E;cursor:default;}
+input:disabled+.perm-slider:before{transform:translateX(20px);}
 /* User Management styles */
 .um-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
 .um-table th{background:#F8FAFC;color:#475569;font-weight:700;font-size:11px;padding:10px 12px;text-align:left;border-bottom:2px solid #E2E8F0;}
@@ -575,7 +579,7 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
   <div class="nav-tab sale-only active" id="nav-form" data-tab="form" onclick="goTab('form',this)">📱 ฝ่ายขาย</div>
   <div class="nav-tab" id="nav-status" data-tab="status" onclick="goTab('status',this)">📋 สถานะ Order <span class="nav-dot"></span></div>
   <div class="nav-tab sale-only" id="nav-proderr" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ฝ่ายผลิต</div>
-  <div class="nav-tab sale-only" id="nav-shiperr" data-tab="shiperr" onclick="goTab('shiperr',this)">⚠️ Error ผลิต</div>
+  <div class="nav-tab sale-only" id="nav-shiperr" data-tab="shiperr" onclick="goTab('shiperr',this)">⚠️ Error ขนส่ง</div>
   <div class="nav-tab" id="nav-transport" data-tab="transport" onclick="goTab('transport',this)">🚛 ฝ่ายขนส่ง</div>
   <div class="nav-tab admin-manager-only" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ฝ่ายสต็อก</div>
   <div class="nav-tab" id="nav-customers" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
@@ -704,7 +708,7 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
         </div>
       </div>
       <div class="toolbar">
-        <button class="btn btn-danger btn-sm desk-only-btn" onclick="goTab('shiperr',document.querySelector('[data-tab=shiperr]'))">⚠️ Error ผลิต</button>
+        <button class="btn btn-danger btn-sm desk-only-btn" onclick="goTab('shiperr',document.querySelector('[data-tab=shiperr]'))">⚠️ Error ขนส่ง</button>
         <input type="search" class="search-inp" id="orderSearch" placeholder="🔍 ค้นหาลูกค้า / เลข Order..." oninput="renderOrders()"/>
         <select class="filter-sel" id="statusFilter" onchange="renderOrders()">
           <option value="">สถานะ: ทั้งหมด</option>
@@ -965,14 +969,14 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
-<!-- ================================================================ SECTION: Error ผลิต (History) ================================================================ -->
+<!-- ================================================================ SECTION: Error ขนส่ง (History) ================================================================ -->
 <div id="sec-shiperr" class="section">
   <div class="app-content stack">
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">⚠️ ประวัติ Error ผลิต</div>
-          <div class="card-sub">บันทึก Error ได้จากหน้า 🏭 ผลิต</div>
+          <div class="card-title">⚠️ ประวัติ Error ขนส่ง</div>
+          <div class="card-sub">บันทึก Error ได้จากหน้า 🚛 ขนส่ง</div>
         </div>
       </div>
       <div class="table-wrap">
@@ -2125,7 +2129,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="card-title">🔐 สิทธิ์การเข้าถึงตามตำแหน่ง</div>
           <div class="card-sub">Admin มีสิทธิ์ทุกอย่างเสมอ — ปรับเฉพาะตำแหน่งอื่น</div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="saveRolePerms()" style="margin-left:auto;">💾 บันทึก</button>
+        <span id="permSaveStatus" style="margin-left:auto;font-size:12px;color:#94A3B8;"></span>
       </div>
       <div class="card-body" style="padding:12px 16px 16px;">
         <!-- Role pills -->
@@ -2150,13 +2154,8 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
 
-        <!-- Permission table -->
-        <div class="table-wrap">
-          <table class="perm-table" id="permTable">
-            <thead id="permThead"></thead>
-            <tbody id="permTableBody"></tbody>
-          </table>
-        </div>
+        <!-- Permission table (pill UI) -->
+        <div id="permTableWrap"></div>
       </div>
     </div>
 
@@ -2417,20 +2416,20 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- ================================================================ MOBILE BOTTOM NAV ================================================================ -->
 <div class="mob-nav">
   <div class="mob-nav-item sale-only active" id="mnav-form" onclick="goTab('form',document.getElementById('nav-form'))">
-    <span class="mob-nav-icon">📱</span><span>ส่ง Order</span>
+    <span class="mob-nav-icon">📱</span><span>ฝ่ายขาย</span>
   </div>
   <div class="mob-nav-item" id="mnav-status" onclick="goTab('status',document.getElementById('nav-status'))">
     <span class="mob-nav-icon">📋</span><span>สถานะ</span>
     <div class="mob-nav-badge" id="mnav-status-badge"></div>
   </div>
   <div class="mob-nav-item sale-only" id="mnav-proderr" onclick="goTab('proderr',document.getElementById('nav-proderr'))">
-    <span class="mob-nav-icon">🏭</span><span>ผลิต</span>
+    <span class="mob-nav-icon">🏭</span><span>ฝ่ายผลิต</span>
   </div>
   <div class="mob-nav-item" id="mnav-stock" onclick="goTab('stock',document.getElementById('nav-stock'))">
-    <span class="mob-nav-icon">📦</span><span>สต็อก</span>
+    <span class="mob-nav-icon">📦</span><span>ฝ่ายสต็อก</span>
   </div>
   <div class="mob-nav-item" id="mnav-transport" onclick="goTab('transport',document.getElementById('nav-transport'))">
-    <span class="mob-nav-icon">🚛</span><span>ขนส่ง</span>
+    <span class="mob-nav-icon">🚛</span><span>ฝ่ายขนส่ง</span>
   </div>
   <div class="mob-nav-item" id="mnav-more" onclick="openMobMore()">
     <span class="mob-nav-icon">⋯</span><span>เพิ่มเติม</span>
@@ -3033,27 +3032,26 @@ function fillCustomerFromDB() {
 // ── Navigation ─────────────────────────────────────────────────
 
 // ── Permission System ──────────────────────────────────────────
-const ALL_PERMISSIONS = [
-  { group:'📋 Orders', key:'view_orders',      label:'ดู/ค้นหา Orders' },
-  { group:'📋 Orders', key:'create_order',     label:'สร้าง Order ใหม่' },
-  { group:'📋 Orders', key:'change_order_status', label:'เปลี่ยนสถานะ Order' },
-  { group:'📋 Orders', key:'edit_order',       label:'แก้ไข/ลบ Order' },
-  { group:'🏭 ผลิต',   key:'view_production',  label:'ดูหน้าผลิต' },
-  { group:'🏭 ผลิต',   key:'log_production',   label:'บันทึกการผลิต' },
-  { group:'🚛 ขนส่ง',  key:'view_shipping',    label:'ดู Error ขนส่ง' },
-  { group:'🚛 ขนส่ง',  key:'log_shipping',     label:'บันทึก Error ขนส่ง' },
-  { group:'📦 สต็อก',  key:'view_stock',       label:'ดูสต็อก' },
-  { group:'📦 สต็อก',  key:'edit_stock',       label:'เพิ่ม/เบิกสต็อก' },
-  { group:'👥 ลูกค้า', key:'view_customers',   label:'ดูฐานข้อมูลลูกค้า' },
-  { group:'📊 รายงาน', key:'view_summary',     label:'ดูสรุปภาพรวม' },
-  { group:'📊 รายงาน', key:'view_dashboard',   label:'ดู Executive Dashboard' },
-  { group:'⚙️ ระบบ',   key:'view_settings',    label:'ดูการตั้งค่า' },
+// ── New section-based permission model ──────────────────────────
+// type 've'=ดู/แก้ไข, 'ved'=ดู/แก้ไข/ลบ, 'toggle'=on/off
+const PERM_SECTIONS = [
+  { id:'overview',    icon:'📊', label:'สรุปภาพรวม',   type:'ve'     },
+  { id:'sale',        icon:'🛒', label:'ฝ่ายขาย',       type:'toggle' },
+  { id:'orderstatus', icon:'📋', label:'สถานะออเดอร์', type:'ved'    },
+  { id:'production',  icon:'🏭', label:'ฝ่ายผลิต',     type:'ved'    },
+  { id:'shipping',    icon:'🚚', label:'ฝ่ายขนส่ง',    type:'ved'    },
+  { id:'stock',       icon:'📦', label:'ฝ่ายสต็อก',    type:'ved'    },
+  { id:'customer',    icon:'👥', label:'ลูกค้า',        type:'ved'    },
 ];
+// Stored as arrays of levels (or boolean for toggle).
+// Levels: 'view' | 'edit' | 'delete'
 const DEFAULT_ROLE_PERMS = {
-  admin:   { view_orders:true,create_order:true,change_order_status:true,edit_order:true,view_production:true,log_production:true,view_shipping:true,log_shipping:true,view_stock:true,edit_stock:true,view_customers:true,view_summary:true,view_dashboard:true,view_settings:true },
-  manager: { view_orders:true,view_production:true,view_shipping:true,view_stock:true,view_customers:true,view_summary:true,view_dashboard:true },
-  sale:    { view_orders:true,create_order:true,change_order_status:true,view_production:true,log_production:true,view_shipping:true,log_shipping:true,view_stock:true,view_customers:true },
+  admin:   { overview:['view','edit'], sale:true,  orderstatus:['view','edit','delete'], production:['view','edit','delete'], shipping:['view','edit','delete'], stock:['view','edit','delete'], customer:['view','edit','delete'] },
+  manager: { overview:['view'],        sale:false, orderstatus:['view'],                 production:['view'],                 shipping:['view'],                 stock:['view'],                 customer:['view']                 },
+  sale:    { overview:[],              sale:true,  orderstatus:['view','edit'],           production:['view','edit'],          shipping:['view','edit'],          stock:['view'],                 customer:['view']                 },
 };
+// Keep ALL_PERMISSIONS as empty stub so legacy references don't crash
+const ALL_PERMISSIONS = [];
 let _userPerms = {};
 
 function canDo(key) {
@@ -3070,17 +3068,56 @@ function showNav(id, visible) {
 }
 
 function applyPermissions() {
-  const base = _savedRolePerms?.[_currentRole] || DEFAULT_ROLE_PERMS[_currentRole] || DEFAULT_ROLE_PERMS.sale;
-  _userPerms = Object.assign({}, base);
-  // Show/hide nav tabs based on permissions
+  if (_currentRole === 'admin') { _userPerms = {}; _applyNav(); return; }
+  // Translate new section-level arrays into legacy boolean keys for canDo()
+  const raw = _savedRolePerms?.[_currentRole] || DEFAULT_ROLE_PERMS[_currentRole] || DEFAULT_ROLE_PERMS.sale;
+  const has = (sec, lv) => {
+    const v = raw[sec];
+    if (Array.isArray(v)) return v.includes(lv);
+    if (typeof v === 'boolean' && lv === 'on') return v;
+    return false;
+  };
+  _userPerms = {
+    // สรุปภาพรวม
+    view_summary:         has('overview','view') || has('overview','edit'),
+    // ฝ่ายขาย
+    create_order:         has('sale','on'),
+    // สถานะออเดอร์
+    view_orders:          has('orderstatus','view') || has('orderstatus','edit') || has('orderstatus','delete'),
+    change_order_status:  has('orderstatus','edit') || has('orderstatus','delete'),
+    edit_order:           has('orderstatus','edit') || has('orderstatus','delete'),
+    delete_order:         has('orderstatus','delete'),
+    // ฝ่ายผลิต
+    view_production:      has('production','view') || has('production','edit') || has('production','delete'),
+    log_production:       has('production','edit') || has('production','delete'),
+    delete_production:    has('production','delete'),
+    // ฝ่ายขนส่ง
+    view_shipping:        has('shipping','view') || has('shipping','edit') || has('shipping','delete'),
+    log_shipping:         has('shipping','edit') || has('shipping','delete'),
+    delete_shipping:      has('shipping','delete'),
+    // ฝ่ายสต็อก
+    view_stock:           has('stock','view') || has('stock','edit') || has('stock','delete'),
+    edit_stock:           has('stock','edit') || has('stock','delete'),
+    delete_stock:         has('stock','delete'),
+    // ลูกค้า
+    view_customers:       has('customer','view') || has('customer','edit') || has('customer','delete'),
+    edit_customers:       has('customer','edit') || has('customer','delete'),
+    delete_customers:     has('customer','delete'),
+    // ตั้งค่า — admin only (ไม่มี section สำหรับนี้ในตัวเลือก)
+    view_settings:        false,
+    view_dashboard:       has('overview','view') || has('overview','edit'),
+  };
+  _applyNav();
+}
+
+function _applyNav() {
   showNav('nav-form',      _currentRole !== 'manager');
   showNav('nav-proderr',   canDo('view_production'));
   showNav('nav-shiperr',   canDo('view_shipping'));
   showNav('nav-summary',   canDo('view_summary'));
-  // showNav('nav-dashboard', canDo('view_dashboard')); // ซ่อน Dashboard
   showNav('nav-stock',     canDo('view_stock'));
   showNav('nav-customers', canDo('view_customers'));
-  showNav('nav-settings',  canDo('view_settings'));
+  showNav('nav-settings',  _currentRole === 'admin');
 }
 
 function goTab(name, el) {
@@ -5301,48 +5338,71 @@ function _renderPermRoles() {
 }
 
 function _renderPermTable() {
-  const editableRoles = _permRoles.filter(r => !r.locked);
+  const wrap = document.getElementById('permTableWrap');
+  if (!wrap) return;
+  const allRoles = _permRoles; // admin first (locked), then editable
   const perms = _savedRolePerms || DEFAULT_ROLE_PERMS;
+  const n = allRoles.length;
+  const gridStyle = `grid-template-columns:180px repeat(${n},1fr)`;
 
-  // thead
-  let thHtml = `<tr><th>สิทธิ์</th><th>👑 Admin</th>`;
-  editableRoles.forEach(r => {
-    thHtml += `<th><span style="background:${r.color.bg};color:${r.color.text};padding:4px 12px;border-radius:10px;font-size:11px;font-weight:800;">${r.label}</span></th>`;
+  // Helper: get levels array for a role+section
+  function getLevels(roleId, secId) {
+    const v = perms[roleId]?.[secId];
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'boolean') return v ? ['on'] : [];
+    return [];
+  }
+
+  // Header
+  let html = `<div class="perm-grid-head" style="${gridStyle}">
+    <div class="perm-col-label">หน้า / ฝ่าย</div>`;
+  allRoles.forEach(r => {
+    const badge = r.locked
+      ? `<span style="background:#FEF3C7;color:#92400E;padding:4px 12px;border-radius:10px;font-size:11px;font-weight:800;">${r.label}</span>`
+      : `<span style="background:${r.color.bg};color:${r.color.text};padding:4px 12px;border-radius:10px;font-size:11px;font-weight:800;">${r.label}</span>`;
+    html += `<div class="perm-col-role">${badge}</div>`;
   });
-  thHtml += '</tr>';
-  const thead = document.getElementById('permThead');
-  if (thead) thead.innerHTML = thHtml;
+  html += `</div>`;
 
-  // tbody
-  let lastGroup = '', html = '';
-  ALL_PERMISSIONS.forEach(p => {
-    if (p.group !== lastGroup) {
-      const gid = 'pgrp_' + p.group.replace(/[^a-zA-Zก-๙]/g,'_');
-      html += `<tr class="perm-group-row" id="${gid}" onclick="permToggleGroup('${gid}')">
-        <td colspan="${editableRoles.length + 2}">
-          <div class="perm-group-row-inner">${p.group}<span class="perm-group-chevron">▼</span></div>
-        </td></tr>`;
-      lastGroup = p.group;
-    }
-    const gid = 'pgrp_' + p.group.replace(/[^a-zA-Zก-๙]/g,'_');
-    let tds = `<td>${p.label}</td>`;
-    tds += `<td><label class="perm-toggle"><input type="checkbox" checked disabled/><span class="perm-slider"></span></label></td>`;
-    editableRoles.forEach(r => {
-      const checked = perms[r.id]?.[p.key] ? 'checked' : '';
-      tds += `<td><label class="perm-toggle"><input type="checkbox" id="perm_${r.id}_${p.key}" ${checked}/><span class="perm-slider"></span></label></td>`;
+  // Rows
+  PERM_SECTIONS.forEach(sec => {
+    html += `<div class="perm-grid-row" style="${gridStyle}">`;
+    html += `<div class="perm-sec-label"><span>${sec.icon}</span>${sec.label}</div>`;
+
+    allRoles.forEach(role => {
+      const isLocked = !!role.locked;
+      const levels = isLocked
+        ? (sec.type === 'toggle' ? ['on'] : sec.type === 've' ? ['view','edit'] : ['view','edit','delete'])
+        : getLevels(role.id, sec.id);
+
+      if (sec.type === 'toggle') {
+        const on = levels.includes('on');
+        html += `<div style="display:flex;justify-content:center">
+          <label class="perm-toggle">
+            <input type="checkbox" ${on?'checked':''} ${isLocked?'disabled':''}
+              onchange="_permToggleSale('${role.id}',this.checked)">
+            <span class="perm-slider"></span>
+          </label></div>`;
+      } else {
+        const pills = sec.type === 've'
+          ? [['view','ดู'],['edit','แก้ไข']]
+          : [['view','ดู'],['edit','แก้ไข'],['delete','ลบ']];
+        html += `<div class="perm-level-group"><div class="perm-level-pills">`;
+        pills.forEach(([lv,txt]) => {
+          const on = levels.includes(lv);
+          html += `<button class="perm-pill perm-pill-${lv}${on?' on':''} ${isLocked?'perm-pill-locked':''}"
+            onclick="_permToggleLevel('${role.id}','${sec.id}','${lv}')">${txt}</button>`;
+        });
+        html += `</div></div>`;
+      }
     });
-    html += `<tr class="perm-item-row" data-group="${gid}">${tds}</tr>`;
+    html += `</div>`;
   });
-  const tbody = document.getElementById('permTableBody');
-  if (tbody) tbody.innerHTML = html;
+
+  wrap.innerHTML = html;
 }
 
-function permToggleGroup(gid) {
-  const grp = document.getElementById(gid);
-  const rows = document.querySelectorAll(`.perm-item-row[data-group="${gid}"]`);
-  const isCollapsed = grp.classList.toggle('collapsed');
-  rows.forEach(r => r.classList.toggle('hidden', isCollapsed));
-}
+function permToggleGroup(gid) { /* no-op: old collapsible rows removed */ }
 
 function permToggleAddForm() {
   const f = document.getElementById('permAddForm');
@@ -5396,7 +5456,9 @@ function permAddRole() {
   if (_permRoles.find(r => r.id === id)) { showToast('⚠️ ตำแหน่งนี้มีอยู่แล้ว'); return; }
   _permRoles.push({ id, label: name, color: { ..._permSelectedColor } });
   if (!_savedRolePerms) _savedRolePerms = {};
+  // Init with empty permissions for all sections
   _savedRolePerms[id] = {};
+  PERM_SECTIONS.forEach(s => { _savedRolePerms[id][s.id] = s.type === 'toggle' ? false : []; });
   document.getElementById('permAddForm').classList.remove('show');
   _renderPermRoles();
   _renderPermTable();
@@ -5413,16 +5475,49 @@ function permDeleteRole(id) {
   showToast('ลบตำแหน่งแล้ว');
 }
 
-function saveRolePerms() {
+// ── Auto-save (debounced 900ms) ──────────────────────────────────
+let _permSaveTimer = null;
+function _permAutoSave() {
+  const el = document.getElementById('permSaveStatus');
+  if (el) { el.textContent = '⏳ กำลังบันทึก...'; el.style.color = '#94A3B8'; }
+  clearTimeout(_permSaveTimer);
+  _permSaveTimer = setTimeout(() => saveRolePerms(true), 900);
+}
+
+// ── Live-edit helpers (called from pill onclick / toggle onchange) ──
+function _permToggleLevel(roleId, secId, level) {
+  if (!_savedRolePerms) _savedRolePerms = {};
+  if (!_savedRolePerms[roleId]) _savedRolePerms[roleId] = {};
+  let arr = _savedRolePerms[roleId][secId];
+  if (!Array.isArray(arr)) arr = [];
+  const idx = arr.indexOf(level);
+  if (idx >= 0) arr.splice(idx, 1); else arr.push(level);
+  _savedRolePerms[roleId][secId] = arr;
+  _renderPermTable();
+  _permAutoSave();
+}
+function _permToggleSale(roleId, val) {
+  if (!_savedRolePerms) _savedRolePerms = {};
+  if (!_savedRolePerms[roleId]) _savedRolePerms[roleId] = {};
+  _savedRolePerms[roleId]['sale'] = val;
+  _permAutoSave();
+}
+
+function saveRolePerms(auto) {
+  const statusEl = document.getElementById('permSaveStatus');
+  // Collect current state from _savedRolePerms (already updated live)
   const editableRoles = _permRoles.filter(r => !r.locked);
-  const newPerms = {};
+  if (!_savedRolePerms) _savedRolePerms = {};
+  // Make sure every editable role has an entry
   editableRoles.forEach(r => {
-    newPerms[r.id] = {};
-    ALL_PERMISSIONS.forEach(p => {
-      newPerms[r.id][p.key] = document.getElementById(`perm_${r.id}_${p.key}`)?.checked || false;
-    });
+    if (!_savedRolePerms[r.id]) {
+      _savedRolePerms[r.id] = {};
+      PERM_SECTIONS.forEach(s => { _savedRolePerms[r.id][s.id] = s.type === 'toggle' ? false : []; });
+    }
   });
-  // Save roles list too
+  const newPerms = {};
+  editableRoles.forEach(r => { newPerms[r.id] = _savedRolePerms[r.id]; });
+
   const rolesDataArr = _permRoles.filter(r => !r.locked).map(r => ({ id:r.id, label:r.label, color:r.color }));
   const db = firebase.database();
   var rolesPayload = null;
@@ -5431,15 +5526,16 @@ function saveRolePerms() {
     db.ref('/config/rolePerms').set(newPerms),
     db.ref('/config/customRoles').set(rolesPayload),
   ]).then(() => {
-    _savedRolePerms = newPerms;
-    if (_currentRole !== 'admin') {
-      _userPerms = Object.assign({}, newPerms[_currentRole] || {});
-      applyPermissions();
-    }
-    showToast('✅ บันทึกสิทธิ์เรียบร้อย!');
+    _savedRolePerms = { ...(_savedRolePerms||{}), ...newPerms };
+    if (_currentRole !== 'admin') applyPermissions();
+    const statusEl = document.getElementById('permSaveStatus');
+    if (statusEl) { statusEl.textContent = '✅ บันทึกแล้ว'; statusEl.style.color = '#16A34A'; setTimeout(()=>{ if(statusEl) statusEl.textContent=''; }, 2500); }
+    if (!auto) showToast('✅ บันทึกสิทธิ์เรียบร้อย!');
   }).catch(err => {
     console.error('saveRolePerms error:', err);
-    showToast('❌ บันทึกไม่สำเร็จ: ' + (err.message || err.code || 'ดู Console'));
+    const statusEl = document.getElementById('permSaveStatus');
+    if (statusEl) { statusEl.textContent = '❌ บันทึกไม่สำเร็จ'; statusEl.style.color = '#DC2626'; }
+    if (!auto) showToast('❌ บันทึกไม่สำเร็จ: ' + (err.message || err.code || 'ดู Console'));
   });
 }
 
@@ -5449,7 +5545,24 @@ function loadRolePerms(cb) {
     db.ref('/config/rolePerms').once('value'),
     db.ref('/config/customRoles').once('value'),
   ]).then(([permSnap, rolesSnap]) => {
-    if (permSnap.exists()) _savedRolePerms = permSnap.val();
+    if (permSnap.exists()) {
+      const raw = permSnap.val();
+      // Normalise: Firebase stores arrays as objects {0:x,1:y} — convert back
+      _savedRolePerms = {};
+      Object.keys(raw).forEach(roleId => {
+        _savedRolePerms[roleId] = {};
+        Object.keys(raw[roleId]).forEach(secId => {
+          const v = raw[roleId][secId];
+          if (v === true || v === false) {
+            _savedRolePerms[roleId][secId] = v;
+          } else if (typeof v === 'object' && v !== null) {
+            _savedRolePerms[roleId][secId] = Object.values(v);
+          } else {
+            _savedRolePerms[roleId][secId] = [];
+          }
+        });
+      });
+    }
     if (rolesSnap.exists()) {
       const raw = rolesSnap.val();
       const custom = Array.isArray(raw) ? raw : Object.values(raw);
@@ -6618,10 +6731,10 @@ function _dbBucketOrders(orders, days, mode) {
 
 // ── Mobile More Sheet ──────────────────────────────────────────
 const _mobMoreConfig = {
-  'nav-shiperr':   { icon:'⚠️', label:'Error ผลิต',       tab:'shiperr' },
+  'nav-shiperr':   { icon:'⚠️', label:'Error ขนส่ง',       tab:'shiperr' },
   'nav-summary':   { icon:'📊', label:'สรุปภาพรวม',        tab:'summary' },
   'nav-customers': { icon:'👥', label:'ลูกค้า',            tab:'customers' },
-  'nav-settings':  { icon:'⚙️', label:'ตั้งค่าระบบ',       tab:'settings' },
+  'nav-settings':  { icon:'⚙️', label:'ตั้งค่า',           tab:'settings' },
 };
 function openMobMore() {
   const list = document.getElementById('mobMoreList');
