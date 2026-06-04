@@ -1136,11 +1136,10 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
 
 <script>
 // ── Transport Calendar ────────────────────────────────────────
-const TC_KEY = 'tc_events';
 let _tcYear, _tcMonth, _tcSelectedDate = null;
 
-function tcGetEvents() { try { return JSON.parse(localStorage.getItem(TC_KEY)||'[]'); } catch(e) { return []; } }
-function tcSaveEvents(a) { localStorage.setItem(TC_KEY, JSON.stringify(a)); }
+function tcGetEvents() { return _cache.tcEvents || []; }
+function tcSaveEvents(a) { db.ref(K_TC_EVENTS).set(arrToFbObj(a)); }
 
 function tcInit() {
   const n = new Date(); _tcYear = n.getFullYear(); _tcMonth = n.getMonth(); tcRender();
@@ -1175,34 +1174,27 @@ function tcRender() {
     html += `<div class="${cls}" onclick="tcToggleDay('${ds}')"><div class="tc-day-num">${d}${de.length>0&&!iS?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3B82F6;vertical-align:middle;margin-left:4px;margin-bottom:1px;"></span>`:''}${iS?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.7);vertical-align:middle;margin-left:4px;margin-bottom:1px;"></span>`:''}</div>${chips}${more}</div>`;
   }
   document.getElementById('tcGrid').innerHTML = html;
-
   // badge: รอบขาออก + ต้น
-  const tcGrid = document.getElementById('tcGrid');
-  if (tcGrid) {
-    const byDateTc = {};
-    evs.forEach(e => {
-      if (!e.timeOut) return;
-      if (!byDateTc[e.date]) byDateTc[e.date] = { trips: 0, piles: 0 };
+  const tcGrid=document.getElementById('tcGrid');
+  if(tcGrid){
+    const byDateTc={};
+    evs.forEach(e=>{
+      if(!e.timeOut)return;
+      if(!byDateTc[e.date])byDateTc[e.date]={trips:0,piles:0};
       byDateTc[e.date].trips++;
-      (e.selectedItems || []).forEach(si => { byDateTc[e.date].piles += (parseInt(si.qty) || 0); });
+      (e.selectedItems||[]).forEach(si=>{byDateTc[e.date].piles+=(parseInt(si.qty)||0);});
     });
-    const dayCells = tcGrid.querySelectorAll('.tc-day');
-    dayCells.forEach(cell => {
-      const onclick = cell.getAttribute('onclick') || '';
-      const m = onclick.match(/tcToggleDay\(['"]([^'"]+)['"]\)/);
-      if (!m) return;
-      const ds = m[1];
-      if (!byDateTc[ds]) return;
-      const { trips, piles } = byDateTc[ds];
-      const isSel = cell.classList.contains('is-selected');
-      const badge = document.createElement('div');
-      badge.style.cssText = 'font-size:10px;font-weight:900;margin-top:3px;text-align:center;border-radius:4px;padding:1px 5px;background:' +
-        (isSel ? 'rgba(255,255,255,0.2)' : '#DBEAFE') + ';color:' + (isSel ? 'rgba(255,255,255,0.9)' : '#1E40AF') + ';';
-      badge.textContent = trips + ' รอบ / ' + piles + ' ต้น';
-      cell.appendChild(badge);
+    tcGrid.querySelectorAll('.tc-day').forEach(cell=>{
+      const m=(cell.getAttribute('onclick')||'').match(/tcToggleDay\(['"]([^'"]+)['"]\)/);
+      if(!m)return;
+      const info=byDateTc[m[1]];if(!info)return;
+      const isSel=cell.classList.contains('is-selected');
+      const b=document.createElement('div');
+      b.style.cssText='font-size:10px;font-weight:900;margin-top:3px;text-align:center;border-radius:4px;padding:1px 5px;background:'+(isSel?'rgba(255,255,255,0.2)':'#DBEAFE')+';color:'+(isSel?'rgba(255,255,255,0.9)':'#1E40AF')+';';
+      b.textContent=info.trips+' รอบ / '+info.piles+' ต้น';
+      cell.appendChild(b);
     });
   }
-
   tcRenderAllDays()
 }
 
@@ -2658,6 +2650,7 @@ const K_VAR_FB    = 'sud/stockVariants';
 const K_CUST_POLES = 'sud/customerPoles';
 const K_PROD_LOG    = 'sud/prodLog';
 const K_PROD_ACTIVE = 'sud/prodActive';
+const K_TC_EVENTS   = 'sud/tcEvents';
 
 // ── In-Memory Cache (sync'd from Firebase realtime) ──────────
 const _cache = {
@@ -2690,7 +2683,7 @@ function startFirebaseListeners() {
   }, 12000);
 
   let loadCount = 0;
-  const TOTAL = 9;
+  const TOTAL = 10;
   function checkDone() {
     loadCount++;
     if (loadCount >= TOTAL) {
@@ -2730,6 +2723,12 @@ function startFirebaseListeners() {
     const v = snap.val();
     _cache.prodActive = v ? Object.values(v).sort((a,b) => (a.startedAt||0)-(b.startedAt||0)) : [];
     if (_fbReady) { renderActiveProd(); renderProdSection(); }
+    else checkDone();
+  });
+  db.ref(K_TC_EVENTS).on('value', snap => {
+    const v = snap.val();
+    _cache.tcEvents = v ? Object.values(v).sort((a,b) => (b._id||0)-(a._id||0)) : [];
+    if (_fbReady) { if(typeof tcRender==='function') tcRender(); }
     else checkDone();
   });
   db.ref(K_STOCK).on('value', snap => {
@@ -6891,20 +6890,18 @@ function pcRender(){
     Object.keys(bd).forEach(ds=>{
       const dayNet=bd[ds].reduce((s,l)=>s+(l.qtyNet||0),0);
       if(!dayNet)return;
-      const cells=pcGrid.querySelectorAll('.tc-day');
-      cells.forEach(cell=>{
-        const onclick=cell.getAttribute('onclick')||'';
-        if(onclick.includes("'"+ds+"'")||onclick.includes('"'+ds+'"')){
-          const isSelected=cell.classList.contains('is-selected');
-          const badge=document.createElement('div');
-          badge.style.cssText='font-size:10px;font-weight:900;color:'+(isSelected?'rgba(255,255,255,.9)':'#5B21B6')+';background:'+(isSelected?'rgba(255,255,255,.2)':'#EDE9FE')+';border-radius:4px;padding:1px 5px;margin-top:2px;text-align:center;';
-          badge.textContent=dayNet+' ต้น';
-          cell.appendChild(badge);
+      pcGrid.querySelectorAll('.tc-day').forEach(cell=>{
+        const oc=cell.getAttribute('onclick')||'';
+        if(oc.includes("'"+ds+"'")||oc.includes('"'+ds+'"')){
+          const isSel=cell.classList.contains('is-selected');
+          const b=document.createElement('div');
+          b.style.cssText='font-size:10px;font-weight:900;color:'+(isSel?'rgba(255,255,255,.9)':'#5B21B6')+';background:'+(isSel?'rgba(255,255,255,.2)':'#EDE9FE')+';border-radius:4px;padding:1px 5px;margin-top:2px;text-align:center;';
+          b.textContent=dayNet+' ต้น';
+          cell.appendChild(b);
         }
       });
     });
   }
-
   panel.innerHTML='<div id="pcd-'+_pcSel+'"
  class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;"><div class="card-header" style="background:linear-gradient(135deg,#EDE9FE,#F5F3FF);"><div style="flex:1;"><div class="card-title" style="color:#5B21B6;">'+_dayLabel(_pcSel)+'</div><div class="card-sub">'+(list.length?list.length+' รายการผลิต':'ไม่มีรายการ')+'</div></div></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">'+body+'</div></div>';
 }
