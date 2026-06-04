@@ -571,14 +571,15 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
 
 <!-- NAV -->
 <div class="app-nav">
-  <div class="nav-tab sale-only active" id="nav-form" data-tab="form" onclick="goTab('form',this)">📱 ส่ง Order</div>
-  <div class="nav-tab" id="nav-status" data-tab="status" onclick="goTab('status',this)">📋 สถานะ Order <span class="nav-dot"></span></div>
-  <div class="nav-tab sale-only" id="nav-proderr" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ผลิต</div>
-  <div class="nav-tab sale-only" id="nav-shiperr" data-tab="shiperr" onclick="goTab('shiperr',this)">⚠️ Error ผลิต</div>
   <div class="nav-tab admin-manager-only" id="nav-summary" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
-  <div class="nav-tab admin-manager-only" id="nav-dashboard" data-tab="dashboard" onclick="goTab('dashboard',this)" style="display:none !important;">📈 Dashboard</div>
-  <div class="nav-tab admin-manager-only" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ระบบสต็อก</div>
+  <div class="nav-tab sale-only active" id="nav-form" data-tab="form" onclick="goTab('form',this)">📱 ฝ่ายขาย</div>
+  <div class="nav-tab" id="nav-status" data-tab="status" onclick="goTab('status',this)">📋 สถานะ Order <span class="nav-dot"></span></div>
+  <div class="nav-tab sale-only" id="nav-proderr" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ฝ่ายผลิต</div>
+  <div class="nav-tab sale-only" id="nav-shiperr" data-tab="shiperr" onclick="goTab('shiperr',this)">⚠️ Error ผลิต</div>
+  <div class="nav-tab" id="nav-transport" data-tab="transport" onclick="goTab('transport',this)">🚛 ฝ่ายขนส่ง</div>
+  <div class="nav-tab admin-manager-only" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ฝ่ายสต็อก</div>
   <div class="nav-tab" id="nav-customers" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
+  <div class="nav-tab admin-manager-only" id="nav-dashboard" data-tab="dashboard" onclick="goTab('dashboard',this)" style="display:none !important;">📈 Dashboard</div>
   <div class="nav-tab admin-only" id="nav-settings" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
 </div>
 
@@ -984,6 +985,795 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
   </div>
 </div>
 
+<!-- ================================================================ SECTION: ขนส่ง ================================================================ -->
+<style>
+.tc-day{min-height:72px;border-radius:10px;border:1.5px solid #E2E8F0;background:#FAFBFF;padding:6px 8px;cursor:pointer;transition:all 0.15s;position:relative;}
+.tc-day:hover{border-color:#93C5FD;background:#F0F7FF;transform:translateY(-1px);box-shadow:0 2px 8px rgba(59,130,246,0.10);}
+.tc-day.is-today{border-color:#60A5FA;background:#EFF6FF;}
+.tc-day.is-selected{border-color:#1E40AF;background:#1E40AF;box-shadow:0 4px 14px rgba(30,64,175,0.28);}
+.tc-day.is-selected:hover{background:#1D3A9E;}
+.tc-day.is-selected .tc-day-num{color:#fff;}
+.tc-day.is-today .tc-day-num{color:#1E40AF;font-weight:900;}
+.tc-day-num{font-size:13px;font-weight:700;color:#1E293B;line-height:1;}
+.tc-event-chip{font-size:9.5px;border-radius:4px;padding:2px 5px;margin-top:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600;}
+.tc-event-chip.normal{background:#DBEAFE;color:#1D4ED8;}
+.tc-event-chip.sel{background:rgba(255,255,255,0.22);color:#fff;}
+.tc-more{font-size:9px;color:#94A3B8;margin-top:2px;}
+.tc-more.sel{color:rgba(255,255,255,0.65);}
+.tc-dow{text-align:center;font-size:11px;font-weight:700;color:#94A3B8;padding:6px 0;letter-spacing:0.03em;}
+.tc-dow.sun{color:#EF4444;}
+.tc-dow.sat{color:#3B82F6;}
+.tc-panel-enter{animation:tcSlideIn 0.2s ease;}
+@keyframes tcSlideIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.tc-entry{border:1.5px solid #E2E8F0;border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;background:#fff;transition:box-shadow 0.15s;}
+.tc-entry:hover{box-shadow:0 2px 10px rgba(0,0,0,0.08);}
+.tc-entry-icon{width:38px;height:38px;border-radius:10px;background:#DBEAFE;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+</style>
+
+<div id="sec-transport" class="section">
+  <div class="app-content stack">
+
+    <!-- ── Header ── -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:17px;font-weight:800;color:#1E293B;">🚛 ปฏิทินขนส่ง</div>
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">จัดการนัดส่งของแต่ละวัน · คลิกวันเพื่อดูหรือซ่อนรายการ</div>
+      </div>
+      <button onclick="openTransportModal()" style="padding:9px 20px;background:linear-gradient(135deg,#1E40AF,#2563EB);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(30,64,175,0.25);">＋ เพิ่มนัดส่ง</button>
+    </div>
+
+    <!-- ── ปฏิทิน ── -->
+    <div class="card" style="box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+      <div class="card-body" style="padding:20px;">
+        <!-- Nav เดือน -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <button onclick="tcPrevMonth()" style="width:36px;height:36px;border-radius:9px;border:1.5px solid #E2E8F0;background:#F8FAFC;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;">‹</button>
+          <div style="text-align:center;">
+            <div id="tcMonthLabel" style="font-size:16px;font-weight:800;color:#1E293B;"></div>
+          </div>
+          <button onclick="tcNextMonth()" style="width:36px;height:36px;border-radius:9px;border:1.5px solid #E2E8F0;background:#F8FAFC;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;">›</button>
+        </div>
+        <!-- หัวคอลัมน์วัน -->
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
+          <div class="tc-dow sun">อา</div>
+          <div class="tc-dow">จ</div>
+          <div class="tc-dow">อ</div>
+          <div class="tc-dow">พ</div>
+          <div class="tc-dow">พฤ</div>
+          <div class="tc-dow">ศ</div>
+          <div class="tc-dow sat">ส</div>
+        </div>
+        <!-- ตารางวัน -->
+        <div id="tcGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+      </div>
+    </div>
+
+    <!-- ── รายการทุกวันที่มีนัดส่ง ── -->
+    <div id="tcAllDaysPanel" style="display:flex;flex-direction:column;gap:16px;"></div>
+
+  </div>
+</div>
+
+<!-- ── Modal เพิ่มนัดส่ง ── -->
+<div id="transportModal" onclick="if(event.target===this)closeTransportModal()" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(2px);">
+  <div style="background:#fff;border-radius:16px;padding:28px;width:min(500px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+      <div style="width:40px;height:40px;border-radius:10px;background:#DBEAFE;display:flex;align-items:center;justify-content:center;font-size:20px;">🚛</div>
+      <div>
+        <div id="tcModalTitle" style="font-size:16px;font-weight:800;color:#1E293B;">เพิ่มนัดส่ง</div>
+        <div id="tcModalSub" style="font-size:11px;color:#64748B;">กรอกรายละเอียดการขนส่ง</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- วันที่ -->
+      <div class="field"><label class="field-label">วันที่ส่ง <span class="req">*</span></label><input type="date" id="tc_date" onchange="tcUpdateTimeInMonthYear(this.value)"></div>
+
+      <!-- เลข Order (dropdown จาก active orders) -->
+      <div class="field">
+        <label class="field-label">เลข Order <span class="req">*</span></label>
+        <div style="position:relative;">
+          <input type="text" id="tc_order_input" placeholder="พิมพ์หรือเลือก Order..." autocomplete="off"
+            oninput="tcOrderSearch(this.value)" onfocus="tcOrderSearch(this.value)"
+            style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;color:#111827;background:#F9FAFB;outline:none;font-family:inherit;">
+          <div id="tc_order_dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid #BFDBFE;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:50;max-height:220px;overflow-y:auto;"></div>
+        </div>
+      </div>
+
+      <!-- ข้อมูลลูกค้า (auto-fill, read-only) -->
+      <div id="tc_cust_block" style="display:none;background:#F0F7FF;border:1.5px solid #BFDBFE;border-radius:10px;padding:12px 14px;">
+        <div style="font-size:10px;font-weight:700;color:#1E40AF;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;">ข้อมูลจาก Order</div>
+        <div id="tc_cust_info" style="font-size:13px;color:#1E293B;line-height:1.7;"></div>
+      </div>
+
+      <!-- สินค้า/เสาที่จะส่ง -->
+      <div id="tc_items_block" style="display:none;">
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px;">สินค้าที่จะส่ง <span style="font-weight:400;color:#94A3B8;">(เลือกและกรอกจำนวน)</span></div>
+        <div id="tc_items_list" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+
+      <!-- พนักงานขับ -->
+      <div class="field">
+        <label class="field-label">พนักงานขับ</label>
+        <select id="tc_driver" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;color:#111827;background:#F9FAFB;font-family:inherit;">
+          <option value="">— เลือกคนขับ —</option>
+        </select>
+      </div>
+      <!-- รถ -->
+      <div class="field">
+        <label class="field-label">รถ</label>
+        <select id="tc_vehicle" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;color:#111827;background:#F9FAFB;font-family:inherit;">
+          <option value="">— เลือกรถ —</option>
+        </select>
+      </div>
+
+      <!-- เวลาออก / เข้า -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="field">
+          <label class="field-label">🚀 เวลาออก</label>
+          <input type="time" id="tc_time_out" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:14px;color:#111827;background:#F9FAFB;font-family:inherit;width:100%;">
+        </div>
+        <div class="field">
+          <label class="field-label">🏁 วันที่ / เวลาเข้า</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="number" id="tc_time_in_day" min="1" max="31" placeholder="วัน" style="width:72px;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:14px;color:#111827;background:#F9FAFB;font-family:inherit;text-align:center;">
+            <span id="tc_time_in_monthyear" style="font-size:13px;color:#1E40AF;font-weight:600;white-space:nowrap;background:#DBEAFE;padding:6px 10px;border-radius:7px;border:1.5px solid #BFDBFE;min-width:80px;text-align:center;">—</span>
+            <input type="time" id="tc_time_in_time" style="flex:1;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:14px;color:#111827;background:#F9FAFB;font-family:inherit;">
+          </div>
+        </div>
+      </div>
+
+      <!-- หมายเหตุ -->
+      <div class="field"><label class="field-label">หมายเหตุ</label><textarea id="tc_note" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea></div>
+
+    </div>
+    <div style="display:flex;gap:10px;margin-top:22px;">
+      <button onclick="submitTransport()" style="flex:1;padding:11px;background:linear-gradient(135deg,#1E40AF,#2563EB);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(30,64,175,0.22);">✅ บันทึก</button>
+      <button onclick="closeTransportModal()" style="padding:11px 20px;background:#F1F5F9;border:1.5px solid #E2E8F0;border-radius:9px;font-size:13px;cursor:pointer;color:#374151;font-weight:600;">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Transport Calendar ────────────────────────────────────────
+const TC_KEY = 'tc_events';
+let _tcYear, _tcMonth, _tcSelectedDate = null;
+
+function tcGetEvents() { try { return JSON.parse(localStorage.getItem(TC_KEY)||'[]'); } catch(e) { return []; } }
+function tcSaveEvents(a) { localStorage.setItem(TC_KEY, JSON.stringify(a)); }
+
+function tcInit() {
+  const n = new Date(); _tcYear = n.getFullYear(); _tcMonth = n.getMonth(); tcRender();
+}
+function tcPrevMonth() { _tcMonth--; if (_tcMonth<0){_tcMonth=11;_tcYear--;} tcRender(); }
+function tcNextMonth() { _tcMonth++; if (_tcMonth>11){_tcMonth=0;_tcYear++;} tcRender(); }
+
+const TC_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+function tcRender() {
+  if (!document.getElementById('tcMonthLabel')) return;
+  document.getElementById('tcMonthLabel').textContent = TC_MONTHS[_tcMonth] + ' ' + (_tcYear+543);
+  const evs = tcGetEvents();
+  const first = new Date(_tcYear,_tcMonth,1).getDay();
+  const days  = new Date(_tcYear,_tcMonth+1,0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  let html = '';
+  for (let i=0;i<first;i++) html += '<div></div>';
+  for (let d=1;d<=days;d++) {
+    const ds = _tcYear+'-'+String(_tcMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const de = evs.filter(e=>e.date===ds);
+    const iT = new Date(_tcYear,_tcMonth,d).getTime()===today.getTime();
+    const iS = ds===_tcSelectedDate;
+    const cls = 'tc-day'+(iS?' is-selected':iT?' is-today':'');
+    const chips = de.slice(0,2).map(e=>{
+      const st = tcShipStatus(e);
+      const chipBg = iS ? 'rgba(255,255,255,0.22)' : st.bg;
+      const chipCl = iS ? '#fff' : st.color;
+      return `<div class="tc-event-chip" style="background:${chipBg};color:${chipCl};">${e.order?e.order+' / ':''}${e.cust||'-'} ${st.label}</div>`;
+    }).join('');
+    const more  = de.length>2?`<div class="tc-more ${iS?'sel':''}">+${de.length-2} อื่นๆ</div>`:'';
+    html += `<div class="${cls}" onclick="tcToggleDay('${ds}')"><div class="tc-day-num">${d}${de.length>0&&!iS?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3B82F6;vertical-align:middle;margin-left:4px;margin-bottom:1px;"></span>`:''}${iS?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.7);vertical-align:middle;margin-left:4px;margin-bottom:1px;"></span>`:''}</div>${chips}${more}</div>`;
+  }
+  document.getElementById('tcGrid').innerHTML = html;
+  tcRenderAllDays()
+}
+
+function tcToggleDay(ds) {
+  _tcSelectedDate = ds; tcRender();
+  setTimeout(() => {
+    const el = document.getElementById('tcday-' + ds);
+    if (el) {
+      el.scrollIntoView({ behavior:'smooth', block:'start' });
+      el.style.transition = 'box-shadow 0.3s';
+      el.style.boxShadow = '0 0 0 3px #3B82F6, 0 4px 20px rgba(59,130,246,0.3)';
+      setTimeout(() => { el.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)'; }, 1800);
+    }
+  }, 80);
+}
+
+function tcClosePanel() { }
+
+function tcEntryHTML(e) {
+  const st = tcShipStatus(e);
+  const fmtDT = dt => {
+    if (!dt) return '';
+    const dd = new Date(dt);
+    const thM = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    return `${dd.getDate()} ${thM[dd.getMonth()]} ${dd.getFullYear()+543} ${String(dd.getHours()).padStart(2,'0')}:${String(dd.getMinutes()).padStart(2,'0')}`;
+  };
+  const timeRow = (e.timeOut||e.timeIn) ? `<div style="font-size:11px;color:#64748B;margin-top:4px;display:flex;flex-wrap:wrap;gap:10px;">${e.timeOut?`<span>🚀 ออก <strong>${fmtDT(e.timeOut)}</strong></span>`:''}${e.timeIn?`<span>🏁 เข้า <strong>${fmtDT(e.timeIn)}</strong></span>`:''}</div>` : '';
+  const stockBadge = e._stocked ? `<span style="font-size:9px;background:#DCFCE7;color:#166534;border:1px solid #86EFAC;border-radius:12px;padding:1px 7px;font-weight:700;">✅ ตัดสต็อกแล้ว</span>` : '';
+  return `<div class="tc-entry" style="border-left:4px solid ${st.border};">
+    <div class="tc-entry-icon">🚛</div>
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+        <span style="font-size:10px;font-weight:700;background:${st.bg};color:${st.color};border:1px solid ${st.border};border-radius:20px;padding:2px 10px;">${st.label}</span>${stockBadge}
+      </div>
+      <div style="font-weight:700;font-size:13px;color:#1E293B;">${e.cust||'-'}${e.tel?`<span style="font-size:11px;color:#64748B;font-weight:400;margin-left:6px;">📞 ${e.tel}</span>`:''}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;">
+        ${e.order?`<span style="font-size:11px;background:#EFF6FF;color:#1E40AF;border:1px solid #BFDBFE;border-radius:5px;padding:2px 7px;font-weight:700;">📋 ${e.order}</span>`:''}
+        ${e.piles?`<span style="font-size:11px;background:#F0FDF4;color:#166534;border:1px solid #BBF7D0;border-radius:5px;padding:2px 7px;">📦 ${e.piles}</span>`:''}
+        ${e.driver?`<span style="font-size:11px;background:#F1F5F9;color:#374151;border:1px solid #E2E8F0;border-radius:5px;padding:2px 7px;">🧑‍✈️ ${e.driver}</span>`:''}
+        ${e.vehicle?`<span style="font-size:11px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:5px;padding:2px 7px;">🚚 ${e.vehicle}</span>`:''}
+      </div>
+      ${timeRow}
+      ${e.note?`<div style="font-size:11px;color:#64748B;margin-top:5px;line-height:1.4;">${e.note}</div>`:''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-self:flex-start;">
+      ${(!e._stocked && e.timeIn) ? `<button onclick="tcConfirmFinalize(${e._id})" style="padding:5px 10px;background:linear-gradient(135deg,#16A34A,#22C55E);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(22,163,74,0.3);">✅ ส่งจบ</button>` : ''}
+      <button onclick="tcEditEvent(${e._id})" style="padding:5px 10px;background:#EFF6FF;color:#1E40AF;border:1.5px solid #BFDBFE;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;">แก้ไข</button>
+      <button onclick="tcDeleteEvent(${e._id})" style="padding:5px 10px;background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;">ลบ</button>
+    </div>
+  </div>`;
+}
+
+function tcRenderAllDays() {
+  const panel = document.getElementById('tcAllDaysPanel');
+  if (!panel) return;
+  const evs = tcGetEvents();
+  const byDate = {};
+  evs.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
+  if (_tcSelectedDate && !byDate[_tcSelectedDate]) byDate[_tcSelectedDate] = [];
+  const dates = Object.keys(byDate).sort();
+  if (!dates.length) { panel.innerHTML = ''; return; }
+  panel.innerHTML = dates.map(ds => {
+    const p = ds.split('-');
+    const label = `📅 ${+p[2]} ${TC_MONTHS[+p[1]-1]} ${+p[0]+543}`;
+    const list = byDate[ds];
+    const isSel = ds === _tcSelectedDate;
+    const hBg = isSel ? 'linear-gradient(135deg,#DBEAFE,#EFF6FF)' : 'linear-gradient(135deg,#EFF6FF,#F0F7FF)';
+    const body = list.length ? list.map(e => tcEntryHTML(e)).join('') : `<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ยังไม่มีนัดส่งวันนี้</div>`;
+    return `<div id="tcday-${ds}" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;transition:box-shadow 0.3s;"><div class="card-header" style="background:${hBg};border-radius:12px 12px 0 0;"><div style="flex:1;"><div class="card-title" style="color:#1E40AF;">${label}</div><div class="card-sub">${list.length ? list.length+' รายการขนส่ง':'ยังไม่มีรายการ'}</div></div><button onclick="openTransportModal('${ds}')" style="padding:7px 16px;background:#1E40AF;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">＋ เพิ่ม</button></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">${body}</div></div>`;
+  }).join('');
+}
+
+function tcShowDay(ds) { }
+function tcConfirmFinalize(id) {
+  const arr = tcGetEvents();
+  const entry = arr.find(e => e._id === id);
+  if (!entry) return;
+  if (entry._stocked) { showToast('✅ ตัดสต็อกไปแล้ว'); return; }
+  const itemsDesc = (entry.selectedItems||[]).map(si => si.pileType+' '+si.qty+' ต้น').join(', ') || entry.piles || '-';
+  if (!confirm('ยืนยันส่งจบ?\n\nลูกค้า: '+(entry.cust||'-')+'\nOrder: '+(entry.order||'-')+'\nสินค้า: '+itemsDesc+'\n\n→ ระบบจะตัดสต็อกและอัปเดตสถานะ Order')) return;
+  const ok = tcFinalizeDelivery(entry);
+  entry._stocked = ok || true;
+  // บันทึกกลับ localStorage
+  const saved = arr.map(e => e._id === id ? entry : e);
+  localStorage.setItem(TC_KEY, JSON.stringify(saved));
+  tcRender();
+  showToast(ok ? '📦 ส่งจบ — ตัดสต็อกและอัปเดต Order แล้ว' : '✅ บันทึกส่งจบแล้ว (ไม่มีสินค้าให้ตัดสต็อก)');
+}
+function tcDeleteEvent(id) {
+  if (!confirm('ลบรายการนี้?')) return;
+  tcSaveEvents(tcGetEvents().filter(e=>e._id!==id));
+  tcRender();
+  if (_tcSelectedDate) tcShowDay(_tcSelectedDate);
+}
+
+function tcEditEvent(id) {
+  const e = tcGetEvents().find(x => x._id === id);
+  if (!e) return;
+  _tcEditId = id;
+  _tcSelectedOrder = null;
+
+  // set date + อัปเดต badge เดือน/ปี
+  document.getElementById('tc_date').value = e.date || '';
+  tcUpdateTimeInMonthYear(e.date || '');
+  // set order input + trigger autofill if possible
+  document.getElementById('tc_order_input').value = e.order || '';
+  document.getElementById('tc_order_dropdown').style.display = 'none';
+
+  // fill customer block manually from saved data
+  document.getElementById('tc_cust_info').innerHTML =
+    `<strong>${e.cust||'-'}</strong>${e.tel ? ' · 📞 ' + e.tel : ''}`;
+  document.getElementById('tc_cust_block').style.display = e.cust ? 'block' : 'none';
+
+  // fill items if order still exists
+  const o = (getOrders()||[]).find(x=>x.orderNum===e.order);
+  if (o) {
+    _tcSelectedOrder = o;
+    const items = getOrderItems(o);
+    const listEl2 = document.getElementById('tc_items_list');
+    const cpHtmlE = _tcCpRowsHtml(e.order, e.selectedItems||[]);
+    if (cpHtmlE !== null) {
+      const cpCountE = _tcCpGroupCount(e.order);
+      listEl2.dataset.cpMode = 'true';
+      listEl2.dataset.cpCount = String(cpCountE);
+      listEl2.innerHTML = cpHtmlE;
+      document.getElementById('tc_items_block').style.display = 'block';
+    } else {
+      listEl2.dataset.cpMode = 'false';
+      listEl2.dataset.cpCount = '0';
+      listEl2.innerHTML = `<div style="padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;text-align:center;">
+        <div style="font-size:14px;font-weight:800;color:#92400E;margin-bottom:4px;">⚠️ ยังไม่มีเสาลูกค้าสำหรับออเดอร์นี้</div>
+        <div style="font-size:12px;color:#78350F;">กรุณาไปที่หน้าสต็อก → เปิดรายละเอียดกอง → กด <strong>"ย้ายกลับ"</strong> หรือ <strong>"ส่ง"</strong> เพื่อโอนเสาเข้าช่องลูกค้าก่อน</div>
+      </div>`;
+      document.getElementById('tc_items_block').style.display = 'block';
+    }
+  } else {
+    document.getElementById('tc_items_block').style.display = 'none';
+  }
+
+  // populate dropdowns then set values
+  tcPopulateStaffVehicle();
+  setTimeout(() => {
+    const dSel = document.getElementById('tc_driver');
+    const vSel = document.getElementById('tc_vehicle');
+    if (dSel) dSel.value = e.driver || '';
+    if (vSel) vSel.value = e.vehicle || '';
+  }, 0);
+
+  // เวลาออก: แค่เวลา (HH:MM)
+  if (e.timeOut) {
+    const tot = e.timeOut.includes('T') ? e.timeOut.split('T')[1].slice(0,5) : e.timeOut.slice(0,5);
+    document.getElementById('tc_time_out').value = tot;
+  } else {
+    document.getElementById('tc_time_out').value = '';
+  }
+  // เวลาเข้า: แยกวัน + เวลา
+  tcUpdateTimeInMonthYear(e.date || e.timeIn);
+  if (e.timeIn) {
+    const [tiDate, tiTime] = e.timeIn.includes('T') ? e.timeIn.split('T') : [null, null];
+    if (tiDate) document.getElementById('tc_time_in_day').value = parseInt(tiDate.split('-')[2]);
+    if (tiTime) document.getElementById('tc_time_in_time').value = tiTime.slice(0,5);
+  } else {
+    document.getElementById('tc_time_in_day').value  = '';
+    document.getElementById('tc_time_in_time').value = '';
+  }
+  document.getElementById('tc_note').value = e.note || '';
+
+  // update modal title
+  document.getElementById('tcModalTitle').textContent = 'แก้ไขนัดส่ง';
+  document.getElementById('tcModalSub').textContent = 'แก้ไขรายละเอียดการขนส่ง';
+  document.getElementById('transportModal').style.display = 'flex';
+}
+
+// ── Order search / autofill ──────────────────────────────────
+let _tcSelectedOrder = null;
+let _tcEditId = null; // null = add mode, number = edit mode
+
+const DONE_STATUS_TC = ['ส่งครบ','ส่งครบแล้ว','ยกเลิก','จบบิล'];
+
+function tcGetActiveOrders() {
+  return (getOrders()||[]).filter(o => !DONE_STATUS_TC.includes(o.status||'รับ Order แล้ว'));
+}
+
+function tcOrderSearch(q) {
+  const orders = tcGetActiveOrders();
+  const dd = document.getElementById('tc_order_dropdown');
+  const filtered = q.trim()
+    ? orders.filter(o => (o.orderNum||'').toLowerCase().includes(q.toLowerCase()) || (o.customer||'').toLowerCase().includes(q.toLowerCase()))
+    : orders;
+  if (!filtered.length) { dd.style.display='none'; return; }
+  const allCp = getCustPoles();
+  dd.innerHTML = filtered.map(o => {
+    const items = getOrderItems(o);
+    const piles = items.map(it=>it.pileType).join(', ');
+    const hasCP = allCp.some(cp => cp.orderNum === o.orderNum && cp.online !== false);
+    if (hasCP) {
+      return `<div onclick="tcSelectOrder('${(o.orderNum||'').replace(/'/g,"\\'")}');event.stopPropagation();"
+        style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background 0.1s;"
+        onmouseenter="this.style.background='#EFF6FF'" onmouseleave="this.style.background=''">
+        <div style="font-size:13px;font-weight:700;color:#1E40AF;">${o.orderNum}</div>
+        <div style="font-size:11px;color:#374151;margin-top:1px;">👤 ${o.customer||'-'}${o.tel?' · 📞 '+o.tel:''}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:1px;">📦 ${piles}</div>
+      </div>`;
+    } else {
+      return `<div style="padding:10px 14px;cursor:not-allowed;border-bottom:1px solid #F1F5F9;opacity:0.45;" title="ยังไม่มีเสาลูกค้า — ต้องย้ายเสาเข้าช่องลูกค้าก่อน">
+        <div style="font-size:13px;font-weight:700;color:#94A3B8;">${o.orderNum} <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;">ยังไม่มีเสาลูกค้า</span></div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:1px;">👤 ${o.customer||'-'}</div>
+        <div style="font-size:10px;color:#CBD5E1;margin-top:1px;">📦 ${piles}</div>
+      </div>`;
+    }
+  }).join('');
+  dd.style.display = 'block';
+}
+
+function tcSelectOrder(orderNum) {
+  const o = (getOrders()||[]).find(x => x.orderNum === orderNum);
+  document.getElementById('tc_order_dropdown').style.display = 'none';
+  if (!o) return;
+  _tcSelectedOrder = o;
+  document.getElementById('tc_order_input').value = orderNum;
+  // แสดงข้อมูลลูกค้า
+  const items = getOrderItems(o);
+  const addr = o.address||o.addr||(o.site&&o.site!=='-'?o.site:'');
+  document.getElementById('tc_cust_info').innerHTML =
+    `<strong>${o.customer||'-'}</strong>${o.tel ? ' · 📞 ' + o.tel : ''}` +
+    (addr ? `<br>📍 ${addr}` : '');
+  document.getElementById('tc_cust_block').style.display = 'block';
+
+  // render รายการเสา: ต้องมี custPoles (เสาลูกค้า) เท่านั้น ถึงจะส่งได้
+  const listEl = document.getElementById('tc_items_list');
+  const cpHtml = _tcCpRowsHtml(orderNum, []);
+  if (cpHtml !== null) {
+    const cpCount = _tcCpGroupCount(orderNum);
+    listEl.dataset.cpMode = 'true';
+    listEl.dataset.cpCount = String(cpCount);
+    listEl.innerHTML = cpHtml;
+    document.getElementById('tc_items_block').style.display = 'block';
+  } else {
+    listEl.dataset.cpMode = 'false';
+    listEl.dataset.cpCount = '0';
+    listEl.innerHTML = `<div style="padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;text-align:center;">
+      <div style="font-size:14px;font-weight:800;color:#92400E;margin-bottom:4px;">⚠️ ยังไม่มีเสาลูกค้าสำหรับออเดอร์นี้</div>
+      <div style="font-size:12px;color:#78350F;">กรุณาไปที่หน้าสต็อก → เปิดรายละเอียดกอง → กด <strong>"ย้ายกลับ"</strong> หรือ <strong>"ส่ง"</strong> เพื่อโอนเสาเข้าช่องลูกค้าก่อน</div>
+    </div>`;
+    document.getElementById('tc_items_block').style.display = 'block';
+  }
+}
+
+// ปิด dropdown เมื่อคลิกที่อื่น (ไม่ปิดถ้าคลิกใน input หรือ dropdown เอง)
+document.addEventListener('click', (e) => {
+  const dd  = document.getElementById('tc_order_dropdown');
+  const inp = document.getElementById('tc_order_input');
+  if (dd && inp && !dd.contains(e.target) && e.target !== inp) {
+    dd.style.display = 'none';
+  }
+});
+
+function tcShipStatus(e) {
+  if (e.timeIn)  return { label:'✅ จัดส่งสำเร็จ', bg:'#F0FDF4', color:'#166534', border:'#86EFAC' };
+  if (e.timeOut) return { label:'🚛 กำลังขนส่ง',  bg:'#FEF3C7', color:'#92400E', border:'#FCD34D' };
+  return           { label:'📋 จองรถ',            bg:'#EFF6FF', color:'#1E40AF', border:'#BFDBFE' };
+}
+
+function tcItemToggle(i) {
+  const chk = document.getElementById('tc_item_chk_'+i);
+  const qty = document.getElementById('tc_item_qty_'+i);
+  if (qty) qty.disabled = !chk.checked;
+  if (qty) qty.style.opacity = chk.checked ? '1' : '0.4';
+}
+function tcCpToggle(i) {
+  const chk = document.getElementById('tc_cp_chk_'+i);
+  const qty = document.getElementById('tc_cp_qty_'+i);
+  if (qty) qty.disabled = !chk.checked;
+  if (qty) qty.style.opacity = chk.checked ? '1' : '0.4';
+}
+function _tcCpGroupCount(orderNum) {
+  const cpRows = getCustPoles().filter(cp => cp.orderNum === orderNum && cp.online !== false);
+  const keys = new Set();
+  cpRows.forEach(cp => {
+    if (cp.fromStock) keys.add('stock_' + cp.id);
+    else keys.add('prod_' + (cp.pileType||'') + '|' + (cp.spec||''));
+  });
+  return keys.size;
+}
+// render custPole rows (Approach A) — grouped by pileType+spec+isStock
+function _tcCpRowsHtml(orderNum, savedItems) {
+  const cpRows = getCustPoles().filter(cp => cp.orderNum === orderNum && cp.online !== false);
+  if (!cpRows.length) return null;
+  // หา remaining per pileType จาก order items
+  const o = (getOrders()||[]).find(x => x.orderNum === orderNum);
+  const remainMap = {};
+  if (o) {
+    getOrderItems(o).forEach(it => {
+      const rem = Math.max(0, (it.qty||0) - (it.delivered||0));
+      remainMap[it.pileType] = (remainMap[it.pileType]||0) + rem;
+    });
+  }
+  // group: production batches merged by pileType+spec; fromStock entries separate
+  const groups = [];
+  const prodMap = {}; // key: pileType+'|'+spec
+  cpRows.forEach(cp => {
+    if (cp.fromStock) {
+      groups.push({ pileType: cp.pileType, spec: cp.spec||'', qty: cp.qty||0, isStock: true, ids: [cp.id] });
+    } else {
+      const key = (cp.pileType||'') + '|' + (cp.spec||'');
+      if (!prodMap[key]) {
+        prodMap[key] = { pileType: cp.pileType, spec: cp.spec||'', qty: 0, isStock: false, ids: [] };
+        groups.push(prodMap[key]);
+      }
+      prodMap[key].qty += (cp.qty||0);
+      prodMap[key].ids.push(cp.id);
+    }
+  });
+  return groups.map((g, i) => {
+    const specLabel = g.spec && g.spec !== '-' ? ' · สเปค ' + g.spec : '';
+    const stockTag = g.isStock ? ' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">สต็อกเก่า</span>' : '';
+    const saved = (savedItems||[]).find(s => s.cpIds && s.cpIds[0] === g.ids[0]);
+    const defQty = saved ? saved.qty : g.qty;
+    const borderColor = g.qty <= 0 ? '#FCA5A5' : (g.isStock ? '#FCD34D' : '#BFDBFE');
+    const bg = g.isStock ? '#FFFBEB' : '#F0FDF4';
+    const textColor = g.isStock ? '#92400E' : '#166534';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:9px;background:${bg};">
+      <input type="checkbox" id="tc_cp_chk_${i}" checked style="width:16px;height:16px;cursor:pointer;accent-color:${textColor};" onchange="tcCpToggle(${i})">
+      <input type="hidden" id="tc_cp_ids_${i}" value="${g.ids.join(',').replace(/"/g,'&quot;')}">
+      <input type="hidden" id="tc_cp_pt_${i}" value="${(g.pileType||'').replace(/"/g,'&quot;')}">
+      <input type="hidden" id="tc_cp_sp_${i}" value="${(g.spec||'').replace(/"/g,'&quot;')}">
+      <input type="hidden" id="tc_cp_stk_${i}" value="${g.isStock?'1':'0'}">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:${textColor};">${g.pileType}${specLabel}${stockTag}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:1px;">🪵 มี <span style="color:${textColor};font-weight:700;">${g.qty} ต้น</span>${remainMap[g.pileType]!==undefined?` · ต้องส่ง <span style="color:#DC2626;font-weight:700;">${remainMap[g.pileType]} ต้น</span>`:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <input type="number" id="tc_cp_qty_${i}" value="${Math.min(defQty,g.qty)}" min="0" max="${g.qty}"
+          style="width:60px;padding:5px 8px;border:1.5px solid ${borderColor};border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#fff;color:${textColor};" oninput="tcClampStock(this,${g.qty})">
+        <span style="font-size:11px;color:#64748B;">ต้น</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function tcPopulateStaffVehicle() {
+  const cfg = getConfig ? getConfig() : {};
+  const drivers  = cfg.shipStaff   || [];
+  const vehicles = cfg.vehicleList || [];
+  const dSel = document.getElementById('tc_driver');
+  const vSel = document.getElementById('tc_vehicle');
+  if (dSel) dSel.innerHTML = '<option value="">— เลือกคนขับ —</option>' + drivers.map(d=>`<option>${d}</option>`).join('');
+  if (vSel) vSel.innerHTML = '<option value="">— เลือกรถ —</option>' + vehicles.map(v=>`<option>${v}</option>`).join('');
+}
+
+// อัปเดต badge เดือน/ปีใน timeIn จาก dateStr (YYYY-MM-DD) หรือ datetime string
+function tcUpdateTimeInMonthYear(dateStr) {
+  const el = document.getElementById('tc_time_in_monthyear');
+  if (!el) return;
+  const ds = (dateStr||'').slice(0,10); // YYYY-MM-DD
+  if (!ds || ds.length < 7) { el.textContent = '—'; return; }
+  const [yr, mo] = ds.split('-');
+  const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  el.textContent = thMonths[parseInt(mo)-1] + ' ' + (parseInt(yr)+543);
+}
+
+function openTransportModal(ds) {
+  _tcSelectedOrder = null;
+  _tcEditId = null;
+  document.getElementById('tcModalTitle').textContent = 'เพิ่มนัดส่ง';
+  document.getElementById('tcModalSub').textContent   = 'กรอกรายละเอียดการขนส่ง';
+  const dateVal = ds||(new Date().toISOString().slice(0,10));
+  document.getElementById('tc_date').value         = dateVal;
+  document.getElementById('tc_order_input').value  = '';
+  document.getElementById('tc_note').value         = '';
+  document.getElementById('tc_order_dropdown').style.display = 'none';
+  document.getElementById('tc_cust_block').style.display     = 'none';
+  document.getElementById('tc_cust_info').innerHTML          = '';
+  document.getElementById('tc_items_block').style.display    = 'none';
+  document.getElementById('tc_items_list').innerHTML         = '';
+  document.getElementById('tc_time_out').value      = '';
+  document.getElementById('tc_time_in_day').value   = '';
+  document.getElementById('tc_time_in_time').value  = '';
+  tcUpdateTimeInMonthYear(dateVal);
+  tcPopulateStaffVehicle();
+  document.getElementById('transportModal').style.display    = 'flex';
+}
+function closeTransportModal() { document.getElementById('transportModal').style.display='none'; }
+
+
+function tcFinalizeDelivery(entry) {
+  if (!entry.timeIn || entry._stocked) return false;
+  const siList = (entry.selectedItems || []).filter(si => si.pileType && si.qty > 0);
+  if (!siList.length) return false;
+
+  const orders = getOrders();
+  const o = orders && orders.find(x => x.orderNum === entry.order);
+  let anyDeducted = false;
+
+  siList.forEach(si => {
+    const sendQty = si.qty;
+
+    // ── 1. ตัด custPoles (เสาลูกค้า) + นับ fromStockSent ──
+    const allCp = getCustPoles();
+    let fromStockSent = 0;
+    if (si.cpIds && si.cpIds.length) {
+      // Approach A: ตัดจาก custPoles ที่ระบุ cpIds (FIFO ภายใน group)
+      let left = sendQty;
+      for (const cpId of si.cpIds) {
+        if (left <= 0) break;
+        const cp = allCp.find(x => x.id === cpId);
+        if (!cp) continue;
+        const take = Math.min(cp.qty || 0, left);
+        if (cp.fromStock) fromStockSent += take;
+        if ((cp.qty || 0) <= left) {
+          left -= (cp.qty || 0);
+          deleteCustPole(cp.id);
+          const idx = _cache.custPoles.indexOf(cp);
+          if (idx !== -1) _cache.custPoles.splice(idx, 1);
+        } else {
+          cp.qty = (cp.qty || 0) - left;
+          left = 0;
+          saveSingleCustPole(cp);
+        }
+      }
+    } else {
+      // fallback FIFO: หา custPoles ที่ตรงกับ pileType + orderNum
+      const matchCp = allCp.filter(x =>
+        x.pileType === si.pileType &&
+        (!x.orderNum || x.orderNum === entry.order) &&
+        x.online !== false
+      );
+      let left = sendQty;
+      for (const cp of matchCp) {
+        if (left <= 0) break;
+        const take = Math.min(cp.qty || 0, left);
+        if (take <= 0) continue;
+        if (cp.fromStock) fromStockSent += take;
+        if ((cp.qty || 0) <= left) {
+          left -= (cp.qty || 0);
+          deleteCustPole(cp.id);
+          const idx = _cache.custPoles.indexOf(cp);
+          if (idx !== -1) _cache.custPoles.splice(idx, 1);
+        } else {
+          cp.qty = (cp.qty || 0) - left;
+          left = 0;
+          saveSingleCustPole(cp);
+        }
+      }
+    }
+
+    // ── 2. ตัด main stock ──
+    const stock = getStock(), log = getStockLog() || [];
+    stock[si.pileType] = Math.max(0, (stock[si.pileType] || 0) - sendQty);
+    log.unshift({ ts:nowTs(), typeVal:'📤 เบิกออก (ส่งของ)', name:si.pileType,
+      qty:sendQty, newStock:stock[si.pileType], qtyDisplay:'-'+sendQty,
+      ref:entry.order||'-', staff:'-',
+      note:'🚛 ขนส่ง: ส่ง '+(entry.cust||'-')+' ('+si.pileType+')'+(fromStockSent>0?' [สต็อกเก่า '+fromStockSent+' ต้น]':'') });
+    saveStock(stock); saveStockLog(log);
+    anyDeducted = true;
+
+    // ── 3. อัปเดต delivered + stockDelivered ในออเดอร์ ──
+    if (o && o.items) {
+      const it = o.items.find(x => x.pileType === si.pileType);
+      if (it) {
+        it.delivered = Math.min((it.delivered||0) + sendQty, it.qty);
+        if (fromStockSent > 0) {
+          it.stockDelivered = (it.stockDelivered||0) + fromStockSent;
+        }
+      }
+    }
+  });
+
+  if (o && anyDeducted) {
+    o.delivered = o.items
+      ? o.items.reduce((s,it) => s+(it.delivered||0), 0)
+      : (siList[0] ? siList[0].qty : 0);
+    const tq = getOrderTotalQty(o);
+    if (o.delivered >= tq) o.status = 'ส่งครบ';
+    else if (o.delivered > 0) o.status = 'ส่งแล้วบางส่วน';
+    saveOrders(orders);
+  }
+
+  // render ทันที (cache ถูก mutate แล้ว) + อีกรอบหลัง Firebase ตอบกลับ
+  if (typeof renderStockCards === 'function') renderStockCards();
+  if (typeof renderStockLog  === 'function') renderStockLog();
+  if (typeof renderOrders    === 'function') renderOrders();
+  if (typeof renderSummary   === 'function') renderSummary();
+  setTimeout(() => {
+    if (typeof renderStockCards === 'function') renderStockCards();
+    if (typeof renderStockLog   === 'function') renderStockLog();
+    if (typeof renderOrders     === 'function') renderOrders();
+    if (typeof renderSummary    === 'function') renderSummary();
+  }, 1500);
+
+  return anyDeducted;
+}
+function tcClampStock(inp, maxVal) {
+  const v = parseInt(inp.value)||0;
+  if (v > maxVal) { inp.value = maxVal; showToast('⚠️ จำกัดตามสต็อกที่มี: '+maxVal+' ต้น'); }
+  inp.style.borderColor = v > maxVal ? '#EF4444' : (maxVal <= 0 ? '#FCA5A5' : '#BFDBFE');
+}
+
+function submitTransport() {
+  const date  = document.getElementById('tc_date').value;
+  const oNum  = (document.getElementById('tc_order_input').value||'').trim();
+  if (!date || !oNum) { alert('กรุณาระบุวันที่และเลข Order'); return; }
+  const o = _tcSelectedOrder || (getOrders()||[]).find(x=>x.orderNum===oNum);
+  const cust = o ? (o.customer||oNum) : oNum;
+  const tel  = o ? (o.tel||'') : '';
+
+  // รวบรวมสินค้าที่เลือก
+  const selectedItems = [];
+  const _listEl = document.getElementById('tc_items_list');
+  const _cpMode = _listEl && _listEl.dataset.cpMode === 'true';
+  const _cpCount = parseInt(_listEl?.dataset.cpCount || '0');
+  if (_cpMode) {
+    // Approach A: per-custPole batch
+    for (let i = 0; i < _cpCount; i++) {
+      const chk    = document.getElementById('tc_cp_chk_'+i);
+      const qtyEl  = document.getElementById('tc_cp_qty_'+i);
+      const idsRaw = document.getElementById('tc_cp_ids_'+i)?.value || '';
+      const cpIds  = idsRaw ? idsRaw.split(',') : [];
+      const pt     = document.getElementById('tc_cp_pt_'+i)?.value || '';
+      const sp     = document.getElementById('tc_cp_sp_'+i)?.value || '';
+      if (chk && chk.checked && qtyEl) {
+        const qty = parseInt(qtyEl.value)||0;
+        if (qty > 0) {
+          // ตรวจสอบ: รวม qty ของทุก cp ใน group
+          const totalGroupQty = cpIds.reduce((s, id) => {
+            const cp = getCustPoles().find(x => x.id === id);
+            return s + (cp ? cp.qty||0 : 0);
+          }, 0);
+          if (qty > totalGroupQty) {
+            alert('⚠️ จำนวนเกินที่มีใน batch ' + pt + (sp?' สเปค '+sp:'') + '\nมีใน group: ' + totalGroupQty + ' ต้น');
+            return;
+          }
+          selectedItems.push({ cpIds, pileType: pt, spec: sp, qty });
+        }
+      }
+    }
+  } else if (o) {
+    const items = getOrderItems(o);
+    items.forEach((it, i) => {
+      const chk = document.getElementById('tc_item_chk_'+i);
+      const qtyEl = document.getElementById('tc_item_qty_'+i);
+      if (chk && chk.checked && qtyEl) {
+        const qty = parseInt(qtyEl.value)||0;
+        if (qty > 0) {
+          const _rawStock = (getStock()[it.pileType] !== undefined ? getStock()[it.pileType] : Infinity);
+          const _cpQtyV = getCustPoles().filter(p=>p.pileType===it.pileType).reduce((s,p)=>s+(p.qty||0),0);
+          const stockQty = _cpQtyV > 0 ? Math.min(_rawStock, _cpQtyV) : _rawStock;
+          if (qty > stockQty) {
+            alert('⚠️ สต็อกไม่พอสำหรับ ' + it.pileType + '\nสต็อกมี: ' + stockQty + ' ต้น\nต้องการส่ง: ' + qty + ' ต้น');
+            return;
+          }
+          const specPart = [it.length&&it.length!=='-'?it.length:null, it.weld&&it.weld!=='-'?it.weld:null].filter(Boolean).join('/');
+          selectedItems.push({ pileType: it.pileType, spec: specPart, qty });
+        }
+      }
+    });
+  }
+
+  const piles   = selectedItems.map(it => it.pileType + (it.spec?' ('+it.spec+')':'') + ' ' + it.qty + ' ต้น').join(', ');
+  const driver  = document.getElementById('tc_driver').value;
+  const vehicle = document.getElementById('tc_vehicle').value;
+  // สร้าง timeOut: รวม date + เวลาที่คีย์
+  const toTime = document.getElementById('tc_time_out').value;
+  const timeOut = toTime ? (date + 'T' + toTime) : '';
+  // สร้าง timeIn: รวม YYYY-MM จาก date + วันที่เลือก + เวลา
+  const tiDay  = document.getElementById('tc_time_in_day').value;
+  const tiTime = document.getElementById('tc_time_in_time').value;
+  let timeIn = '';
+  if (tiDay && tiTime) {
+    const [yr, mo] = date.split('-');
+    timeIn = yr + '-' + mo + '-' + String(tiDay).padStart(2,'0') + 'T' + tiTime;
+  }
+  const oldEntry = _tcEditId ? tcGetEvents().find(e => e._id === _tcEditId) : null;
+  const newEntry = { _id: _tcEditId || Date.now(), date, cust, tel, order:oNum, selectedItems, piles, driver, vehicle, timeOut, timeIn, note:document.getElementById('tc_note').value.trim() };
+  // คงสถานะ _stocked เดิมไว้ (ไม่ auto-deduct อีกต่อไป → ใช้ปุ่ม "ส่งจบ" แทน)
+  if (oldEntry && oldEntry._stocked) newEntry._stocked = true;
+  let arr = tcGetEvents();
+  if (_tcEditId) {
+    arr = arr.map(e => e._id === _tcEditId ? newEntry : e);
+  } else {
+    arr.push(newEntry);
+  }
+  tcSaveEvents(arr);
+  closeTransportModal();
+  _tcSelectedDate = date;
+  const [y,m] = date.split('-'); _tcYear=+y; _tcMonth=+m-1;
+  tcRender();
+  showToast(_tcEditId ? '✏️ แก้ไขนัดส่งแล้ว' : '✅ เพิ่มนัดส่งแล้ว');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const orig = window.goTab;
+  window.goTab = function(name, el) {
+    orig && orig(name, el);
+    if (name==='transport') { if (!_tcYear) tcInit(); else tcRender(); }
+  };
+});
+</script>
+
 <!-- ================================================================ SECTION: DASHBOARD ================================================================ -->
 <div id="sec-dashboard" class="section">
   <div class="db-wrap">
@@ -1043,13 +1833,30 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">📋 ประวัติ Order ที่จบบิลแล้ว</div>
-          <div class="card-sub" id="histSummarySub">รายการ Order ที่ส่งครบและปิดบิลเรียบร้อย</div>
+          <div class="card-title">📋 สถานะออเดอร์</div>
+          <div class="card-sub" id="histSummarySub">ออเดอร์ทั้งหมดและสถานะการจัดส่ง</div>
         </div>
+      </div>
+      <div class="toolbar" style="padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #F1F5F9;">
+        <input type="search" id="sumSearch" placeholder="🔍 ค้นหาเลข Order / ชื่อ / เบอร์..."
+          oninput="renderHistorySummary()"
+          style="flex:1;min-width:180px;padding:8px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;outline:none;font-family:inherit;">
+        <select id="sumStatusFilter" onchange="renderHistorySummary()"
+          style="padding:8px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;color:#374151;background:#fff;font-family:inherit;cursor:pointer;">
+          <option value="">ทุกสถานะ</option>
+          <option value="รับงาน">📥 รับงาน</option>
+          <option value="ผลิต">🏭 ผลิต</option>
+          <option value="ผลิตเสร็จ">✅ ผลิตเสร็จ</option>
+          <option value="ผลิต+จัดส่ง">🚛 ผลิต+จัดส่ง</option>
+          <option value="จบงาน">🎉 จบงาน</option>
+          <option value="_done">✅ จบบิลแล้ว</option>
+        </select>
+        <button onclick="document.getElementById('sumSearch').value='';document.getElementById('sumStatusFilter').value='';renderHistorySummary();"
+          style="padding:8px 14px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:12px;background:#F8FAFC;cursor:pointer;color:#64748B;font-family:inherit;">ล้าง</button>
       </div>
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>เลข Order</th><th>วันที่จบ</th><th>ลูกค้า</th><th>รายการ</th><th>จำนวน</th><th>Sale</th></tr></thead>
+          <thead><tr><th>เลข Order</th><th>วันที่</th><th>ชื่อ / เบอร์</th><th>รายการ</th><th>จำนวน</th><th>ผลิตแล้ว / ต้น</th><th>จัดส่งแล้ว / ต้น</th><th>สถานะ</th></tr></thead>
           <tbody id="histSummaryBody"></tbody>
         </table>
       </div>
@@ -1205,9 +2012,14 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
             <div class="tag-add-row"><input class="tag-add-inp" id="inp_prod" placeholder="เพิ่มชื่อพนักงาน..." onkeydown="if(event.key==='Enter') addTag('prod')"/><button class="tag-add-btn" onclick="addTag('prod')">+ เพิ่ม</button></div>
           </div>
           <div class="settings-block">
-            <div class="settings-block-title">🚛 คนขับ / ขนส่ง</div>
+            <div class="settings-block-title">🧑‍✈️ คนขับ / ขนส่ง</div>
             <div class="tag-list" id="tagsShip"></div>
             <div class="tag-add-row"><input class="tag-add-inp" id="inp_ship" placeholder="เพิ่มชื่อคนขับ..." onkeydown="if(event.key==='Enter') addTag('ship')"/><button class="tag-add-btn" onclick="addTag('ship')">+ เพิ่ม</button></div>
+          </div>
+          <div class="settings-block">
+            <div class="settings-block-title">🚚 รายการรถ</div>
+            <div class="tag-list" id="tagsVehicle"></div>
+            <div class="tag-add-row"><input class="tag-add-inp" id="inp_vehicle" placeholder="เช่น รถ 6 ล้อ ทะเบียน กข-1234..." onkeydown="if(event.key==='Enter') addTag('vehicle')"/><button class="tag-add-btn" onclick="addTag('vehicle')">+ เพิ่ม</button></div>
           </div>
           <div class="settings-block">
             <div class="settings-block-title">📦 ทีมคลังสินค้า</div>
@@ -1919,6 +2731,7 @@ function startFirebaseListeners() {
     const v = snap.val();
     _cache.orderHistory = v ? Object.values(v).sort((a,b) => (b._idx||0)-(a._idx||0)) : [];
     // Not counted in checkDone — history is lazy
+    try { renderHistorySummary(); } catch(e) {}
   });
   db.ref(K_VAR_FB).on('value', snap => {
     _cache.stockVariants = snap.val() || {};
@@ -2026,6 +2839,7 @@ const DEFAULT_CONFIG = {
   saleStaff:   ['คุณนิด', 'คุณบอล', 'คุณแพท'],
   prodStaff:   ['คุณแดง', 'คุณสมชาย', 'คุณต้อม'],
   shipStaff:   ['คุณตั้ม', 'คุณบอย', 'คุณนุ้ย'],
+  vehicleList: ['รถ 6 ล้อ ทะเบียน กข-1234', 'รถ 10 ล้อ ทะเบียน ขค-5678'],
   stockStaff:  ['คุณอ้อย', 'คุณต้อม', 'คุณแดง'],
   pileTypes:   ['เสาตัน 0.22m', 'เสาตัน 0.26m', 'เสากลม 0.30m', 'เสาสี่เหลี่ยม 0.35m'],
   pilePrices:  {},
@@ -2630,7 +3444,7 @@ function renderOrders() {
             </tr></thead><tbody>`;
 
         entries.forEach(({o, it, idx}) => {
-          const del   = it.delivered !== undefined ? it.delivered : (o.delivered||0);
+          const del   = (o.items && o.items.length > 1) ? (it.delivered || 0) : (it.delivered !== undefined ? it.delivered : (o.delivered||0));
           const rem   = it.qty - del;
           const iPct  = it.qty>0 ? Math.round(del/it.qty*100) : 0;
           const iBarC = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
@@ -2724,6 +3538,28 @@ function renderOrders() {
     </div>`);
   });
   _mobOrd.innerHTML = cards.join('');
+}
+
+function setSumStatus(orderNum, selectEl) {
+  const SUM_STATUSES = [
+    { val:'รับงาน',       bg:'#EFF6FF', color:'#1D4ED8', border:'#BFDBFE' },
+    { val:'ผลิต',         bg:'#FFF7ED', color:'#C2410C', border:'#FED7AA' },
+    { val:'ผลิตเสร็จ',   bg:'#FEFCE8', color:'#854D0E', border:'#FDE68A' },
+    { val:'ผลิต+จัดส่ง', bg:'#F0F9FF', color:'#0369A1', border:'#BAE6FD' },
+    { val:'จบงาน',        bg:'#F0FDF4', color:'#15803D', border:'#86EFAC' },
+  ];
+  const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
+  if (!o) return;
+  o._sumStatus = selectEl.value;
+  o._sumStatusManual = true;   // mark as manually set
+  saveOrders(orders);
+  const s = SUM_STATUSES.find(x => x.val === selectEl.value);
+  if (s) {
+    selectEl.style.background = s.bg;
+    selectEl.style.color = s.color;
+    selectEl.style.borderColor = s.border;
+  }
+  showToast(`📋 ${orderNum}: ${selectEl.value}`);
 }
 
 function updateOrderStatus(orderNum, selectEl) {
@@ -2832,7 +3668,7 @@ function getTotalProduced(orderNum, pileType) {
 function renderProdSection() {
   const container = document.getElementById('prodOrdersBody');
   if (!container) return;
-  const PROD_STATUSES = ['รับออเดอร์','ยืนยัน Order','กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง'];
+  const PROD_STATUSES = ['รับออเดอร์','ยืนยัน Order','กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง','ส่งแล้วบางส่วน'];
   const orders = getOrders().filter(o => PROD_STATUSES.includes(o.status||''));
   if (!orders.length) {
     container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;font-size:13px;">ยังไม่มีออเดอร์สำหรับฝ่ายผลิต — รอฝ่ายผลิตกดรับออเดอร์</div>';
@@ -2875,9 +3711,13 @@ function renderProdSection() {
         </div>
         ${tags ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${tags}</div>` : ''}
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:4px;">
-          <span>ผลิตแล้ว <strong style="color:${pct>=100?'#166534':'#1E293B'};">${totalProduced}</strong>${stockDelivered > 0 ? ` <span style="color:#2563EB;font-size:10px;">(+${stockDelivered} จากสต็อก)</span>` : ''} / ${it.qty} ต้น</span>
+          <span>ผลิตแล้ว <strong style="color:${pct>=100?'#166534':'#1E293B'};">${totalProduced}</strong> / ${it.qty} ต้น</span>
           <span style="font-weight:700;color:${pct>=100?'#166534':'#92400E'};">${pct}%</span>
         </div>
+        ${stockDelivered > 0 ? `<div style="display:flex;justify-content:space-between;font-size:11px;background:#FEF3C7;border:1px solid #FCD34D;border-radius:6px;padding:4px 8px;margin-bottom:4px;">
+          <span style="color:#92400E;font-weight:700;">📦 ส่งจากสต็อกเก่าแล้ว: ${stockDelivered} ต้น</span>
+          <span style="color:#92400E;font-weight:700;">เหลือผลิต: ${remaining} ต้น</span>
+        </div>` : ''}
         <div style="height:7px;background:#E2E8F0;border-radius:4px;overflow:hidden;margin-bottom:4px;">
           <div style="height:100%;width:${pct}%;background:${pct>=100?'#22C55E':'#F59E0B'};border-radius:4px;transition:width .3s;"></div>
         </div>
@@ -3510,34 +4350,140 @@ function renderSummary() {
 }
 
 
-// ── History Summary ────────────────────────────────────────────
+// ── Order Status Summary ────────────────────────────────────────
 function renderHistorySummary() {
-  const hist = getHistory();
+  const active  = getOrders();
+  const hist    = getHistory().map(h => ({ ...h, _done: true }));
+  const allOrders = [...active, ...hist];
   const tbody = document.getElementById('histSummaryBody');
   if (!tbody) return;
   const sub = document.getElementById('histSummarySub');
-  if (!hist.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="7">ยังไม่มีประวัติ Order ที่จบบิล · กดปุ่ม 🔴 จบบิล ในแท็บสถานะ Order</td></tr>';
+
+  function autoSumStatus(o, items) {
+    const totalQty  = items.reduce((s,it) => s+(it.qty||0), 0);
+    const totalDel  = items.reduce((s,it) => s+(it.delivered||0), 0);
+    const totalStk  = items.reduce((s,it) => s+(it.stockDelivered||0), 0);
+    const totalProd = items.reduce((s,it) => s + getTotalProduced(o.orderNum, it.pileType), 0);
+    const effProd   = totalProd + totalStk;
+    if (totalDel >= totalQty && totalQty > 0) return 'จบงาน';
+    if (totalProd < totalQty && totalDel > 0) return 'ผลิต+จัดส่ง';
+    if (effProd >= totalQty && totalQty > 0) return 'ผลิตเสร็จ';
+    if (totalProd > 0) return 'ผลิต';
+    return 'รับงาน';
+  }
+
+  const q = (document.getElementById('sumSearch')?.value || '').trim().toLowerCase();
+  const stFilter = document.getElementById('sumStatusFilter')?.value || '';
+
+  let orders = allOrders.filter(o => {
+    // search filter
+    if (q) {
+      const haystack = [(o.orderNum||''), (o.customer||''), (o.tel||'')].join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    // status filter
+    if (stFilter) {
+      if (stFilter === '_done') return !!o._done;
+      if (o._done) return false;
+      const items = getOrderItems(o);
+      const auto = autoSumStatus(o, items);
+      const cur = (o._sumStatusManual && o._sumStatus) ? o._sumStatus : auto;
+      if (cur !== stFilter) return false;
+    }
+    return true;
+  });
+
+  if (!allOrders.length) {
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="8">ยังไม่มีออเดอร์ · เพิ่มออเดอร์ที่แท็บสถานะ Order</td></tr>';
     if (sub) sub.textContent = 'ยังไม่มีรายการ';
     return;
   }
-  const totalVal = hist.reduce((s,h)=>s+(h.orderValue||0),0);
-  if (sub) sub.textContent = hist.length + ' รายการ · มูลค่ารวม ' + (totalVal>0?totalVal.toLocaleString('th-TH')+' ฿':'ไม่ระบุ');
-  tbody.innerHTML = hist.map(h => {
-    const items = h.archivedItems || getOrderItems(h);
-    const itemsStr = items.map(it => it.pileType + (it.length&&it.length!=='-'?' '+it.length:'') + ' ' + it.qty + 'ต้น').join('<br>');
-    const totalQty = items.reduce((s,it)=>s+(it.qty||0),0);
-    const val = (h.orderValue||0)>0 ? (h.orderValue).toLocaleString('th-TH')+' ฿' : '-';
-    return `<tr>
-      <td><span class="order-id">${h.orderNum}</span></td>
-      <td style="font-size:11px;color:#64748B;">${h.closedAt||'-'}</td>
-      <td><strong>${h.customer}</strong><br><span style="font-size:11px;color:#64748B;">${h.tel||''}</span></td>
-      <td style="font-size:12px;">${itemsStr}</td>
-      <td style="font-weight:700;">${totalQty} ต้น</td>
-      <td style="color:#15803D;font-weight:700;">${val}</td>
-      <td style="font-size:12px;">${h.sale||'-'}</td>
-    </tr>`;
-  }).join('');
+  if (!orders.length) {
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="8">ไม่พบรายการที่ตรงกับการค้นหา</td></tr>';
+    if (sub) sub.textContent = 'ไม่พบรายการ';
+    return;
+  }
+  if (sub) sub.textContent = orders.length + ' รายการ (ทั้งหมด ' + active.length + ' ออเดอร์ · จบบิล ' + hist.length + ')';
+  const SUM_STATUSES = [
+    { val:'รับงาน',      label:'📥 รับงาน',        bg:'#EFF6FF', color:'#1D4ED8', border:'#BFDBFE' },
+    { val:'ผลิต',        label:'🏭 ผลิต',           bg:'#FFF7ED', color:'#C2410C', border:'#FED7AA' },
+    { val:'ผลิตเสร็จ',  label:'✅ ผลิตเสร็จ',     bg:'#FEFCE8', color:'#854D0E', border:'#FDE68A' },
+    { val:'ผลิต+จัดส่ง',label:'🚛 ผลิต+จัดส่ง',   bg:'#F0F9FF', color:'#0369A1', border:'#BAE6FD' },
+    { val:'จบงาน',       label:'🎉 จบงาน',          bg:'#F0FDF4', color:'#15803D', border:'#86EFAC' },
+  ];
+
+  function statusBadge(o) {
+    // ออเดอร์จบบิล — แสดง badge เขียวอย่างเดียว ไม่มี dropdown
+    if (o._done) {
+      return `<div style="min-width:130px;">
+        <span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:#F0FDF4;color:#15803D;font-size:11px;font-weight:700;border:1px solid #86EFAC;">
+          <span style="width:7px;height:7px;border-radius:50%;background:#22C55E;flex-shrink:0;"></span>🎉 จบงานแล้ว
+        </span>
+        ${o.closedAt?`<div style="font-size:9px;color:#94A3B8;margin-top:3px;padding-left:2px;">จบบิล ${o.closedAt}</div>`:''}
+      </div>`;
+    }
+
+    const items = getOrderItems(o);
+    // ใช้ค่า manual เฉพาะถ้า user เลือกเอง ไม่งั้น auto-detect เสมอ
+    const savedVal = (o._sumStatusManual && o._sumStatus) ? o._sumStatus : autoSumStatus(o, items);
+    const cur = SUM_STATUSES.find(s => s.val === savedVal) || SUM_STATUSES[0];
+
+    const opts = SUM_STATUSES.map(s =>
+      `<option value="${s.val}"${s.val===savedVal?' selected':''}>${s.label}</option>`
+    ).join('');
+
+    return `<select onchange="setSumStatus('${o.orderNum}',this)"
+      style="padding:5px 8px;border-radius:8px;border:1.5px solid ${cur.border};background:${cur.bg};color:${cur.color};font-size:11px;font-weight:700;cursor:pointer;outline:none;min-width:130px;font-family:inherit;">
+      ${opts}
+    </select>`;
+  }
+  function deliveredBar(del, qty) {
+    const pct = qty > 0 ? Math.round(del/qty*100) : 0;
+    const barColor = pct >= 100 ? '#16A34A' : pct > 0 ? '#2563EB' : '#CBD5E1';
+    return `<div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-weight:700;color:${pct>=100?'#16A34A':'#1E293B'}">${del}</span>
+      <span style="color:#94A3B8;font-size:11px;">/ ${qty} ต้น</span>
+    </div>`;
+  }
+  const rows = [];
+  orders.forEach(o => {
+    const items = (o._done && o.archivedItems) ? o.archivedItems : getOrderItems(o);
+    const dateStr = o.deliveryDateISO || o.deliveryDate || o.orderDate || o.closedAt || '-';
+    const rowBg = o._done ? 'background:#F0FDF4;' : '';
+    const span = items.length;
+    items.forEach((it, idx) => {
+      const label = it.pileType + (it.length && it.length!=='-' ? ' '+it.length : '');
+      const del = it.delivered || 0;
+      const qty = it.qty || 0;
+      const prod = getTotalProduced(o.orderNum, it.pileType);
+      const stockDel = it.stockDelivered || 0;
+      const prodColor = (prod + stockDel) >= qty ? '#15803D' : prod > 0 ? '#C2410C' : '#94A3B8';
+      const stockTag = stockDel > 0
+        ? `<span style="font-size:10px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">(+${stockDel})</span>`
+        : '';
+      const prodCell = `<span style="font-weight:700;color:${prodColor};">${prod}</span>${stockTag}<span style="color:#94A3B8;font-size:11px;"> / ${qty} ต้น</span>`;
+      if (idx === 0) {
+        rows.push(`<tr style="border-top:2px solid #E2E8F0;${rowBg}">
+          <td rowspan="${span}" style="${rowBg}"><span class="order-id">${o.orderNum}</span></td>
+          <td rowspan="${span}" style="font-size:11px;color:#64748B;">${dateStr}</td>
+          <td rowspan="${span}"><strong>${o.customer||'-'}</strong><br><span style="font-size:11px;color:#64748B;">${o.tel||''}</span></td>
+          <td style="font-size:12px;">${label}</td>
+          <td style="font-weight:700;">${qty} ต้น</td>
+          <td>${prodCell}</td>
+          <td>${deliveredBar(del, qty)}</td>
+          <td rowspan="${span}" style="vertical-align:middle;">${statusBadge(o)}</td>
+        </tr>`);
+      } else {
+        rows.push(`<tr style="${rowBg}">
+          <td style="font-size:12px;">${label}</td>
+          <td style="font-weight:700;">${qty} ต้น</td>
+          <td>${prodCell}</td>
+          <td>${deliveredBar(del, qty)}</td>
+        </tr>`);
+      }
+    });
+  });
+  tbody.innerHTML = rows.join('');
 }
 
 function exportHistoryCSV() {
@@ -4283,8 +5229,9 @@ let _cfg = null;
 const TAG_MAP = {
   sale:       { key:'saleStaff',  container:'tagsSale' },
   prod:       { key:'prodStaff',  container:'tagsProd' },
-  ship:       { key:'shipStaff',  container:'tagsShip' },
-  stockStaff: { key:'stockStaff', container:'tagsStockStaff' },
+  ship:       { key:'shipStaff',    container:'tagsShip' },
+  vehicle:    { key:'vehicleList',  container:'tagsVehicle' },
+  stockStaff: { key:'stockStaff',  container:'tagsStockStaff' },
   pile:       { key:'pileTypes',  container:'tagsPile' },
 };
 
@@ -5811,6 +6758,309 @@ function adminClearHistory(type) {
     </div>
   </div>
 </div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     MULTI-CALENDAR EXTENSION
+     oc = สถานะ Order (Blue)   pc = ผลิต (Purple)
+     sc = สต็อก (Green)        cc = สรุปภาพรวม (Multi-color)
+══════════════════════════════════════════════════════════════════════ -->
+<style>
+.cal-section-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:4px 0 10px;}
+.cal-section-title{font-size:17px;font-weight:800;color:#1E293B;}
+.cal-section-sub{font-size:12px;color:#64748B;margin-top:2px;}
+.cal-nav-btn{width:36px;height:36px;border-radius:9px;border:1.5px solid #E2E8F0;background:#F8FAFC;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;}
+.cal-nav-btn:hover{background:#EFF6FF;border-color:#BFDBFE;}
+.cal-month-label{font-size:16px;font-weight:800;color:#1E293B;}
+.cal-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.cal-legend-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;border-radius:12px;padding:4px 12px;}
+.cal-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.cal-divider{border:none;border-top:2px dashed #E2E8F0;margin:24px 0 0;}
+</style>
+<script>
+const _CM=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+function _cp(n){return String(n).padStart(2,'0');}
+function _parseTs(ts){
+  if(!ts)return null;
+  const m=ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if(!m)return null;
+  const d=parseInt(m[1]),mo=parseInt(m[2]),yy=parseInt(m[3]);
+  const ce=yy<100?1943+yy:yy-543;
+  return ce+'-'+_cp(mo)+'-'+_cp(d);
+}
+function _dow(){return['อา','จ','อ','พ','พฤ','ศ','ส'].map((d,i)=>'<div class="tc-dow'+(i===0?' sun':i===6?' sat':'')+'">'+ d+'</div>').join('');}
+function _dayLabel(ds){if(!ds)return'';const[y,m,d]=ds.split('-');return'📅 '+(+d)+' '+_CM[+m-1]+' '+(+y+543);}
+function _renderGrid(prefix,year,month,byDate,sel,dot,chipBg,chipText){
+  const grid=document.getElementById(prefix+'Grid');
+  const lbl=document.getElementById(prefix+'MonLabel');
+  if(!grid||!lbl)return;
+  lbl.textContent=_CM[month]+' '+(year+543);
+  const first=new Date(year,month,1).getDay(),days=new Date(year,month+1,0).getDate();
+  const today=new Date();today.setHours(0,0,0,0);
+  let html='';
+  for(let i=0;i<first;i++)html+='<div></div>';
+  for(let d=1;d<=days;d++){
+    const ds=year+'-'+_cp(month+1)+'-'+_cp(d);
+    const de=byDate[ds]||[];
+    const iT=new Date(year,month,d).getTime()===today.getTime();
+    const iS=ds===sel;
+    const cls='tc-day'+(iS?' is-selected':iT?' is-today':'');
+    const dotHtml=de.length&&!iS?'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+dot+';vertical-align:middle;margin-left:3px;margin-bottom:1px;"></span>':(iS?'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.7);vertical-align:middle;margin-left:3px;margin-bottom:1px;"></span>':'');
+    const chips=de.slice(0,2).map(e=>'<div class="tc-event-chip" style="background:'+(iS?'rgba(255,255,255,.22)':(e._chipBg||chipBg))+';color:'+(iS?'#fff':(e._chipText||chipText))+';">'+e._chip+'</div>').join('');
+    const more=de.length>2?'<div class="tc-more'+(iS?' sel':'')+'">+'+(de.length-2)+'</div>':'';
+    html+='<div class="'+cls+'" onclick="'+prefix+'Day(\''+ds+'\')"><div class="tc-day-num">'+d+dotHtml+'</div>'+chips+more+'</div>';
+  }
+  grid.innerHTML=html;
+}
+function _calCard(prefix){
+  return '<div class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);"><div class="card-body" style="padding:20px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;"><button class="cal-nav-btn" onclick="'+prefix+'Prev()">&#x2039;</button><div class="cal-month-label" id="'+prefix+'MonLabel"></div><button class="cal-nav-btn" onclick="'+prefix+'Next()">&#x203a;</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">'+_dow()+'</div><div id="'+prefix+'Grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div></div></div><div id="'+prefix+'Panel" style="display:flex;flex-direction:column;gap:16px;margin-top:16px;"></div>';
+}
+function _scrollTo(id){setTimeout(()=>{const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},80);}
+
+// ── ORDER CALENDAR (oc) Blue ──
+let _ocY,_ocM,_ocSel=null;
+const OC_DOT='#3B82F6',OC_BG='#DBEAFE',OC_TX='#1D4ED8';
+const OC_ST={'':'#FEF9C3|#854D0E','รับ Order แล้ว':'#FEF9C3|#854D0E','ยืนยัน Order แล้ว':'#FEF3C7|#92400E','กำลังผลิต':'#F3E8FF|#6D28D9','พร้อมส่ง':'#DBEAFE|#1D4ED8','ระหว่างขนส่ง':'#E0F2FE|#0369A1','ส่งแล้วบางส่วน':'#D1FAE5|#065F46','ส่งครบแล้ว':'#DCFCE7|#166534'};
+function ocInit(){const n=new Date();_ocY=n.getFullYear();_ocM=n.getMonth();ocRender();}
+function ocPrev(){_ocM--;if(_ocM<0){_ocM=11;_ocY--;}ocRender();}
+function ocNext(){_ocM++;if(_ocM>11){_ocM=0;_ocY++;}ocRender();}
+function ocDay(ds){_ocSel=_ocSel===ds?null:ds;ocRender();if(_ocSel)_scrollTo('ocd-'+ds);}
+function ocByDate(){const bd={};(typeof getOrders==='function'?getOrders():[]).forEach(o=>{const ds=o.deliveryDateISO||o.orderDateISO;if(!ds)return;(bd[ds]=bd[ds]||[]).push({...o,_chip:o.orderNum});});return bd;}
+function ocRender(){
+  const bd=ocByDate();_renderGrid('oc',_ocY,_ocM,bd,_ocSel,OC_DOT,OC_BG,OC_TX);
+  const panel=document.getElementById('ocPanel');if(!panel)return;
+  if(!_ocSel){panel.innerHTML='';return;}
+  const list=bd[_ocSel]||[];
+  const body=list.length?list.map(o=>{
+    const s=o.status||'';const pair=(OC_ST[s]||'#F1F5F9|#374151').split('|');
+    const items=typeof getOrderItems==='function'?getOrderItems(o):[];
+    const desc=items.map(it=>(it.pileType||'')+' '+(it.qty||0)+'ต้น').join(', ')||'-';
+    return '<div class="tc-entry" style="border-left:4px solid '+OC_DOT+';"><div class="tc-entry-icon" style="background:#DBEAFE;">📋</div><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-size:13px;font-weight:900;color:#1E40AF;">'+o.orderNum+'</span><span style="font-size:10px;font-weight:700;background:'+pair[0]+';color:'+pair[1]+';border-radius:20px;padding:2px 10px;">'+(s||'รับ Order แล้ว')+'</span></div><div style="font-weight:700;font-size:13px;color:#1E293B;">'+(o.customer||'-')+(o.tel?'<span style="font-size:11px;color:#64748B;font-weight:400;margin-left:6px;">📞 '+o.tel+'</span>':'')+'</div><div style="font-size:11px;color:#64748B;margin-top:4px;">📦 '+desc+'</div>'+(o.sale?'<div style="font-size:11px;color:#94A3B8;margin-top:2px;">👤 '+o.sale+'</div>':'')+'</div></div>';
+  }).join(''):'<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ไม่มี Order วันนี้</div>';
+  panel.innerHTML='<div id="ocd-'+_ocSel+'" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;"><div class="card-header" style="background:linear-gradient(135deg,#DBEAFE,#EFF6FF);"><div style="flex:1;"><div class="card-title" style="color:#1E40AF;">'+_dayLabel(_ocSel)+'</div><div class="card-sub">'+(list.length?list.length+' Order กำหนดส่ง':'ไม่มี Order')+'</div></div></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">'+body+'</div></div>';
+}
+
+// ── PRODUCTION CALENDAR (pc) Purple ──
+let _pcY,_pcM,_pcSel=null;
+const PC_DOT='#7C3AED',PC_BG='#EDE9FE',PC_TX='#5B21B6';
+function pcInit(){const n=new Date();_pcY=n.getFullYear();_pcM=n.getMonth();pcRender();}
+function pcPrev(){_pcM--;if(_pcM<0){_pcM=11;_pcY--;}pcRender();}
+function pcNext(){_pcM++;if(_pcM>11){_pcM=0;_pcY++;}pcRender();}
+function pcDay(ds){_pcSel=_pcSel===ds?null:ds;pcRender();if(_pcSel)_scrollTo('pcd-'+ds);}
+function pcByDate(){const bd={};(typeof getProdLog==='function'?getProdLog():[]).forEach(l=>{if(!l.dateISO)return;(bd[l.dateISO]=bd[l.dateISO]||[]).push({...l,_chip:l.pileType||'-'});});return bd;}
+function pcRender(){
+  const bd=pcByDate();_renderGrid('pc',_pcY,_pcM,bd,_pcSel,PC_DOT,PC_BG,PC_TX);
+  const panel=document.getElementById('pcPanel');if(!panel)return;
+  if(!_pcSel){panel.innerHTML='';return;}
+  const list=bd[_pcSel]||[];
+  const body=list.length?list.map(l=>{
+    const net=l.qtyNet||0,def=l.qtyDefect||0;
+    return '<div class="tc-entry" style="border-left:4px solid '+PC_DOT+';"><div class="tc-entry-icon" style="background:#EDE9FE;">🏭</div><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-size:13px;font-weight:900;color:#5B21B6;">'+(l.orderNum||'STOCK')+'</span><span style="font-size:10px;font-weight:700;background:#EDE9FE;color:#5B21B6;border-radius:20px;padding:2px 10px;">🏭 ผลิต</span></div><div style="font-weight:700;font-size:13px;color:#1E293B;">'+(l.pileType||'-')+(l.length&&l.length!=='-'?' · '+l.length:'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;font-size:11px;"><span style="background:#F0FDF4;color:#166534;border-radius:5px;padding:2px 7px;font-weight:700;">✅ ได้ '+net+' ต้น</span>'+(def>0?'<span style="background:#FEE2E2;color:#DC2626;border-radius:5px;padding:2px 7px;font-weight:700;">❌ เสีย '+def+' ต้น</span>':'')+(l.lane?'<span style="background:#F8FAFC;color:#374151;border-radius:5px;padding:2px 7px;">เลน '+l.lane+'</span>':'')+'</div></div></div>';
+  }).join(''):'<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ไม่มีบันทึกผลิตวันนี้</div>';
+  panel.innerHTML='<div id="pcd-'+_pcSel+'" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;"><div class="card-header" style="background:linear-gradient(135deg,#EDE9FE,#F5F3FF);"><div style="flex:1;"><div class="card-title" style="color:#5B21B6;">'+_dayLabel(_pcSel)+'</div><div class="card-sub">'+(list.length?list.length+' รายการผลิต':'ไม่มีรายการ')+'</div></div></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">'+body+'</div></div>';
+}
+
+// ── STOCK CALENDAR (sc) Green ──
+let _scY,_scM,_scSel=null;
+const SC_DOT='#16A34A',SC_BG='#DCFCE7',SC_TX='#166534';
+const SC_DEMO=[{ts:'23/05/69 13:00',typeVal:'📤 เบิกออก (ส่งของ)',name:'เสาตัน 0.22m',qtyDisplay:'-60',newStock:140,ref:'DO-001',staff:'คุณอ้อย'},{ts:'22/05/69 16:20',typeVal:'📥 รับเข้า (ผลิตเสร็จ)',name:'เสาตัน 0.22m',qtyDisplay:'+200',newStock:200,ref:'WO-003',staff:'คุณอ้อย'},{ts:'21/05/69 11:30',typeVal:'📤 เบิกออก (ส่งของ)',name:'เสากลม 0.30m',qtyDisplay:'-20',newStock:32,ref:'DO-002',staff:'คุณต้อม'}];
+function scInit(){const n=new Date();_scY=n.getFullYear();_scM=n.getMonth();scRender();}
+function scPrev(){_scM--;if(_scM<0){_scM=11;_scY--;}scRender();}
+function scNext(){_scM++;if(_scM>11){_scM=0;_scY++;}scRender();}
+function scDay(ds){_scSel=_scSel===ds?null:ds;scRender();if(_scSel)_scrollTo('scd-'+ds);}
+function scByDate(){const bd={};const raw=typeof getStockLog==='function'?getStockLog():null;const logs=raw&&raw.length?raw:SC_DEMO;logs.forEach(l=>{const ds=_parseTs(l.ts);if(!ds)return;const t=(l.typeVal||'').replace(/\s*\(.*\)/,'');(bd[ds]=bd[ds]||[]).push({...l,_chip:t+' '+l.name,_dateISO:ds});});return bd;}
+function scRender(){
+  const bd=scByDate();_renderGrid('sc',_scY,_scM,bd,_scSel,SC_DOT,SC_BG,SC_TX);
+  const panel=document.getElementById('scPanel');if(!panel)return;
+  if(!_scSel){panel.innerHTML='';return;}
+  const list=bd[_scSel]||[];
+  const body=list.length?list.map(l=>{
+    const isIn=l.typeVal&&l.typeVal.includes('รับเข้า'),isAdj=l.typeVal&&l.typeVal.includes('ปรับแก้');
+    const dotBg=isAdj?'#F3E8FF':isIn?'#DCFCE7':'#FEE2E2',dotTx=isAdj?'#6D28D9':isIn?'#166534':'#991B1B';
+    return '<div class="tc-entry" style="border-left:4px solid '+SC_DOT+';"><div class="tc-entry-icon" style="background:#DCFCE7;">📦</div><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-size:10px;font-weight:700;background:'+dotBg+';color:'+dotTx+';border-radius:20px;padding:2px 10px;">'+(l.typeVal||'-')+'</span></div><div style="font-weight:700;font-size:13px;color:#1E293B;">'+(l.name||'-')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;font-size:11px;"><span style="background:#F0FDF4;color:#166534;border-radius:5px;padding:2px 7px;font-weight:700;">'+(l.qtyDisplay||'')+'</span>'+(l.newStock!==undefined?'<span style="background:#F8FAFC;color:#374151;border-radius:5px;padding:2px 7px;">คงเหลือ '+l.newStock+'</span>':'')+(l.ref&&l.ref!=='-'?'<span style="background:#F8FAFC;color:#374151;border-radius:5px;padding:2px 7px;">'+l.ref+'</span>':'')+(l.staff?'<span style="background:#F8FAFC;color:#374151;border-radius:5px;padding:2px 7px;">👤 '+l.staff+'</span>':'')+'</div>'+(l.note&&l.note!=='-'?'<div style="font-size:11px;color:#64748B;margin-top:4px;">'+l.note+'</div>':'')+'</div></div>';
+  }).join(''):'<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ไม่มีการเคลื่อนไหวสต็อกวันนี้</div>';
+  panel.innerHTML='<div id="scd-'+_scSel+'" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;"><div class="card-header" style="background:linear-gradient(135deg,#DCFCE7,#F0FDF4);"><div style="flex:1;"><div class="card-title" style="color:#166634;">'+_dayLabel(_scSel)+'</div><div class="card-sub">'+(list.length?list.length+' รายการเคลื่อนไหว':'ไม่มีรายการ')+'</div></div></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">'+body+'</div></div>';
+}
+
+// ── COMBINED CALENDAR (cc) ──
+let _ccY,_ccM,_ccSel=null;
+const CC={order:{icon:'📋',dot:'#3B82F6',bg:'#DBEAFE',tx:'#1D4ED8',label:'Order'},prod:{icon:'🏭',dot:'#7C3AED',bg:'#EDE9FE',tx:'#5B21B6',label:'ผลิต'},transport:{icon:'🚛',dot:'#0891B2',bg:'#CFFAFE',tx:'#0E7490',label:'ขนส่ง'},stock:{icon:'📦',dot:'#16A34A',bg:'#DCFCE7',tx:'#166534',label:'สต็อก'}};
+function ccInit(){const n=new Date();_ccY=n.getFullYear();_ccM=n.getMonth();ccRender();}
+function ccPrev(){_ccM--;if(_ccM<0){_ccM=11;_ccY--;}ccRender();}
+function ccNext(){_ccM++;if(_ccM>11){_ccM=0;_ccY++;}ccRender();}
+function ccDay(ds){_ccSel=_ccSel===ds?null:ds;ccRender();if(_ccSel)_scrollTo('ccd-'+ds);}
+function ccByDate(){
+  const bd={};
+  const add=(ds,ev)=>{if(!ds)return;(bd[ds]=bd[ds]||[]).push(ev);};
+  (typeof getOrders==='function'?getOrders():[]).forEach(o=>{const ds=o.deliveryDateISO||o.orderDateISO;if(!ds)return;add(ds,{_cat:'order',_oNum:o.orderNum,_chip:'📋 '+o.orderNum,_chipBg:CC.order.bg,_chipText:CC.order.tx,_label:o.orderNum+' · '+(o.customer||'-'),_sub:o.status||'รับ Order แล้ว',_cust:o.customer||'-',_tel:o.tel||''});});
+  (typeof getProdLog==='function'?getProdLog():[]).forEach(l=>{if(!l.dateISO)return;add(l.dateISO,{_cat:'prod',_oNum:l.orderNum||'',_chip:'🏭 '+(l.pileType||'-'),_chipBg:CC.prod.bg,_chipText:CC.prod.tx,_label:(l.pileType||'-'),_sub:'ได้ '+(l.qtyNet||0)+' ต้น'+(l.qtyDefect>0?' · เสีย '+l.qtyDefect:'')});});
+  (typeof tcGetEvents==='function'?tcGetEvents():[]).forEach(e=>{if(!e.date)return;add(e.date,{_cat:'transport',_oNum:e.order||'',_chip:'🚛 '+(e.cust||e.order||'-'),_chipBg:CC.transport.bg,_chipText:CC.transport.tx,_label:e.piles||e.cust||'-',_sub:(e.driver?'🚚 '+e.driver:'')+(e.timeIn?' · ✅ ส่งจบ':e.timeOut?' · กำลังขนส่ง':'')});});
+  const slogs_raw=typeof getStockLog==='function'?getStockLog():null;
+  (slogs_raw&&slogs_raw.length?slogs_raw:SC_DEMO).forEach(l=>{const ds=_parseTs(l.ts);if(!ds)return;const t=(l.typeVal||'').replace(/\s*\(.*\)/,'');add(ds,{_cat:'stock',_oNum:l.ref&&l.ref!=='-'?l.ref:'',_chip:'📦 '+l.name,_chipBg:CC.stock.bg,_chipText:CC.stock.tx,_label:t+' '+l.name,_sub:l.qtyDisplay||''});});
+  return bd;
+}
+function ccRender(){
+  const bd=ccByDate();
+  const grid=document.getElementById('ccGrid'),lbl=document.getElementById('ccMonLabel');
+  if(!grid||!lbl)return;
+  lbl.textContent=_CM[_ccM]+' '+(_ccY+543);
+  const first=new Date(_ccY,_ccM,1).getDay(),days=new Date(_ccY,_ccM+1,0).getDate();
+  const today=new Date();today.setHours(0,0,0,0);
+  let html='';
+  for(let i=0;i<first;i++)html+='<div></div>';
+  for(let d=1;d<=days;d++){
+    const ds=_ccY+'-'+_cp(_ccM+1)+'-'+_cp(d);
+    const de=bd[ds]||[];
+    const iT=new Date(_ccY,_ccM,d).getTime()===today.getTime();
+    const iS=ds===_ccSel;
+    const cls='tc-day'+(iS?' is-selected':iT?' is-today':'');
+    const cats=[...new Set(de.map(e=>e._cat))];
+    const dots=!iS&&cats.length?cats.map(c=>CC[c]?'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:'+CC[c].dot+';margin-left:2px;vertical-align:middle;"></span>':'').join(''):(iS?'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.7);vertical-align:middle;margin-left:3px;"></span>':'');
+    const chips=de.slice(0,2).map(e=>'<div class="tc-event-chip" style="background:'+(iS?'rgba(255,255,255,.22)':e._chipBg||CC.order.bg)+';color:'+(iS?'#fff':e._chipText||CC.order.tx)+';">'+e._chip+'</div>').join('');
+    const more=de.length>2?'<div class="tc-more'+(iS?' sel':'')+'">+'+(de.length-2)+'</div>':'';
+    html+='<div class="'+cls+'" onclick="ccDay(\''+ds+'\')"><div class="tc-day-num">'+d+dots+'</div>'+chips+more+'</div>';
+  }
+  grid.innerHTML=html;
+  ccRenderPanel(bd);
+}
+function ccRenderPanel(bd){
+  const panel=document.getElementById('ccPanel');if(!panel)return;
+  if(!_ccSel){panel.innerHTML='';return;}
+  const list=bd[_ccSel]||[];
+
+  function _evRow(e){
+    const c=CC[e._cat]||CC.order;
+    return '<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0;border-bottom:1px solid #F1F5F9;">'
+      +'<span style="font-size:12px;color:#374151;flex:1;">'+e._label+(e._sub?' <span style="color:#9CA3AF;font-size:11px;">· '+e._sub+'</span>':'')+'</span>'
+    +'</div>';
+  }
+
+  function _zone(title, color, border, dot, content){
+    return '<div style="margin-bottom:12px;">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+        +'<span style="width:10px;height:10px;border-radius:50%;background:'+dot+';flex-shrink:0;"></span>'
+        +'<span style="font-size:12px;font-weight:800;color:'+color+';text-transform:uppercase;letter-spacing:.5px;">'+title+'</span>'
+        +'<div style="flex:1;height:1px;background:'+border+';"></div>'
+      +'</div>'
+      +content
+    +'</div>';
+  }
+
+  // ── โซนออเดอร์: group by orderNum (only real orders) ──
+  const realOrderNums=new Set((typeof getOrders==='function'?getOrders():[]).map(o=>o.orderNum).filter(Boolean));
+  const orderEvs=list.filter(e=>e._oNum && realOrderNums.has(e._oNum));
+  const orderMap={};
+  orderEvs.forEach(e=>{(orderMap[e._oNum]=orderMap[e._oNum]||[]).push(e);});
+  const orderKeys=Object.keys(orderMap).sort();
+  let orderZoneContent='';
+  if(orderKeys.length){
+    const cards=orderKeys.map(key=>{
+      const evs=orderMap[key];
+      const oEv=evs.find(e=>e._cat==='order');
+      const bodyEvs=evs.filter(e=>e._cat!=='order');
+      const cust=oEv?(oEv._cust||''):'';
+      const status=oEv?oEv._sub:'';
+      return '<div style="border:1px solid #BFDBFE;border-radius:10px;overflow:hidden;">'
+        +'<div style="background:#EFF6FF;padding:8px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+          +'<span style="font-size:15px;font-weight:800;color:#1E293B;">'+key+'</span>'
+          +(cust?'<span style="font-size:14px;color:#475569;">'+cust+'</span>':'')
+          +(status?'<span style="font-size:12px;color:#64748B;background:#F1F5F9;border-radius:6px;padding:1px 8px;margin-left:auto;">'+status+'</span>':'')
+        +'</div>'
+        +(bodyEvs.length?'<div style="padding:8px 14px 10px;">'+bodyEvs.map(e=>{
+          const c=CC[e._cat]||CC.order;
+          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #F1F5F9;">'
+            +'<div style="font-size:18px;line-height:1.3;">'+c.icon+'</div>'
+            +'<div style="flex:1;min-width:0;">'
+              +'<span style="font-size:11px;font-weight:700;background:'+c.bg+';color:'+c.tx+';border-radius:20px;padding:1px 8px;">'+c.label+'</span>'
+              +'<div style="font-size:14px;font-weight:600;color:#1E293B;margin-top:2px;">'+e._label+'</div>'
+              +(e._sub?'<div style="font-size:12px;color:#64748B;">'+e._sub+'</div>':'')
+            +'</div>'
+          +'</div>';
+        }).join('')+'</div>':'')
+      +'</div>';
+    }).join('');
+    orderZoneContent='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;">'+cards+'</div>';
+  }
+
+  // ── โซนสต็อก: prod + stock events that don't belong to a real order ──
+  const stockZoneEvs=list.filter(e=>(!e._oNum || !realOrderNums.has(e._oNum)) && (e._cat==='prod'||e._cat==='stock'));
+
+  let zones='';
+  if(!list.length){
+    zones='<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ไม่มีรายการวันนี้</div>';
+  } else {
+    if(orderKeys.length)      zones+=_zone('โซนออเดอร์','#1D4ED8','#BFDBFE','#3B82F6',orderZoneContent);
+    if(stockZoneEvs.length){
+      const rows=stockZoneEvs.map(e=>{
+        const c=CC[e._cat]||CC.stock;
+        return '<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #F1F5F9;">'
+          +'<div style="font-size:18px;line-height:1.3;">'+c.icon+'</div>'
+          +'<div style="flex:1;min-width:0;">'
+            +'<span style="font-size:11px;font-weight:700;background:'+c.bg+';color:'+c.tx+';border-radius:20px;padding:1px 8px;">'+c.label+'</span>'
+            +'<div style="font-size:14px;font-weight:600;color:#1E293B;margin-top:2px;">'+e._label+'</div>'
+            +(e._sub?'<div style="font-size:12px;color:#64748B;">'+e._sub+'</div>':'')
+          +'</div>'
+        +'</div>';
+      }).join('');
+      zones+=_zone('โซนสต็อก','#0369A1','#BAE6FD','#0EA5E9','<div style="border:1px solid #BAE6FD;border-radius:10px;padding:8px 14px 10px;background:#F0F9FF;">'+rows+'</div>');
+    }
+  }
+
+  const cnts={};list.forEach(e=>{cnts[e._cat]=(cnts[e._cat]||0)+1;});
+  const legendHtml=Object.entries(cnts).map(([k,n])=>{const c=CC[k];if(!c)return'';return'<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;background:'+c.bg+';color:'+c.tx+';border-radius:12px;padding:3px 10px;"><span style="width:8px;height:8px;border-radius:50%;background:'+c.dot+';"></span>'+c.label+' '+n+'</span>';}).join('');
+
+  panel.innerHTML='<div id="ccd-'+_ccSel+'" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;">'
+    +'<div class="card-header" style="background:linear-gradient(135deg,#F8FAFC,#EFF6FF);">'
+      +'<div style="flex:1;">'
+        +'<div class="card-title" style="color:#1E293B;">'+_dayLabel(_ccSel)+'</div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">'+(legendHtml||'<span style="font-size:12px;color:#94A3B8;">ไม่มีรายการ</span>')+'</div>'
+      +'</div>'
+    +'</div>'
+    +'<div style="padding:16px 20px;">'+zones+'</div>'
+  +'</div>';
+}
+
+// ── INJECT + HOOK ──
+document.addEventListener('DOMContentLoaded',()=>{
+  function injectCal(secId,prefix,title,sub,prepend){
+    const sec=document.getElementById('sec-'+secId);if(!sec)return;
+    const wrap=sec.querySelector('.app-content');if(!wrap)return;
+    const div=document.createElement('div');
+    div.innerHTML='<div class="cal-section-hdr"><div><div class="cal-section-title">'+title+'</div><div class="cal-section-sub">'+sub+'</div></div></div>'+_calCard(prefix)+(prepend?'<hr class="cal-divider" style="margin-bottom:0;"/>':'<hr class="cal-divider"/>');
+    if(prepend)wrap.insertBefore(div,wrap.firstChild);else wrap.appendChild(div);
+  }
+  injectCal('status','oc','📋 ปฏิทิน Order','กำหนดส่งของแต่ละ Order · คลิกวันเพื่อดูรายละเอียด', true);
+  injectCal('proderr','pc','🏭 ปฏิทินผลิต','บันทึกการผลิตตามวันที่ · คลิกวันเพื่อดูรายละเอียด', true);
+  injectCal('stock','sc','📦 ปฏิทินสต็อก','การเคลื่อนไหวสต็อกตามวันที่ · คลิกวันเพื่อดูรายละเอียด', true);
+  // ── Init calendars immediately after injection (don't wait for goTab) ──
+  setTimeout(()=>{
+    try{ocInit();}catch(e){}
+    try{pcInit();}catch(e){}
+    try{scInit();}catch(e){}
+  }, 200);
+
+  // ── Wrap goTab for re-render on tab switch ──
+  const _g=window.goTab;
+  window.goTab=function(name,el){
+    _g&&_g(name,el);
+    if(name==='status')   setTimeout(ocRender,50);
+    if(name==='proderr')  setTimeout(pcRender,50);
+    if(name==='stock')    setTimeout(scRender,50);
+  };
+
+  // ── Re-render calendars when Firebase data refreshes ──
+  function _wrapFn(fname, extraFn){
+    const orig=window[fname];
+    if(typeof orig==='function'){
+      window[fname]=function(){orig.apply(this,arguments);try{extraFn();}catch(e){}};
+    }
+  }
+  _wrapFn('renderOrders',    ()=>{ocRender();});
+  _wrapFn('renderStockCards',()=>scRender());
+  _wrapFn('renderStockLog',  ()=>scRender());
+  _wrapFn('renderProdLogHistory', ()=>pcRender());
+});
+</script>
 
 </body>
 </html>
