@@ -2495,7 +2495,10 @@ function getSecondaryAuth() {
 function getRoleLabel(role) {
   if (role === 'admin')   return '👑 Admin';
   if (role === 'manager') return '📊 Manager';
-  return '💼 Sale';
+  if (role === 'sale')    return '💼 Sale';
+  // custom role — ค้นหาจาก _permRoles
+  const found = (_permRoles || []).find(r => r.id === role);
+  return found ? found.label : role;
 }
 
 function applyRole(role) {
@@ -3075,7 +3078,6 @@ function applyPermissions() {
   if (_currentRole === 'admin') { _userPerms = {}; _applyNav(); return; }
   // Translate new section-level arrays into legacy boolean keys for canDo()
   // ถ้าโหลด perms มาแล้ว (_savedRolePerms ไม่ใช่ null) ให้ใช้ค่าที่บันทึกไว้เท่านั้น
-  // ถ้ายังไม่เคยโหลด ให้ใช้ DEFAULT เป็น fallback
   const raw = _savedRolePerms !== null
     ? (_savedRolePerms[_currentRole] || {})
     : (DEFAULT_ROLE_PERMS[_currentRole] || DEFAULT_ROLE_PERMS.sale);
@@ -3123,6 +3125,7 @@ function _applyNav() {
   showNav('nav-status',    canDo('view_orders'));
   showNav('nav-proderr',   canDo('view_production'));
   showNav('nav-shiperr',   canDo('view_shipping'));
+  showNav('nav-transport', canDo('view_shipping'));
   showNav('nav-summary',   canDo('view_summary'));
   showNav('nav-stock',     canDo('view_stock'));
   showNav('nav-customers', canDo('view_customers'));
@@ -5741,10 +5744,11 @@ function umRefresh() {
       ];
       html += `<tr>
         <td><strong>${u.email||'-'}</strong>${isMe ? ' <span style="font-size:10px;color:#3B82F6;">(คุณ)</span>' : ''}</td>
-        <td>
-          <select class="role-sel-um" onchange="umChangeRole('${u.uid}', this.value)" ${isMe?'disabled':''}>
+        <td style="display:flex;align-items:center;gap:6px;">
+          <select class="role-sel-um" id="rolesel_${u.uid}" ${isMe?'disabled':''}>
             ${_allRoleOpts.map(r=>`<option value="${r.value}" ${u.role===r.value?'selected':''}>${r.label}</option>`).join('')}
           </select>
+          ${isMe ? '' : `<button class="btn btn-primary btn-sm" onclick="umChangeRole('${u.uid}')">💾 บันทึก</button>`}
         </td>
         <td style="font-size:11px;color:#64748B;">${u.addedBy||'-'}</td>
         <td style="font-size:11px;color:#64748B;">${addedAt}</td>
@@ -5760,10 +5764,13 @@ function umRefresh() {
   });
 }
 
-function umChangeRole(uid, newRole) {
+function umChangeRole(uid) {
   if (_currentRole !== 'admin') return;
+  const sel = document.getElementById('rolesel_' + uid);
+  if (!sel) return;
+  const newRole = sel.value;
   db.ref(K_USER_ROLES + '/' + uid + '/role').set(newRole)
-    .then(() => showToast('✅ เปลี่ยนสิทธิ์เรียบร้อย'))
+    .then(() => { showToast('✅ เปลี่ยนสิทธิ์เรียบร้อย'); umRefresh(); })
     .catch(() => showToast('⚠️ เปลี่ยนสิทธิ์ไม่ได้ ลองใหม่'));
 }
 
