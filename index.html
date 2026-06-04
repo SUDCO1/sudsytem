@@ -213,7 +213,7 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .settings-block-title{font-size:12px;font-weight:800;color:#374151;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1.5px solid #E2E8F0;display:flex;align-items:center;gap:6px;}
 .tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:28px;}
 .tag-item{background:#DBEAFE;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;}
-.tag-remove{background:none;border:none;cursor:pointer;color:#93C5FD;font-size:14px;line-height:1;padding:0;}
+.tag-remove{background:none;border:none;cursor:pointer;color:#93C5FD;font-size:14px;line-height:1;padding:0;}.tag-item.drag-over{border:1.5px dashed #3B82F6 !important;background:#EFF6FF !important;}
 .tag-remove:hover{color:#EF4444;}
 .tag-add-row{display:flex;gap:6px;}
 .tag-add-inp{flex:1;padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:7px;font-size:12px;outline:none;font-family:inherit;background:#fff;}
@@ -1174,8 +1174,7 @@ function tcRender() {
     html += `<div class="${cls}" onclick="tcToggleDay('${ds}')"><div class="tc-day-num">${d}${de.length>0&&!iS?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3B82F6;vertical-align:middle;margin-left:4px;margin-bottom:1px;"></span>`:''}${iS?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.7);vertical-align:middle;margin-left:4px;margin-bottom:1px;"></span>`:''}</div>${chips}${more}</div>`;
   }
   document.getElementById('tcGrid').innerHTML = html;
-  const tcGrid2=document.getElementById('tcGrid');
-  if(tcGrid2){const byDT={};evs.forEach(e=>{if(!e.timeOut)return;if(!byDT[e.date])byDT[e.date]={trips:0,piles:0};byDT[e.date].trips++;(e.selectedItems||[]).forEach(si=>{byDT[e.date].piles+=(parseInt(si.qty)||0);});});tcGrid2.querySelectorAll('.tc-day').forEach(cell=>{const m=(cell.getAttribute('onclick')||'').match(/tcToggleDay\(['"]([^'"]+)['"]\)/);if(!m)return;const info=byDT[m[1]];if(!info)return;const isSel=cell.classList.contains('is-selected');const b=document.createElement('div');b.style.cssText='font-size:10px;font-weight:900;margin-top:3px;text-align:center;border-radius:4px;padding:1px 5px;background:'+(isSel?'rgba(255,255,255,0.2)':'#DBEAFE')+';color:'+(isSel?'rgba(255,255,255,0.9)':'#1E40AF')+';';b.textContent=info.trips+' รอบ / '+info.piles+' ต้น';cell.appendChild(b);});}
+  (function(){const g=document.getElementById('tcGrid');if(!g)return;const m={};evs.forEach(e=>{if(!e.timeOut)return;if(!m[e.date])m[e.date]={trips:0,piles:0};m[e.date].trips++;(e.selectedItems||[]).forEach(si=>{m[e.date].piles+=(parseInt(si.qty)||0);});});g.querySelectorAll('.tc-day').forEach(cell=>{const r=(cell.getAttribute('onclick')||'').match(/tcToggleDay..([^'"]+)/);if(!r)return;const info=m[r[1]];if(!info)return;const isSel=cell.classList.contains('is-selected');const b=document.createElement('div');b.style.cssText='font-size:10px;font-weight:900;margin-top:3px;text-align:center;border-radius:4px;padding:1px 5px;background:'+(isSel?'rgba(255,255,255,0.2)':'#DBEAFE')+';color:'+(isSel?'rgba(255,255,255,0.9)':'#1E40AF')+';';b.textContent=info.trips+' รอบ / '+info.piles+' ต้น';cell.appendChild(b);});})();
   tcRenderAllDays()
 }
 
@@ -1371,15 +1370,14 @@ function tcOrderSearch(q) {
     const items = getOrderItems(o);
     const piles = items.map(it=>it.pileType).join(', ');
     const hasCP = allCp.some(cp => cp.orderNum === o.orderNum && cp.online !== false);
-    const noStock = !hasCP;
-    return `<div onclick="tcSelectOrder('${(o.orderNum||'').replace(/'/g,"\\'")}');event.stopPropagation();"
+    const noStock=!hasCP;
+    return `<div onclick="tcSelectOrder('${(o.orderNum||'').replace(/'/g,"\'")}');event.stopPropagation();"
       style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background 0.1s;"
       onmouseenter="this.style.background='#EFF6FF'" onmouseleave="this.style.background=''">
       <div style="font-size:13px;font-weight:700;color:${noStock?'#94A3B8':'#1E40AF'};">${o.orderNum}${noStock?' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;">ยังไม่มีเสา</span>':''}</div>
       <div style="font-size:11px;color:${noStock?'#94A3B8':'#374151'};margin-top:1px;">👤 ${o.customer||'-'}${o.tel?' · 📞 '+o.tel:''}</div>
       <div style="font-size:10px;color:${noStock?'#CBD5E1':'#64748B'};margin-top:1px;">📦 ${piles}</div>
-    </div>`;
-  }).join('');
+    </div>`;  }).join('');
   dd.style.display = 'block';
 }
 
@@ -1408,32 +1406,18 @@ function tcSelectOrder(orderNum) {
     document.getElementById('tc_items_block').style.display = 'block';
   } else {
     listEl.dataset.cpMode = 'false';
-    const orderItems = getOrderItems(o);
-    if (orderItems.length) {
-      listEl.innerHTML = `<div style="padding:8px 12px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:8px;font-size:12px;color:#92400E;margin-bottom:8px;">⚠️ ยังไม่มีเสาในช่องลูกค้า — ยังไม่สามารถระบุจำนวนส่งได้</div>` +
-        orderItems.map((it, i) => {
-          const rem = Math.max(0,(it.qty||0)-(it.delivered||0));
-          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #FCA5A5;border-radius:9px;background:#FFF5F5;opacity:0.75;">
-            <input type="hidden" id="tc_item_chk_${i}" value="0">
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:12px;font-weight:700;color:#991B1B;">${it.pileType||'-'}</div>
-              <div style="font-size:10px;color:#64748B;margin-top:1px;">ต้องส่ง <span style="color:#DC2626;font-weight:700;">${rem} ต้น</span> · <span style="color:#94A3B8;">สต็อก: 0 ต้น</span></div>
-            </div>
-            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-              <input type="number" id="tc_item_qty_${i}" value="0" min="0" max="0" disabled
-                style="width:60px;padding:5px 8px;border:1.5px solid #FCA5A5;border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#FEE2E2;color:#991B1B;cursor:not-allowed;">
-              <span style="font-size:11px;color:#64748B;">ต้น</span>
-            </div>
-          </div>`;
-        }).join('');
-      listEl.dataset.cpCount = String(orderItems.length);
+    const _oi=getOrderItems(o);
+    if(_oi.length){
+      listEl.innerHTML='<div style="padding:8px 12px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:8px;font-size:12px;color:#92400E;margin-bottom:8px;">⚠️ ยังไม่มีเสาในช่องลูกค้า — ยังไม่สามารถระบุจำนวนส่งได้</div>'+_oi.map((it,i)=>{
+        const rem=Math.max(0,(it.qty||0)-(it.delivered||0));
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #FCA5A5;border-radius:9px;background:#FFF5F5;opacity:0.75;"><input type="hidden" id="tc_item_chk_'+i+'" value="0"><div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:#991B1B;">'+(it.pileType||'-')+'</div><div style="font-size:10px;color:#64748B;margin-top:1px;">ต้องส่ง <span style="color:#DC2626;font-weight:700;">'+rem+' ต้น</span> · <span style="color:#94A3B8;">สต็อก: 0 ต้น</span></div></div><div style="display:flex;align-items:center;gap:4px;"><input type="number" id="tc_item_qty_'+i+'" value="0" min="0" max="0" disabled style="width:60px;padding:5px 8px;border:1.5px solid #FCA5A5;border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#FEE2E2;color:#991B1B;cursor:not-allowed;"><span style="font-size:11px;color:#64748B;">ต้น</span></div></div>';
+      }).join('');
+      listEl.dataset.cpCount=String(_oi.length);
     } else {
-      listEl.innerHTML = `<div style="padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;text-align:center;">
-        <div style="font-size:14px;font-weight:800;color:#92400E;margin-bottom:4px;">⚠️ ยังไม่มีเสาลูกค้าสำหรับออเดอร์นี้</div>
-      </div>`;
-      listEl.dataset.cpCount = '0';
+      listEl.innerHTML='<div style="padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;text-align:center;"><div style="font-size:14px;font-weight:800;color:#92400E;">⚠️ ยังไม่มีเสาลูกค้าสำหรับออเดอร์นี้</div></div>';
+      listEl.dataset.cpCount='0';
     }
-    document.getElementById('tc_items_block').style.display = 'block';
+    document.getElementById('tc_items_block').style.display='block';
   }
 }
 
@@ -2050,15 +2034,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <input class="tag-add-inp" id="inp_pile" placeholder="เพิ่มประเภท เช่น เสาตัน 0.30m..." onkeydown="if(event.key==='Enter') addTag('pile')"/>
             <button class="tag-add-btn" onclick="addTag('pile')">+ เพิ่ม</button>
           </div>
-        </div>
-
-        <!-- Pile Prices -->
-        <div class="settings-block" style="margin-bottom:16px;">
-          <div class="settings-block-title">💰 ราคาต่อต้น (บาท)</div>
-          <p style="font-size:11px;color:#64748B;margin-bottom:10px;">กรอกราคาต่อต้นเพื่อให้ระบบคำนวณมูลค่า Order อัตโนมัติ (ไม่บังคับ)</p>
-          <table class="price-table" id="priceTable">
-            <tbody id="priceTableBody"></tbody>
-          </table>
         </div>
 
         <!-- Stock thresholds -->
@@ -4473,14 +4448,8 @@ function renderHistorySummary() {
     const rowBg = o._done ? 'background:#F0FDF4;' : '';
     const span = items.length;
     items.forEach((it, idx) => {
-      const specChips = [
-        it.length && it.length!=='-' ? `<span style="font-size:10px;background:#EDE9FE;color:#5B21B6;border-radius:4px;padding:1px 5px;font-weight:700;">📐 ${it.length}</span>` : '',
-        it.weld   && it.weld  !=='-' ? `<span style="font-size:10px;background:#DBEAFE;color:#1E40AF;border-radius:4px;padding:1px 5px;font-weight:700;">🔗 ${it.weld}</span>`   : '',
-        it.steel  && it.steel !=='-' ? `<span style="font-size:10px;background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">🔩 ${it.steel}</span>`  : '',
-        it.wire   && it.wire  !=='-' ? `<span style="font-size:10px;background:#DCFCE7;color:#166534;border-radius:4px;padding:1px 5px;font-weight:700;">🪡 ${it.wire}</span>`   : '',
-        it.extra  && it.extra !=='-' ? `<span style="font-size:10px;background:#F1F5F9;color:#475569;border-radius:4px;padding:1px 5px;font-weight:700;">📝 ${it.extra}</span>`  : '',
-      ].filter(Boolean).join(' ');
-      const label = `<div style="font-size:12px;font-weight:700;">${it.pileType}</div>${specChips?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">${specChips}</div>`:''}`;
+      const _sc=[it.length&&it.length!=='-'?`<span style="font-size:10px;background:#EDE9FE;color:#5B21B6;border-radius:4px;padding:1px 5px;font-weight:700;">📐 ${it.length}</span>`:'',it.weld&&it.weld!=='-'?`<span style="font-size:10px;background:#DBEAFE;color:#1E40AF;border-radius:4px;padding:1px 5px;font-weight:700;">🔗 ${it.weld}</span>`:'',it.steel&&it.steel!=='-'?`<span style="font-size:10px;background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">🔩 ${it.steel}</span>`:'',it.wire&&it.wire!=='-'?`<span style="font-size:10px;background:#DCFCE7;color:#166534;border-radius:4px;padding:1px 5px;font-weight:700;">🪡 ${it.wire}</span>`:'',it.extra&&it.extra!=='-'?`<span style="font-size:10px;background:#F1F5F9;color:#475569;border-radius:4px;padding:1px 5px;font-weight:700;">📝 ${it.extra}</span>`:''].filter(Boolean).join(' ');
+      const label=`<div style="font-size:12px;font-weight:700;">${it.pileType}</div>${_sc?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">${_sc}</div>`:''}`;
       const del = it.delivered || 0;
       const qty = it.qty || 0;
       const prod = getTotalProduced(o.orderNum, it.pileType);
@@ -5438,9 +5407,10 @@ function saveRolePerms() {
     });
   });
   // Save roles list too
-  const rolesData = _permRoles.filter(r => !r.locked).map(r => ({ id:r.id, label:r.label, color:r.color }));
+  const rolesDataArr = _permRoles.filter(r => !r.locked).map(r => ({ id:r.id, label:r.label, color:r.color }));
+  // Firebase converts JS arrays to objects — store as keyed object to preserve
+  const rolesPayload = rolesDataArr.length > 0 ? Object.fromEntries(rolesDataArr.map((r,i)=>[i,r])) : null;
   const db = firebase.database();
-  const rolesPayload = rolesData.length > 0 ? rolesData : null;
   Promise.all([
     db.ref('/config/rolePerms').set(newPerms),
     db.ref('/config/customRoles').set(rolesPayload),
@@ -5465,8 +5435,10 @@ function loadRolePerms(cb) {
   ]).then(([permSnap, rolesSnap]) => {
     if (permSnap.exists()) _savedRolePerms = permSnap.val();
     if (rolesSnap.exists()) {
-      const custom = rolesSnap.val();
-      if (Array.isArray(custom)) {
+      const raw = rolesSnap.val();
+      // Firebase may return object instead of array — handle both
+      const custom = Array.isArray(raw) ? raw : Object.values(raw);
+      if (custom.length) {
         const lockedRoles = _permRoles.filter(r => r.locked);
         _permRoles = [...lockedRoles, ...custom];
       }
@@ -5508,22 +5480,49 @@ function updatePricePreview(name, val) {
 
 function renderTags(containerId, arr, type) {
   const el = document.getElementById(containerId); if (!el) return;
-  el.innerHTML = arr.map((v,i) => `<div class="tag-item">${v}<button class="tag-remove" onclick="removeTag('${type}',${i})">×</button></div>`).join('');
+  const drag = (type === 'pile');
+  el.innerHTML = arr.map((v,i) => '<div class="tag-item"'+(drag?' draggable="true" data-idx="'+i+'" style="cursor:grab;"':'')+'>'+
+    (drag?'<span style="font-size:10px;color:#94A3B8;margin-right:3px;user-select:none;">⠿</span>':'')+
+    v+'<button class="tag-remove" onclick="removeTag(''+type+'','+i+')">×</button></div>').join('');
+  if (drag) _initTagDrag(el, type);
+}
+let _dragSrc = null;
+function _initTagDrag(container, type) {
+  container.querySelectorAll('.tag-item').forEach(item => {
+    item.addEventListener('dragstart', e => { _dragSrc=item; item.style.opacity='0.4'; e.dataTransfer.effectAllowed='move'; });
+    item.addEventListener('dragend',   () => { if(_dragSrc)_dragSrc.style.opacity=''; container.querySelectorAll('.tag-item').forEach(t=>t.classList.remove('drag-over')); });
+    item.addEventListener('dragover',  e => { e.preventDefault(); item.classList.add('drag-over'); });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', e => {
+      e.preventDefault(); item.classList.remove('drag-over');
+      if(!_dragSrc||_dragSrc===item) return;
+      const from=parseInt(_dragSrc.dataset.idx), to=parseInt(item.dataset.idx);
+      if(!_cfg) return;
+      const arr=_cfg[TAG_MAP[type].key]; const [mv]=arr.splice(from,1); arr.splice(to,0,mv);
+      renderTags(TAG_MAP[type].container, arr, type);
+      autoSaveSettings();
+    });
+  });
+}
+function autoSaveSettings() {
+  if (_currentRole!=='admin') return;
+  if (!_cfg) _cfg=JSON.parse(JSON.stringify(getConfig()));
+  saveConfigData(_cfg); populateAllDropdowns();
+  showToast('💾 บันทึกอัตโนมัติแล้ว');
 }
 function addTag(type) {
-  const inp = document.getElementById('inp_' + type), val = inp ? inp.value.trim() : '';
-  if (!val) return;
-  if (!_cfg) _cfg = JSON.parse(JSON.stringify(getConfig()));
-  const key = TAG_MAP[type].key;
-  if (!_cfg[key].includes(val)) { _cfg[key].push(val); renderTags(TAG_MAP[type].container, _cfg[key], type); }
-  if (type === 'pile') renderPriceTable();
-  inp.value = '';
+  const inp=document.getElementById('inp_'+type), val=inp?inp.value.trim():'';
+  if(!val) return;
+  if(!_cfg) _cfg=JSON.parse(JSON.stringify(getConfig()));
+  const key=TAG_MAP[type].key;
+  if(!_cfg[key].includes(val)){ _cfg[key].push(val); renderTags(TAG_MAP[type].container,_cfg[key],type); autoSaveSettings(); }
+  inp.value='';
 }
 function removeTag(type, idx) {
-  if (!_cfg) return;
-  _cfg[TAG_MAP[type].key].splice(idx, 1);
-  renderTags(TAG_MAP[type].container, _cfg[TAG_MAP[type].key], type);
-  if (type === 'pile') renderPriceTable();
+  if(!_cfg) return;
+  _cfg[TAG_MAP[type].key].splice(idx,1);
+  renderTags(TAG_MAP[type].container,_cfg[TAG_MAP[type].key],type);
+  autoSaveSettings();
 }
 
 function saveSettings() {
@@ -6887,8 +6886,7 @@ function pcRender(){
   }).join(''):'<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ไม่มีบันทึกผลิตวันนี้</div>';
   const pcGrid=document.getElementById('pcGrid');
   if(pcGrid){Object.keys(bd).forEach(ds=>{const dayNet=bd[ds].reduce((s,l)=>s+(l.qtyNet||0),0);if(!dayNet)return;pcGrid.querySelectorAll('.tc-day').forEach(cell=>{const oc=cell.getAttribute('onclick')||'';if(oc.includes("'"+ds+"'")||oc.includes('"'+ds+'"')){const isSel=cell.classList.contains('is-selected');const b=document.createElement('div');b.style.cssText='font-size:10px;font-weight:900;color:'+(isSel?'rgba(255,255,255,.9)':'#5B21B6')+';background:'+(isSel?'rgba(255,255,255,.2)':'#EDE9FE')+';border-radius:4px;padding:1px 5px;margin-top:2px;text-align:center;';b.textContent=dayNet+' ต้น';cell.appendChild(b);}});});}
-  panel.innerHTML='<div id="pcd-'+_pcSel+'"
- class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;"><div class="card-header" style="background:linear-gradient(135deg,#EDE9FE,#F5F3FF);"><div style="flex:1;"><div class="card-title" style="color:#5B21B6;">'+_dayLabel(_pcSel)+'</div><div class="card-sub">'+(list.length?list.length+' รายการผลิต':'ไม่มีรายการ')+'</div></div></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">'+body+'</div></div>';
+  panel.innerHTML='<div id="pcd-'+_pcSel+'" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;"><div class="card-header" style="background:linear-gradient(135deg,#EDE9FE,#F5F3FF);"><div style="flex:1;"><div class="card-title" style="color:#5B21B6;">'+_dayLabel(_pcSel)+'</div><div class="card-sub">'+(list.length?list.length+' รายการผลิต':'ไม่มีรายการ')+'</div></div></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">'+body+'</div></div>';
 }
 
 // ── STOCK CALENDAR (sc) Green ──
