@@ -1176,13 +1176,12 @@ function tcRender() {
   }
   document.getElementById('tcGrid').innerHTML = html;
 
-  // --- badge: รอบขาออก + ต้นที่ส่ง ---
+  // badge: รอบขาออก + ต้น
   const tcGrid = document.getElementById('tcGrid');
   if (tcGrid) {
-    // สร้าง map: date -> {trips, piles}
     const byDateTc = {};
     evs.forEach(e => {
-      if (!e.timeOut) return; // ขาออกเท่านั้น
+      if (!e.timeOut) return;
       if (!byDateTc[e.date]) byDateTc[e.date] = { trips: 0, piles: 0 };
       byDateTc[e.date].trips++;
       (e.selectedItems || []).forEach(si => { byDateTc[e.date].piles += (parseInt(si.qty) || 0); });
@@ -1857,7 +1856,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <div id="sec-summary" class="section">
   <div class="app-content stack">
     <div class="sum-grid" id="summaryGrid"></div>
-    <div id="statusChartRow"></div>
+    <div class="chart-row" id="chartsRow"></div>
 
     <div class="card">
       <div class="card-header">
@@ -1885,7 +1884,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>เลข Order</th><th>กำหนดส่ง</th><th>ชื่อ / เบอร์</th><th>Sale</th><th>รายการ</th><th>จำนวน</th><th>ผลิตแล้ว / ต้น</th><th>จัดส่งแล้ว / ต้น</th><th>สถานะ</th></tr></thead>
+          <thead><tr><th>เลข Order</th><th>วันที่</th><th>ชื่อ / เบอร์</th><th>รายการ</th><th>จำนวน</th><th>ผลิตแล้ว / ต้น</th><th>จัดส่งแล้ว / ต้น</th><th>สถานะ</th></tr></thead>
           <tbody id="histSummaryBody"></tbody>
         </table>
       </div>
@@ -2458,8 +2457,8 @@ document.addEventListener('DOMContentLoaded', () => {
     <span class="mob-nav-icon">📋</span><span>สถานะ</span>
     <div class="mob-nav-badge" id="mnav-status-badge"></div>
   </div>
-  <div class="mob-nav-item sale-only" id="mnav-proderr" onclick="goTab('proderr',document.getElementById('nav-proderr'))">
-    <span class="mob-nav-icon">🏭</span><span>ผลิต</span>
+  <div class="mob-nav-item" id="mnav-transport" onclick="goTab('transport',document.getElementById('nav-transport'))">
+    <span class="mob-nav-icon">🚛</span><span>ขนส่ง</span>
   </div>
   <div class="mob-nav-item" id="mnav-stock" onclick="goTab('stock',document.getElementById('nav-stock'))">
     <span class="mob-nav-icon">📦</span><span>สต็อก</span>
@@ -4351,30 +4350,12 @@ function renderSummary() {
     <div class="sum-card blue"><div class="sum-label">📦 Order ทั้งหมด</div><div class="sum-val">${totalO}</div><div class="sum-sub">ส่งครบแล้ว ${doneO} รายการ</div></div>
     <div class="sum-card green"><div class="sum-label">🏗️ ส่งแล้ว</div><div class="sum-val">${totDel}<span style="font-size:16px;font-weight:400;color:#64748B;"> / ${totalQty}</span></div><div class="sum-sub">ต้นเสาเข็ม</div></div>
     <div class="sum-card red"><div class="sum-label">🏭 ผลิต</div><div class="sum-val">${pErr}</div><div class="sum-sub">เสียหาย ${pDmg} ต้น</div></div>
+    <div class="sum-card purple"><div class="sum-label">🚛 Error ขนส่ง</div><div class="sum-val">${sErr}</div><div class="sum-sub">เสียหาย ${sDmg} ต้น</div></div>
     ${grandTotal > 0 ? `<div class="sum-card amber"><div class="sum-label">💰 มูลค่ารวม</div><div class="sum-val" style="font-size:22px;">${(grandTotal/1000).toFixed(0)}K</div><div class="sum-sub">${grandTotal.toLocaleString('th-TH')} บาท (รวมจบบิลแล้ว)</div></div>` : ''}
     ${hist.length > 0 ? `<div class="sum-card" style="background:linear-gradient(135deg,#F0FDF4,#DCFCE7);border-color:#86EFAC;"><div class="sum-label">✅ จบบิลแล้ว</div><div class="sum-val" style="color:#15803D;">${hist.length}</div><div class="sum-sub">${histVal>0?histVal.toLocaleString('th-TH')+' ฿':''}</div></div>` : ''}
     ${overdueCount > 0 ? `<div class="sum-card red"><div class="sum-label">⚠️ เกินกำหนด</div><div class="sum-val">${overdueCount}</div><div class="sum-sub">Order ที่ยังไม่ส่งครบ</div></div>` : ''}
   `;
   renderHistorySummary();
-
-  // Status chart only
-  const statusChartEl = document.getElementById('statusChartRow');
-  if (statusChartEl) {
-    const statusMap = {};
-    orders.forEach(o => { const s = o.status||'รับ Order แล้ว'; statusMap[s] = (statusMap[s]||0)+1; });
-    const STATUS_ORDER2 = ['รับ Order แล้ว','รับออเดอร์','ยืนยัน Order แล้ว','ยืนยัน Order','กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง','ส่งแล้วบางส่วน','ส่งครบแล้ว','ส่งครบ'];
-    const knownOrder2 = Object.keys(statusMap).sort((a,b) => {
-      const ai = STATUS_ORDER2.indexOf(a), bi = STATUS_ORDER2.indexOf(b);
-      return (ai===-1?99:ai) - (bi===-1?99:bi);
-    });
-    const statusData = knownOrder2.map(s => ({
-      l: s.replace('รับ Order แล้ว','รับใหม่').replace('ยืนยัน Order แล้ว','ยืนยันแล้ว').replace('ยืนยัน Order','ยืนยัน').replace('ระหว่างขนส่ง','ขนส่ง').replace('ส่งแล้วบางส่วน','ส่งบางส่วน').replace('ส่งครบแล้ว','ส่งครบ'),
-      v: statusMap[s]
-    })).filter(d=>d.v>0);
-    statusChartEl.innerHTML = statusData.length
-      ? '<div class="chart-card" style="margin-bottom:0;"><div class="chart-title">📋 สถานะ Order</div>' + hBarChart(statusData) + '</div>'
-      : '';
-  }
 
   // Charts
   const monthly = getMonthlyData(orders);
@@ -4391,7 +4372,9 @@ function renderSummary() {
     v: statusMap[s]
   })).filter(d=>d.v>0);
 
-
+  document.getElementById('chartsRow').innerHTML =
+    '<div class="chart-card"><div class="chart-title">📊 Orders ต่อเดือน (6 เดือนล่าสุด)</div>' + svgBarChart(monthly, '#3B82F6') + '</div>' +
+    '<div class="chart-card"><div class="chart-title">📋 สถานะ Order</div>' + (statusData.length ? hBarChart(statusData) : '<div style="text-align:center;color:#94A3B8;padding:24px;font-size:12px;">ยังไม่มีข้อมูล</div>') + '</div>';
 }
 
 
@@ -4439,12 +4422,12 @@ function renderHistorySummary() {
   });
 
   if (!allOrders.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="9">ยังไม่มีออเดอร์ · เพิ่มออเดอร์ที่แท็บสถานะ Order</td></tr>';
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="8">ยังไม่มีออเดอร์ · เพิ่มออเดอร์ที่แท็บสถานะ Order</td></tr>';
     if (sub) sub.textContent = 'ยังไม่มีรายการ';
     return;
   }
   if (!orders.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="9">ไม่พบรายการที่ตรงกับการค้นหา</td></tr>';
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="8">ไม่พบรายการที่ตรงกับการค้นหา</td></tr>';
     if (sub) sub.textContent = 'ไม่พบรายการ';
     return;
   }
@@ -4497,12 +4480,7 @@ function renderHistorySummary() {
     const rowBg = o._done ? 'background:#F0FDF4;' : '';
     const span = items.length;
     items.forEach((it, idx) => {
-      const specChips = [
-        it.length && it.length!=='-' ? `<span style="background:#EFF6FF;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;">📐 ${it.length}</span>` : '',
-        it.weld   && it.weld  !=='-' ? `<span style="background:#FEF9C3;color:#854D0E;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;">🔗 ${it.weld}</span>`   : '',
-        it.steel  && it.steel !=='-' ? `<span style="background:#F3E8FF;color:#6D28D9;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;">🔩 ${it.steel}</span>`  : '',
-      ].filter(Boolean).join(' ');
-      const label = `<div style="font-size:12px;font-weight:600;">${it.pileType}</div>${specChips ? '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">'+specChips+'</div>' : ''}`;
+      const label = it.pileType + (it.length && it.length!=='-' ? ' '+it.length : '');
       const del = it.delivered || 0;
       const qty = it.qty || 0;
       const prod = getTotalProduced(o.orderNum, it.pileType);
@@ -4514,10 +4492,9 @@ function renderHistorySummary() {
       const prodCell = `<span style="font-weight:700;color:${prodColor};">${prod}</span>${stockTag}<span style="color:#94A3B8;font-size:11px;"> / ${qty} ต้น</span>`;
       if (idx === 0) {
         rows.push(`<tr style="border-top:2px solid #E2E8F0;${rowBg}">
-          <td rowspan="${span}" style="${rowBg}"><span class="order-id">${o.orderNum}</span>${o.note?`<div style="font-size:10px;color:#94A3B8;margin-top:2px;">${o.note}</div>`:''}</td>
-          <td rowspan="${span}" style="font-size:11px;color:#64748B;">${o.deliveryDateISO||o.deliveryDate||'-'}</td>
+          <td rowspan="${span}" style="${rowBg}"><span class="order-id">${o.orderNum}</span></td>
+          <td rowspan="${span}" style="font-size:11px;color:#64748B;">${dateStr}</td>
           <td rowspan="${span}"><strong>${o.customer||'-'}</strong><br><span style="font-size:11px;color:#64748B;">${o.tel||''}</span></td>
-          <td rowspan="${span}" style="font-size:11px;color:#374151;">${o.sale||'-'}</td>
           <td style="font-size:12px;">${label}</td>
           <td style="font-weight:700;">${qty} ต้น</td>
           <td>${prodCell}</td>
@@ -6901,7 +6878,14 @@ function pcDay(ds){_pcSel=_pcSel===ds?null:ds;pcRender();if(_pcSel)_scrollTo('pc
 function pcByDate(){const bd={};(typeof getProdLog==='function'?getProdLog():[]).forEach(l=>{if(!l.dateISO)return;(bd[l.dateISO]=bd[l.dateISO]||[]).push({...l,_chip:l.pileType||'-'});});return bd;}
 function pcRender(){
   const bd=pcByDate();_renderGrid('pc',_pcY,_pcM,bd,_pcSel,PC_DOT,PC_BG,PC_TX);
-  // ── แสดงยอดผลิตในแต่ละ cell ──
+  const panel=document.getElementById('pcPanel');if(!panel)return;
+  if(!_pcSel){panel.innerHTML='';return;}
+  const list=bd[_pcSel]||[];
+  const body=list.length?list.map(l=>{
+    const net=l.qtyNet||0,def=l.qtyDefect||0;
+    return '<div class="tc-entry" style="border-left:4px solid '+PC_DOT+';"><div class="tc-entry-icon" style="background:#EDE9FE;">🏭</div><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-size:13px;font-weight:900;color:#5B21B6;">'+(l.orderNum||'STOCK')+'</span><span style="font-size:10px;font-weight:700;background:#EDE9FE;color:#5B21B6;border-radius:20px;padding:2px 10px;">🏭 ผลิต</span></div><div style="font-weight:700;font-size:13px;color:#1E293B;">'+(l.pileType||'-')+(l.length&&l.length!=='-'?' · '+l.length:'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;font-size:11px;"><span style="background:#F0FDF4;color:#166534;border-radius:5px;padding:2px 7px;font-weight:700;">✅ ได้ '+net+' ต้น</span>'+(def>0?'<span style="background:#FEE2E2;color:#DC2626;border-radius:5px;padding:2px 7px;font-weight:700;">❌ เสีย '+def+' ต้น</span>':'')+(l.lane?'<span style="background:#F8FAFC;color:#374151;border-radius:5px;padding:2px 7px;">เลน '+l.lane+'</span>':'')+'</div></div></div>';
+  }).join(''):'<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ไม่มีบันทึกผลิตวันนี้</div>';
+  // badge: จำนวนต้นผลิตรายวัน
   const pcGrid=document.getElementById('pcGrid');
   if(pcGrid){
     Object.keys(bd).forEach(ds=>{
@@ -6920,14 +6904,9 @@ function pcRender(){
       });
     });
   }
-  const panel=document.getElementById('pcPanel');if(!panel)return;
-  if(!_pcSel){panel.innerHTML='';return;}
-  const list=bd[_pcSel]||[];
-  const body=list.length?list.map(l=>{
-    const net=l.qtyNet||0,def=l.qtyDefect||0;
-    return '<div class="tc-entry" style="border-left:4px solid '+PC_DOT+';"><div class="tc-entry-icon" style="background:#EDE9FE;">🏭</div><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-size:13px;font-weight:900;color:#5B21B6;">'+(l.orderNum||'STOCK')+'</span><span style="font-size:10px;font-weight:700;background:#EDE9FE;color:#5B21B6;border-radius:20px;padding:2px 10px;">🏭 ผลิต</span></div><div style="font-weight:700;font-size:13px;color:#1E293B;">'+(l.pileType||'-')+(l.length&&l.length!=='-'?' · '+l.length:'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;font-size:11px;"><span style="background:#F0FDF4;color:#166534;border-radius:5px;padding:2px 7px;font-weight:700;">✅ ได้ '+net+' ต้น</span>'+(def>0?'<span style="background:#FEE2E2;color:#DC2626;border-radius:5px;padding:2px 7px;font-weight:700;">❌ เสีย '+def+' ต้น</span>':'')+(l.lane?'<span style="background:#F8FAFC;color:#374151;border-radius:5px;padding:2px 7px;">เลน '+l.lane+'</span>':'')+'</div></div></div>';
-  }).join(''):'<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ไม่มีบันทึกผลิตวันนี้</div>';
-  panel.innerHTML='<div id="pcd-'+_pcSel+'" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;"><div class="card-header" style="background:linear-gradient(135deg,#EDE9FE,#F5F3FF);"><div style="flex:1;"><div class="card-title" style="color:#5B21B6;">'+_dayLabel(_pcSel)+'</div><div class="card-sub">'+(list.length?list.length+' รายการผลิต':'ไม่มีรายการ')+'</div></div></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">'+body+'</div></div>';
+
+  panel.innerHTML='<div id="pcd-'+_pcSel+'"
+ class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;"><div class="card-header" style="background:linear-gradient(135deg,#EDE9FE,#F5F3FF);"><div style="flex:1;"><div class="card-title" style="color:#5B21B6;">'+_dayLabel(_pcSel)+'</div><div class="card-sub">'+(list.length?list.length+' รายการผลิต':'ไม่มีรายการ')+'</div></div></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">'+body+'</div></div>';
 }
 
 // ── STOCK CALENDAR (sc) Green ──
