@@ -213,7 +213,7 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .settings-block-title{font-size:12px;font-weight:800;color:#374151;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1.5px solid #E2E8F0;display:flex;align-items:center;gap:6px;}
 .tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:28px;}
 .tag-item{background:#DBEAFE;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;}
-.tag-remove{background:none;border:none;cursor:pointer;color:#93C5FD;font-size:14px;line-height:1;padding:0;}.tag-item.drag-over{border:1.5px dashed #3B82F6 !important;background:#EFF6FF !important;}
+.tag-remove{background:none;border:none;cursor:pointer;color:#93C5FD;font-size:14px;line-height:1;padding:0;}
 .tag-remove:hover{color:#EF4444;}
 .tag-add-row{display:flex;gap:6px;}
 .tag-add-inp{flex:1;padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:7px;font-size:12px;outline:none;font-family:inherit;background:#fff;}
@@ -1136,10 +1136,12 @@ input:disabled + .perm-slider:before{transform:translateX(20px);}
 
 <script>
 // ── Transport Calendar ────────────────────────────────────────
+const TC_KEY = 'tc_events';
 let _tcYear, _tcMonth, _tcSelectedDate = null;
 
+const K_TC_EVENTS = 'sud/tcEvents';
 function tcGetEvents() { return _cache.tcEvents || []; }
-function tcSaveEvents(a) { db.ref(K_TC_EVENTS).set(arrToFbObj(a)); }
+function tcSaveEvents(a) { db.ref(K_TC_EVENTS).set(a.length ? arrToFbObj(a) : null); }
 
 function tcInit() {
   const n = new Date(); _tcYear = n.getFullYear(); _tcMonth = n.getMonth(); tcRender();
@@ -1370,11 +1372,16 @@ function tcOrderSearch(q) {
     const items = getOrderItems(o);
     const piles = items.map(it=>it.pileType).join(', ');
     const hasCP = allCp.some(cp => cp.orderNum === o.orderNum && cp.online !== false);
-    var noStock=!hasCP;
-    return '<div onclick="tcSelectOrder(this.dataset.onum);event.stopPropagation();" data-onum="'+((o.orderNum||'')).replace(/"/g,'&quot;')+'" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background 0.1s;" onmouseenter="this.style.background='#EFF6FF'" onmouseleave="this.style.background=''">'
-      +'<div style="font-size:13px;font-weight:700;color:'+(noStock?'#94A3B8':'#1E40AF')+';">'+o.orderNum+(noStock?' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;">ยังไม่มีเสา</span>':'')+'</div>'
-      +'<div style="font-size:11px;color:'+(noStock?'#94A3B8':'#374151')+';margin-top:1px;">👤 '+(o.customer||'-')+(o.tel?' · 📞 '+o.tel:'')+'</div>'
-      +'<div style="font-size:10px;color:'+(noStock?'#CBD5E1':'#64748B')+';margin-top:1px;">📦 '+piles+'</div></div>';  }).join('');
+    const noStock = !hasCP;
+    const stockTag = noStock ? ' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;">ยังไม่มีเสาลูกค้า</span>' : '';
+    return `<div onclick="tcSelectOrder('${(o.orderNum||'').replace(/'/g,"\\'")});event.stopPropagation();"
+      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background 0.1s;"
+      onmouseenter="this.style.background='#EFF6FF'" onmouseleave="this.style.background=''">
+      <div style="font-size:13px;font-weight:700;color:${noStock?'#94A3B8':'#1E40AF'}">${o.orderNum}${stockTag}</div>
+      <div style="font-size:11px;color:#374151;margin-top:1px;">👤 ${o.customer||'-'}${o.tel?' · 📞 '+o.tel:''}</div>
+      <div style="font-size:10px;color:#64748B;margin-top:1px;">📦 ${piles}</div>
+    </div>`;
+  }).join('');
   dd.style.display = 'block';
 }
 
@@ -1403,18 +1410,12 @@ function tcSelectOrder(orderNum) {
     document.getElementById('tc_items_block').style.display = 'block';
   } else {
     listEl.dataset.cpMode = 'false';
-    var _oi=getOrderItems(o);
-    if(_oi.length){
-      listEl.innerHTML='<div style="padding:8px 12px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:8px;font-size:12px;color:#92400E;margin-bottom:8px;">⚠️ ยังไม่มีเสาในช่องลูกค้า — ยังไม่สามารถระบุจำนวนส่งได้</div>'+_oi.map(function(it,i){
-        var rem=Math.max(0,(it.qty||0)-(it.delivered||0));
-        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #FCA5A5;border-radius:9px;background:#FFF5F5;opacity:0.75;"><input type="hidden" id="tc_item_chk_'+i+'" value="0"><div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:#991B1B;">'+(it.pileType||'-')+'</div><div style="font-size:10px;color:#64748B;margin-top:1px;">ต้องส่ง <span style="color:#DC2626;font-weight:700;">'+rem+' ต้น</span></div></div><div style="display:flex;align-items:center;gap:4px;"><input type="number" id="tc_item_qty_'+i+'" value="0" min="0" max="0" disabled style="width:60px;padding:5px 8px;border:1.5px solid #FCA5A5;border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#FEE2E2;color:#991B1B;cursor:not-allowed;"><span style="font-size:11px;color:#64748B;">ต้น</span></div></div>';
-      }).join('');
-      listEl.dataset.cpCount=String(_oi.length);
-    } else {
-      listEl.innerHTML='<div style="padding:14px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;text-align:center;"><div style="font-size:14px;font-weight:800;color:#92400E;">⚠️ ยังไม่มีเสาลูกค้าสำหรับออเดอร์นี้</div></div>';
-      listEl.dataset.cpCount='0';
-    }
-    document.getElementById('tc_items_block').style.display='block';
+    listEl.dataset.cpCount = '0';
+    listEl.innerHTML = `<div style="padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;text-align:center;">
+      <div style="font-size:14px;font-weight:800;color:#92400E;margin-bottom:4px;">⚠️ ยังไม่มีเสาลูกค้าสำหรับออเดอร์นี้</div>
+      <div style="font-size:12px;color:#78350F;">กรุณาไปที่หน้าสต็อก → เปิดรายละเอียดกอง → กด <strong>"ย้ายกลับ"</strong> หรือ <strong>"ส่ง"</strong> เพื่อโอนเสาเข้าช่องลูกค้าก่อน</div>
+    </div>`;
+    document.getElementById('tc_items_block').style.display = 'block';
   }
 }
 
@@ -2033,6 +2034,13 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
 
+        <!-- Pile Prices -->
+        <div class="settings-block" style="margin-bottom:16px;">
+          <table class="price-table" id="priceTable" style="display:none;">
+            <tbody id="priceTableBody"></tbody>
+          </table>
+        </div>
+
         <!-- Stock thresholds -->
         <div class="settings-block" style="margin-bottom:16px;">
           <div class="settings-block-title">⚠️ เกณฑ์แจ้งเตือนสต็อก</div>
@@ -2415,11 +2423,14 @@ document.addEventListener('DOMContentLoaded', () => {
     <span class="mob-nav-icon">📋</span><span>สถานะ</span>
     <div class="mob-nav-badge" id="mnav-status-badge"></div>
   </div>
-  <div class="mob-nav-item" id="mnav-transport" onclick="goTab('transport',document.getElementById('nav-transport'))">
-    <span class="mob-nav-icon">🚛</span><span>ขนส่ง</span>
+  <div class="mob-nav-item sale-only" id="mnav-proderr" onclick="goTab('proderr',document.getElementById('nav-proderr'))">
+    <span class="mob-nav-icon">🏭</span><span>ผลิต</span>
   </div>
   <div class="mob-nav-item" id="mnav-stock" onclick="goTab('stock',document.getElementById('nav-stock'))">
     <span class="mob-nav-icon">📦</span><span>สต็อก</span>
+  </div>
+  <div class="mob-nav-item" id="mnav-transport" onclick="goTab('transport',document.getElementById('nav-transport'))">
+    <span class="mob-nav-icon">🚛</span><span>ขนส่ง</span>
   </div>
   <div class="mob-nav-item" id="mnav-more" onclick="openMobMore()">
     <span class="mob-nav-icon">⋯</span><span>เพิ่มเติม</span>
@@ -2488,7 +2499,9 @@ function getRoleLabel(role) {
 function applyRole(role) {
   _currentRole = role;
   document.body.classList.remove('role-admin','role-manager','role-sale');
-  document.body.classList.add('role-' + role);
+  const _builtinRoles = ['admin','manager','sale'];
+  document.body.classList.add('role-' + (_builtinRoles.includes(role) ? role : 'sale'));
+  if (!_builtinRoles.includes(role)) document.body.classList.add('role-custom');
   const badge = document.getElementById('hdrRoleBadge');
   if (badge) {
     badge.textContent   = getRoleLabel(role);
@@ -2616,7 +2629,6 @@ const K_VAR_FB    = 'sud/stockVariants';
 const K_CUST_POLES = 'sud/customerPoles';
 const K_PROD_LOG    = 'sud/prodLog';
 const K_PROD_ACTIVE = 'sud/prodActive';
-const K_TC_EVENTS   = 'sud/tcEvents';
 
 // ── In-Memory Cache (sync'd from Firebase realtime) ──────────
 const _cache = {
@@ -2691,12 +2703,6 @@ function startFirebaseListeners() {
     if (_fbReady) { renderActiveProd(); renderProdSection(); }
     else checkDone();
   });
-  db.ref(K_TC_EVENTS).on('value', snap => {
-    const v = snap.val();
-    _cache.tcEvents = v ? Object.values(v).sort((a,b) => (b._id||0)-(a._id||0)) : [];
-    if (_fbReady) { if(typeof tcRender==='function') tcRender(); }
-    else checkDone();
-  });
   db.ref(K_STOCK).on('value', snap => {
     _cache.stock = snap.val() || {};
     if (_fbReady) { renderStockCards(); renderOrders(); }
@@ -2718,6 +2724,12 @@ function startFirebaseListeners() {
     const v = snap.val();
     _cache.config = v ? { ...DEFAULT_CONFIG, ...v } : { ...DEFAULT_CONFIG };
     if (_fbReady) { populateAllDropdowns(); applyBranding(); }
+    else checkDone();
+  });
+  db.ref(K_TC_EVENTS).on('value', snap => {
+    const v = snap.val();
+    _cache.tcEvents = v ? Object.values(v).sort((a,b) => (b._id||0)-(a._id||0)) : [];
+    if (_fbReady) { if(typeof tcRender==='function') tcRender(); }
     else checkDone();
   });
   db.ref(K_HISTORY).on('value', snap => {
@@ -4445,8 +4457,14 @@ function renderHistorySummary() {
     const rowBg = o._done ? 'background:#F0FDF4;' : '';
     const span = items.length;
     items.forEach((it, idx) => {
-      var _sc=[it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EDE9FE;color:#5B21B6;border-radius:4px;padding:1px 5px;font-weight:700;">📐 '+it.length+'</span>':'',it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1E40AF;border-radius:4px;padding:1px 5px;font-weight:700;">🔗 '+it.weld+'</span>':'',it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">🔩 '+it.steel+'</span>':'',it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#DCFCE7;color:#166534;border-radius:4px;padding:1px 5px;font-weight:700;">🪡 '+it.wire+'</span>':'',it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border-radius:4px;padding:1px 5px;font-weight:700;">📝 '+it.extra+'</span>':''].filter(Boolean).join(' ');
-      var label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">'+_sc+'</div>':'');
+      const _sc=[
+        it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;font-weight:700;">&#128208; '+it.length+'</span>':'',
+        it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;font-weight:700;">&#128293; '+it.weld+'</span>':'',
+        it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;border-radius:4px;padding:1px 5px;font-weight:700;">&#129525; '+it.steel+'</span>':'',
+        it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#FAF5FF;color:#7E22CE;border:1px solid #D8B4FE;border-radius:4px;padding:1px 5px;font-weight:700;">&#129526; '+it.wire+'</span>':'',
+        it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;border-radius:4px;padding:1px 5px;font-weight:700;">+ '+it.extra+'</span>':'',
+      ].filter(Boolean).join(' ');
+      const label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">'+_sc+'</div>':'');
       const del = it.delivered || 0;
       const qty = it.qty || 0;
       const prod = getTotalProduced(o.orderNum, it.pileType);
@@ -5404,9 +5422,10 @@ function saveRolePerms() {
     });
   });
   // Save roles list too
-  var rolesDataArr = _permRoles.filter(function(r){return !r.locked;}).map(function(r){return {id:r.id,label:r.label,color:r.color};});
-  var rolesPayload = {}; rolesDataArr.forEach(function(r,i){rolesPayload[i]=r;}); if(!rolesDataArr.length) rolesPayload=null;
+  const rolesDataArr = _permRoles.filter(r => !r.locked).map(r => ({ id:r.id, label:r.label, color:r.color }));
   const db = firebase.database();
+  var rolesPayload = null;
+  if (rolesDataArr.length) { rolesPayload = {}; rolesDataArr.forEach((r,i) => { rolesPayload[i] = r; }); }
   Promise.all([
     db.ref('/config/rolePerms').set(newPerms),
     db.ref('/config/customRoles').set(rolesPayload),
@@ -5431,11 +5450,11 @@ function loadRolePerms(cb) {
   ]).then(([permSnap, rolesSnap]) => {
     if (permSnap.exists()) _savedRolePerms = permSnap.val();
     if (rolesSnap.exists()) {
-      var raw = rolesSnap.val();
-      var custom = Array.isArray(raw) ? raw : Object.values(raw);
+      const raw = rolesSnap.val();
+      const custom = Array.isArray(raw) ? raw : Object.values(raw);
       if (custom.length) {
-        var lockedRoles = _permRoles.filter(function(r){return r.locked;});
-        _permRoles = lockedRoles.concat(custom);
+        const lockedRoles = _permRoles.filter(r => r.locked);
+        _permRoles = [...lockedRoles, ...custom];
       }
     }
     if (cb) cb();
@@ -5481,45 +5500,41 @@ function removeTagFromEl(btn) {
   renderTags(TAG_MAP[type].container, _cfg[TAG_MAP[type].key], type);
   autoSaveSettings();
 }
-function renderTags(containerId, arr, type) {
-  var el = document.getElementById(containerId); if (!el) return;
-  var drag = (type === 'pile');
-  el.innerHTML = arr.map(function(v, i) {
-    var dAttr = drag ? ' draggable="true"' : '';
-    var grip = drag ? '<span style="font-size:10px;color:#94A3B8;margin-right:3px;user-select:none;">&#10003;</span>' : '';
-    return '<div class="tag-item" data-tagtype="' + type + '" data-tagidx="' + i + '"' + dAttr + '>' + grip + v + '<button class="tag-remove" onclick="removeTagFromEl(this)">&#215;</button></div>';
-  }).join('');
-  if (drag) _initTagDrag(el, type);
-}
-var _dragSrc = null;
-function _initTagDrag(container, type) {
-  container.querySelectorAll('.tag-item').forEach(function(item) {
-    item.addEventListener('dragstart', function(e) { _dragSrc = item; item.style.opacity = '0.4'; e.dataTransfer.effectAllowed = 'move'; });
-    item.addEventListener('dragend',   function() { if (_dragSrc) _dragSrc.style.opacity = ''; container.querySelectorAll('.tag-item').forEach(function(t) { t.classList.remove('drag-over'); }); });
-    item.addEventListener('dragover',  function(e) { e.preventDefault(); item.classList.add('drag-over'); });
-    item.addEventListener('dragleave', function() { item.classList.remove('drag-over'); });
+function _initTagDrag(el, type) {
+  var items = el.querySelectorAll('.tag-item[draggable]');
+  var dragSrc = null;
+  items.forEach(function(item) {
+    item.addEventListener('dragstart', function(e) { dragSrc = item; e.dataTransfer.effectAllowed = 'move'; item.style.opacity = '0.4'; });
+    item.addEventListener('dragend', function() { item.style.opacity = ''; });
+    item.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; });
     item.addEventListener('drop', function(e) {
-      e.preventDefault(); item.classList.remove('drag-over');
-      if (!_dragSrc || _dragSrc === item) return;
-      var from = parseInt(_dragSrc.dataset.tagidx), to = parseInt(item.dataset.tagidx);
-      if (!_cfg) return;
-      var arr = _cfg[TAG_MAP[type].key]; var mv = arr.splice(from, 1)[0]; arr.splice(to, 0, mv);
+      e.stopPropagation(); e.preventDefault();
+      if (dragSrc === item) return;
+      var key = TAG_MAP[type].key;
+      var fromIdx = parseInt(dragSrc.dataset.tagidx), toIdx = parseInt(item.dataset.tagidx);
+      var arr = _cfg[key];
+      var moved = arr.splice(fromIdx, 1)[0];
+      arr.splice(toIdx, 0, moved);
       renderTags(TAG_MAP[type].container, arr, type);
       autoSaveSettings();
     });
   });
 }
-function autoSaveSettings() {
-  if (_currentRole !== 'admin') return;
-  if (!_cfg) _cfg = JSON.parse(JSON.stringify(getConfig()));
-  saveConfigData(_cfg); populateAllDropdowns();
-  showToast('บันทึกอัตโนมัติแล้ว');
+function renderTags(containerId, arr, type) {
+  var el = document.getElementById(containerId); if (!el) return;
+  var drag = (type === 'pile');
+  el.innerHTML = arr.map(function(v, i) {
+    var dAttr = drag ? ' draggable="true"' : '';
+    var grip = drag ? '<span style="cursor:grab;margin-right:4px;color:#94A3B8;font-size:12px;">&#8801;</span>' : '';
+    return '<div class="tag-item" data-tagtype="' + type + '" data-tagidx="' + i + '"' + dAttr + '>' + grip + v + '<button class="tag-remove" onclick="removeTagFromEl(this)">&#215;</button></div>';
+  }).join('');
+  if (drag) _initTagDrag(el, type);
 }
 function addTag(type) {
-  var inp = document.getElementById('inp_' + type), val = inp ? inp.value.trim() : '';
+  const inp = document.getElementById('inp_' + type), val = inp ? inp.value.trim() : '';
   if (!val) return;
   if (!_cfg) _cfg = JSON.parse(JSON.stringify(getConfig()));
-  var key = TAG_MAP[type].key;
+  const key = TAG_MAP[type].key;
   if (!_cfg[key].includes(val)) { _cfg[key].push(val); renderTags(TAG_MAP[type].container, _cfg[key], type); autoSaveSettings(); }
   inp.value = '';
 }
@@ -5528,6 +5543,12 @@ function removeTag(type, idx) {
   _cfg[TAG_MAP[type].key].splice(idx, 1);
   renderTags(TAG_MAP[type].container, _cfg[TAG_MAP[type].key], type);
   autoSaveSettings();
+}
+function autoSaveSettings() {
+  if (_currentRole !== 'admin') return;
+  if (!_cfg) _cfg = JSON.parse(JSON.stringify(getConfig()));
+  saveConfigData(_cfg); populateAllDropdowns();
+  showToast('💾 บันทึกอัตโนมัติแล้ว');
 }
 
 function saveSettings() {
@@ -5590,13 +5611,15 @@ function umRefresh() {
     users.forEach(u => {
       const isMe = _currentUser && u.uid === _currentUser.uid;
       const addedAt = u.addedAt ? new Date(u.addedAt).toLocaleDateString('th-TH') : '-';
+      const _allRoleOpts = [
+        {value:'sale',label:'💼 Sale'},{value:'manager',label:'📊 Manager'},{value:'admin',label:'👑 Admin'},
+        ...(_permRoles||[]).filter(r=>!r.locked).map(r=>({value:r.id,label:(r.label||r.id)}))
+      ];
       html += `<tr>
         <td><strong>${u.email||'-'}</strong>${isMe ? ' <span style="font-size:10px;color:#3B82F6;">(คุณ)</span>' : ''}</td>
         <td>
           <select class="role-sel-um" onchange="umChangeRole('${u.uid}', this.value)" ${isMe?'disabled':''}>
-            <option value="sale"    ${u.role==='sale'   ?'selected':''}>💼 Sale</option>
-            <option value="manager" ${u.role==='manager'?'selected':''}>📊 Manager</option>
-            <option value="admin"   ${u.role==='admin'  ?'selected':''}>👑 Admin</option>
+            ${_allRoleOpts.map(r=>`<option value="${r.value}" ${u.role===r.value?'selected':''}>${r.label}</option>`).join('')}
           </select>
         </td>
         <td style="font-size:11px;color:#64748B;">${u.addedBy||'-'}</td>
@@ -6889,8 +6912,6 @@ function pcRender(){
     const net=l.qtyNet||0,def=l.qtyDefect||0;
     return '<div class="tc-entry" style="border-left:4px solid '+PC_DOT+';"><div class="tc-entry-icon" style="background:#EDE9FE;">🏭</div><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-size:13px;font-weight:900;color:#5B21B6;">'+(l.orderNum||'STOCK')+'</span><span style="font-size:10px;font-weight:700;background:#EDE9FE;color:#5B21B6;border-radius:20px;padding:2px 10px;">🏭 ผลิต</span></div><div style="font-weight:700;font-size:13px;color:#1E293B;">'+(l.pileType||'-')+(l.length&&l.length!=='-'?' · '+l.length:'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;font-size:11px;"><span style="background:#F0FDF4;color:#166534;border-radius:5px;padding:2px 7px;font-weight:700;">✅ ได้ '+net+' ต้น</span>'+(def>0?'<span style="background:#FEE2E2;color:#DC2626;border-radius:5px;padding:2px 7px;font-weight:700;">❌ เสีย '+def+' ต้น</span>':'')+(l.lane?'<span style="background:#F8FAFC;color:#374151;border-radius:5px;padding:2px 7px;">เลน '+l.lane+'</span>':'')+'</div></div></div>';
   }).join(''):'<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ไม่มีบันทึกผลิตวันนี้</div>';
-  const pcGrid=document.getElementById('pcGrid');
-  if(pcGrid){Object.keys(bd).forEach(ds=>{const dayNet=bd[ds].reduce((s,l)=>s+(l.qtyNet||0),0);if(!dayNet)return;pcGrid.querySelectorAll('.tc-day').forEach(cell=>{const oc=cell.getAttribute('onclick')||'';if(oc.includes("'"+ds+"'")||oc.includes('"'+ds+'"')){const isSel=cell.classList.contains('is-selected');const b=document.createElement('div');b.style.cssText='font-size:10px;font-weight:900;color:'+(isSel?'rgba(255,255,255,.9)':'#5B21B6')+';background:'+(isSel?'rgba(255,255,255,.2)':'#EDE9FE')+';border-radius:4px;padding:1px 5px;margin-top:2px;text-align:center;';b.textContent=dayNet+' ต้น';cell.appendChild(b);}});});}
   panel.innerHTML='<div id="pcd-'+_pcSel+'" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;"><div class="card-header" style="background:linear-gradient(135deg,#EDE9FE,#F5F3FF);"><div style="flex:1;"><div class="card-title" style="color:#5B21B6;">'+_dayLabel(_pcSel)+'</div><div class="card-sub">'+(list.length?list.length+' รายการผลิต':'ไม่มีรายการ')+'</div></div></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">'+body+'</div></div>';
 }
 
