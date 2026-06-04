@@ -1410,11 +1410,11 @@ function tcSelectOrder(orderNum) {
     if(_oi.length){
       listEl.innerHTML='<div style="padding:8px 12px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:8px;font-size:12px;color:#92400E;margin-bottom:8px;">⚠️ ยังไม่มีเสาในช่องลูกค้า — ยังไม่สามารถระบุจำนวนส่งได้</div>'+_oi.map((it,i)=>{
         const rem=Math.max(0,(it.qty||0)-(it.delivered||0));
-        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #FCA5A5;border-radius:9px;background:#FFF5F5;opacity:0.75;"><input type="hidden" id="tc_item_chk_'+i+'" value="0"><div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:#991B1B;">'+(it.pileType||'-')+'</div><div style="font-size:10px;color:#64748B;margin-top:1px;">ต้องส่ง <span style="color:#DC2626;font-weight:700;">'+rem+' ต้น</span> · <span style="color:#94A3B8;">สต็อก: 0 ต้น</span></div></div><div style="display:flex;align-items:center;gap:4px;"><input type="number" id="tc_item_qty_'+i+'" value="0" min="0" max="0" disabled style="width:60px;padding:5px 8px;border:1.5px solid #FCA5A5;border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#FEE2E2;color:#991B1B;cursor:not-allowed;"><span style="font-size:11px;color:#64748B;">ต้น</span></div></div>';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #FCA5A5;border-radius:9px;background:#FFF5F5;opacity:0.75;"><input type="hidden" id="tc_item_chk_'+i+'" value="0"><div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:#991B1B;">'+(it.pileType||'-')+'</div><div style="font-size:10px;color:#64748B;margin-top:1px;">ต้องส่ง <span style="color:#DC2626;font-weight:700;">'+rem+' ต้น</span></div></div><div style="display:flex;align-items:center;gap:4px;"><input type="number" id="tc_item_qty_'+i+'" value="0" min="0" max="0" disabled style="width:60px;padding:5px 8px;border:1.5px solid #FCA5A5;border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#FEE2E2;color:#991B1B;cursor:not-allowed;"><span style="font-size:11px;color:#64748B;">ต้น</span></div></div>';
       }).join('');
       listEl.dataset.cpCount=String(_oi.length);
     } else {
-      listEl.innerHTML='<div style="padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;text-align:center;"><div style="font-size:14px;font-weight:800;color:#92400E;">⚠️ ยังไม่มีเสาลูกค้าสำหรับออเดอร์นี้</div></div>';
+      listEl.innerHTML='<div style="padding:14px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;text-align:center;"><div style="font-size:14px;font-weight:800;color:#92400E;">⚠️ ยังไม่มีเสาลูกค้าสำหรับออเดอร์นี้</div></div>';
       listEl.dataset.cpCount='0';
     }
     document.getElementById('tc_items_block').style.display='block';
@@ -4448,8 +4448,8 @@ function renderHistorySummary() {
     const rowBg = o._done ? 'background:#F0FDF4;' : '';
     const span = items.length;
     items.forEach((it, idx) => {
-      const _sc=[it.length&&it.length!=='-'?`<span style="font-size:10px;background:#EDE9FE;color:#5B21B6;border-radius:4px;padding:1px 5px;font-weight:700;">📐 ${it.length}</span>`:'',it.weld&&it.weld!=='-'?`<span style="font-size:10px;background:#DBEAFE;color:#1E40AF;border-radius:4px;padding:1px 5px;font-weight:700;">🔗 ${it.weld}</span>`:'',it.steel&&it.steel!=='-'?`<span style="font-size:10px;background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">🔩 ${it.steel}</span>`:'',it.wire&&it.wire!=='-'?`<span style="font-size:10px;background:#DCFCE7;color:#166534;border-radius:4px;padding:1px 5px;font-weight:700;">🪡 ${it.wire}</span>`:'',it.extra&&it.extra!=='-'?`<span style="font-size:10px;background:#F1F5F9;color:#475569;border-radius:4px;padding:1px 5px;font-weight:700;">📝 ${it.extra}</span>`:''].filter(Boolean).join(' ');
-      const label=`<div style="font-size:12px;font-weight:700;">${it.pileType}</div>${_sc?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">${_sc}</div>`:''}`;
+      const _sc=[it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EDE9FE;color:#5B21B6;border-radius:4px;padding:1px 5px;font-weight:700;">📐 '+it.length+'</span>':'',it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1E40AF;border-radius:4px;padding:1px 5px;font-weight:700;">🔗 '+it.weld+'</span>':'',it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">🔩 '+it.steel+'</span>':'',it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#DCFCE7;color:#166534;border-radius:4px;padding:1px 5px;font-weight:700;">🪡 '+it.wire+'</span>':'',it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border-radius:4px;padding:1px 5px;font-weight:700;">📝 '+it.extra+'</span>':''].filter(Boolean).join(' ');
+      const label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">'+_sc+'</div>':'');
       const del = it.delivered || 0;
       const qty = it.qty || 0;
       const prod = getTotalProduced(o.orderNum, it.pileType);
@@ -5408,8 +5408,7 @@ function saveRolePerms() {
   });
   // Save roles list too
   const rolesDataArr = _permRoles.filter(r => !r.locked).map(r => ({ id:r.id, label:r.label, color:r.color }));
-  // Firebase converts JS arrays to objects — store as keyed object to preserve
-  const rolesPayload = rolesDataArr.length > 0 ? Object.fromEntries(rolesDataArr.map((r,i)=>[i,r])) : null;
+  var rolesPayload = rolesDataArr.length > 0 ? Object.fromEntries(rolesDataArr.map(function(r,i){return [i,r];})) : null;
   const db = firebase.database();
   Promise.all([
     db.ref('/config/rolePerms').set(newPerms),
@@ -5436,7 +5435,6 @@ function loadRolePerms(cb) {
     if (permSnap.exists()) _savedRolePerms = permSnap.val();
     if (rolesSnap.exists()) {
       const raw = rolesSnap.val();
-      // Firebase may return object instead of array — handle both
       const custom = Array.isArray(raw) ? raw : Object.values(raw);
       if (custom.length) {
         const lockedRoles = _permRoles.filter(r => r.locked);
@@ -5481,24 +5479,26 @@ function updatePricePreview(name, val) {
 function renderTags(containerId, arr, type) {
   const el = document.getElementById(containerId); if (!el) return;
   const drag = (type === 'pile');
-  el.innerHTML = arr.map((v,i) => '<div class="tag-item"'+(drag?' draggable="true" data-idx="'+i+'" style="cursor:grab;"':'')+'>'+
-    (drag?'<span style="font-size:10px;color:#94A3B8;margin-right:3px;user-select:none;">⠿</span>':'')+
-    v+'<button class="tag-remove" onclick="removeTag(''+type+'','+i+')">×</button></div>').join('');
+  el.innerHTML = arr.map(function(v,i){
+    var grip = drag ? '<span style="font-size:10px;color:#94A3B8;margin-right:3px;user-select:none;">⠿</span>' : '';
+    var dAttr = drag ? ' draggable="true" data-idx="'+i+'" style="cursor:grab;"' : '';
+    return '<div class="tag-item"'+dAttr+'>'+grip+v+'<button class="tag-remove" onclick="removeTag(''+type+'','+i+')">×</button></div>';
+  }).join('');
   if (drag) _initTagDrag(el, type);
 }
-let _dragSrc = null;
+var _dragSrc = null;
 function _initTagDrag(container, type) {
-  container.querySelectorAll('.tag-item').forEach(item => {
-    item.addEventListener('dragstart', e => { _dragSrc=item; item.style.opacity='0.4'; e.dataTransfer.effectAllowed='move'; });
-    item.addEventListener('dragend',   () => { if(_dragSrc)_dragSrc.style.opacity=''; container.querySelectorAll('.tag-item').forEach(t=>t.classList.remove('drag-over')); });
-    item.addEventListener('dragover',  e => { e.preventDefault(); item.classList.add('drag-over'); });
-    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
-    item.addEventListener('drop', e => {
+  container.querySelectorAll('.tag-item').forEach(function(item){
+    item.addEventListener('dragstart', function(e){ _dragSrc=item; item.style.opacity='0.4'; e.dataTransfer.effectAllowed='move'; });
+    item.addEventListener('dragend',   function(){ if(_dragSrc)_dragSrc.style.opacity=''; container.querySelectorAll('.tag-item').forEach(function(t){t.classList.remove('drag-over');}); });
+    item.addEventListener('dragover',  function(e){ e.preventDefault(); item.classList.add('drag-over'); });
+    item.addEventListener('dragleave', function(){ item.classList.remove('drag-over'); });
+    item.addEventListener('drop', function(e){
       e.preventDefault(); item.classList.remove('drag-over');
       if(!_dragSrc||_dragSrc===item) return;
-      const from=parseInt(_dragSrc.dataset.idx), to=parseInt(item.dataset.idx);
+      var from=parseInt(_dragSrc.dataset.idx), to=parseInt(item.dataset.idx);
       if(!_cfg) return;
-      const arr=_cfg[TAG_MAP[type].key]; const [mv]=arr.splice(from,1); arr.splice(to,0,mv);
+      var arr=_cfg[TAG_MAP[type].key]; var mv=arr.splice(from,1)[0]; arr.splice(to,0,mv);
       renderTags(TAG_MAP[type].container, arr, type);
       autoSaveSettings();
     });
@@ -5511,10 +5511,10 @@ function autoSaveSettings() {
   showToast('💾 บันทึกอัตโนมัติแล้ว');
 }
 function addTag(type) {
-  const inp=document.getElementById('inp_'+type), val=inp?inp.value.trim():'';
+  var inp=document.getElementById('inp_'+type), val=inp?inp.value.trim():'';
   if(!val) return;
   if(!_cfg) _cfg=JSON.parse(JSON.stringify(getConfig()));
-  const key=TAG_MAP[type].key;
+  var key=TAG_MAP[type].key;
   if(!_cfg[key].includes(val)){ _cfg[key].push(val); renderTags(TAG_MAP[type].container,_cfg[key],type); autoSaveSettings(); }
   inp.value='';
 }
