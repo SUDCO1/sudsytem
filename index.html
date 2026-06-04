@@ -3467,6 +3467,7 @@ function renderOrders() {
             it.weld   && it.weld!=='-'   ? '🔗 '+it.weld   : null,
             it.steel  && it.steel!=='-'  ? '🔩 '+it.steel  : null,
             it.wire   && it.wire!=='-'   ? '〰 '+it.wire   : null,
+            it.extra  && it.extra!=='-'  ? '📝 '+it.extra  : null,
           ].filter(Boolean);
           const lenDisp     = specParts.length ? specParts.join('<br>') : '<span style="color:#CBD5E1;">—</span>';
           const valDisp     = o.orderValue > 0 ? o.orderValue.toLocaleString('th-TH')+' ฿' : '—';
