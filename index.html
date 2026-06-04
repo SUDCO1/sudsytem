@@ -1174,7 +1174,7 @@ function tcRender() {
     html += `<div class="${cls}" onclick="tcToggleDay('${ds}')"><div class="tc-day-num">${d}${de.length>0&&!iS?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3B82F6;vertical-align:middle;margin-left:4px;margin-bottom:1px;"></span>`:''}${iS?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.7);vertical-align:middle;margin-left:4px;margin-bottom:1px;"></span>`:''}</div>${chips}${more}</div>`;
   }
   document.getElementById('tcGrid').innerHTML = html;
-  (function(){const g=document.getElementById('tcGrid');if(!g)return;const m={};evs.forEach(e=>{if(!e.timeOut)return;if(!m[e.date])m[e.date]={trips:0,piles:0};m[e.date].trips++;(e.selectedItems||[]).forEach(si=>{m[e.date].piles+=(parseInt(si.qty)||0);});});g.querySelectorAll('.tc-day').forEach(cell=>{const r=(cell.getAttribute('onclick')||'').match(/tcToggleDay..([^'"]+)/);if(!r)return;const info=m[r[1]];if(!info)return;const isSel=cell.classList.contains('is-selected');const b=document.createElement('div');b.style.cssText='font-size:10px;font-weight:900;margin-top:3px;text-align:center;border-radius:4px;padding:1px 5px;background:'+(isSel?'rgba(255,255,255,0.2)':'#DBEAFE')+';color:'+(isSel?'rgba(255,255,255,0.9)':'#1E40AF')+';';b.textContent=info.trips+' รอบ / '+info.piles+' ต้น';cell.appendChild(b);});})();
+  (function(){var g=document.getElementById('tcGrid');if(!g)return;var m={};evs.forEach(function(e){if(!e.timeOut)return;if(!m[e.date])m[e.date]={trips:0,piles:0};m[e.date].trips++;(e.selectedItems||[]).forEach(function(si){m[e.date].piles+=(parseInt(si.qty)||0);});});g.querySelectorAll('.tc-day').forEach(function(cell){var r=(cell.getAttribute('onclick')||'').match(/tcToggleDay..([^'"]+)/);if(!r)return;var info=m[r[1]];if(!info)return;var isSel=cell.classList.contains('is-selected');var b=document.createElement('div');b.style.cssText='font-size:10px;font-weight:900;margin-top:3px;text-align:center;border-radius:4px;padding:1px 5px;background:'+(isSel?'rgba(255,255,255,0.2)':'#DBEAFE')+';color:'+(isSel?'rgba(255,255,255,0.9)':'#1E40AF')+';';b.textContent=info.trips+' รอบ / '+info.piles+' ต้น';cell.appendChild(b);});})();
   tcRenderAllDays()
 }
 
@@ -1370,14 +1370,11 @@ function tcOrderSearch(q) {
     const items = getOrderItems(o);
     const piles = items.map(it=>it.pileType).join(', ');
     const hasCP = allCp.some(cp => cp.orderNum === o.orderNum && cp.online !== false);
-    const noStock=!hasCP;
-    return `<div onclick="tcSelectOrder('${(o.orderNum||'').replace(/'/g,"\'")}');event.stopPropagation();"
-      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background 0.1s;"
-      onmouseenter="this.style.background='#EFF6FF'" onmouseleave="this.style.background=''">
-      <div style="font-size:13px;font-weight:700;color:${noStock?'#94A3B8':'#1E40AF'};">${o.orderNum}${noStock?' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;">ยังไม่มีเสา</span>':''}</div>
-      <div style="font-size:11px;color:${noStock?'#94A3B8':'#374151'};margin-top:1px;">👤 ${o.customer||'-'}${o.tel?' · 📞 '+o.tel:''}</div>
-      <div style="font-size:10px;color:${noStock?'#CBD5E1':'#64748B'};margin-top:1px;">📦 ${piles}</div>
-    </div>`;  }).join('');
+    var noStock=!hasCP;
+    return '<div onclick="tcSelectOrder(this.dataset.onum);event.stopPropagation();" data-onum="'+((o.orderNum||'')).replace(/"/g,'&quot;')+'" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background 0.1s;" onmouseenter="this.style.background='#EFF6FF'" onmouseleave="this.style.background=''">'
+      +'<div style="font-size:13px;font-weight:700;color:'+(noStock?'#94A3B8':'#1E40AF')+';">'+o.orderNum+(noStock?' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;">ยังไม่มีเสา</span>':'')+'</div>'
+      +'<div style="font-size:11px;color:'+(noStock?'#94A3B8':'#374151')+';margin-top:1px;">👤 '+(o.customer||'-')+(o.tel?' · 📞 '+o.tel:'')+'</div>'
+      +'<div style="font-size:10px;color:'+(noStock?'#CBD5E1':'#64748B')+';margin-top:1px;">📦 '+piles+'</div></div>';  }).join('');
   dd.style.display = 'block';
 }
 
@@ -1406,10 +1403,10 @@ function tcSelectOrder(orderNum) {
     document.getElementById('tc_items_block').style.display = 'block';
   } else {
     listEl.dataset.cpMode = 'false';
-    const _oi=getOrderItems(o);
+    var _oi=getOrderItems(o);
     if(_oi.length){
-      listEl.innerHTML='<div style="padding:8px 12px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:8px;font-size:12px;color:#92400E;margin-bottom:8px;">⚠️ ยังไม่มีเสาในช่องลูกค้า — ยังไม่สามารถระบุจำนวนส่งได้</div>'+_oi.map((it,i)=>{
-        const rem=Math.max(0,(it.qty||0)-(it.delivered||0));
+      listEl.innerHTML='<div style="padding:8px 12px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:8px;font-size:12px;color:#92400E;margin-bottom:8px;">⚠️ ยังไม่มีเสาในช่องลูกค้า — ยังไม่สามารถระบุจำนวนส่งได้</div>'+_oi.map(function(it,i){
+        var rem=Math.max(0,(it.qty||0)-(it.delivered||0));
         return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #FCA5A5;border-radius:9px;background:#FFF5F5;opacity:0.75;"><input type="hidden" id="tc_item_chk_'+i+'" value="0"><div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:#991B1B;">'+(it.pileType||'-')+'</div><div style="font-size:10px;color:#64748B;margin-top:1px;">ต้องส่ง <span style="color:#DC2626;font-weight:700;">'+rem+' ต้น</span></div></div><div style="display:flex;align-items:center;gap:4px;"><input type="number" id="tc_item_qty_'+i+'" value="0" min="0" max="0" disabled style="width:60px;padding:5px 8px;border:1.5px solid #FCA5A5;border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#FEE2E2;color:#991B1B;cursor:not-allowed;"><span style="font-size:11px;color:#64748B;">ต้น</span></div></div>';
       }).join('');
       listEl.dataset.cpCount=String(_oi.length);
@@ -4448,8 +4445,8 @@ function renderHistorySummary() {
     const rowBg = o._done ? 'background:#F0FDF4;' : '';
     const span = items.length;
     items.forEach((it, idx) => {
-      const _sc=[it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EDE9FE;color:#5B21B6;border-radius:4px;padding:1px 5px;font-weight:700;">📐 '+it.length+'</span>':'',it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1E40AF;border-radius:4px;padding:1px 5px;font-weight:700;">🔗 '+it.weld+'</span>':'',it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">🔩 '+it.steel+'</span>':'',it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#DCFCE7;color:#166534;border-radius:4px;padding:1px 5px;font-weight:700;">🪡 '+it.wire+'</span>':'',it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border-radius:4px;padding:1px 5px;font-weight:700;">📝 '+it.extra+'</span>':''].filter(Boolean).join(' ');
-      const label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">'+_sc+'</div>':'');
+      var _sc=[it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EDE9FE;color:#5B21B6;border-radius:4px;padding:1px 5px;font-weight:700;">📐 '+it.length+'</span>':'',it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1E40AF;border-radius:4px;padding:1px 5px;font-weight:700;">🔗 '+it.weld+'</span>':'',it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">🔩 '+it.steel+'</span>':'',it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#DCFCE7;color:#166534;border-radius:4px;padding:1px 5px;font-weight:700;">🪡 '+it.wire+'</span>':'',it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border-radius:4px;padding:1px 5px;font-weight:700;">📝 '+it.extra+'</span>':''].filter(Boolean).join(' ');
+      var label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">'+_sc+'</div>':'');
       const del = it.delivered || 0;
       const qty = it.qty || 0;
       const prod = getTotalProduced(o.orderNum, it.pileType);
@@ -5407,8 +5404,8 @@ function saveRolePerms() {
     });
   });
   // Save roles list too
-  const rolesDataArr = _permRoles.filter(r => !r.locked).map(r => ({ id:r.id, label:r.label, color:r.color }));
-  var rolesPayload = rolesDataArr.length > 0 ? Object.fromEntries(rolesDataArr.map(function(r,i){return [i,r];})) : null;
+  var rolesDataArr = _permRoles.filter(function(r){return !r.locked;}).map(function(r){return {id:r.id,label:r.label,color:r.color};});
+  var rolesPayload = {}; rolesDataArr.forEach(function(r,i){rolesPayload[i]=r;}); if(!rolesDataArr.length) rolesPayload=null;
   const db = firebase.database();
   Promise.all([
     db.ref('/config/rolePerms').set(newPerms),
@@ -5434,11 +5431,11 @@ function loadRolePerms(cb) {
   ]).then(([permSnap, rolesSnap]) => {
     if (permSnap.exists()) _savedRolePerms = permSnap.val();
     if (rolesSnap.exists()) {
-      const raw = rolesSnap.val();
-      const custom = Array.isArray(raw) ? raw : Object.values(raw);
+      var raw = rolesSnap.val();
+      var custom = Array.isArray(raw) ? raw : Object.values(raw);
       if (custom.length) {
-        const lockedRoles = _permRoles.filter(r => r.locked);
-        _permRoles = [...lockedRoles, ...custom];
+        var lockedRoles = _permRoles.filter(function(r){return r.locked;});
+        _permRoles = lockedRoles.concat(custom);
       }
     }
     if (cb) cb();
@@ -5476,52 +5473,60 @@ function updatePricePreview(name, val) {
   if (el) el.textContent = v > 0 ? '= '+v.toLocaleString('th-TH')+' ฿/ต้น' : '';
 }
 
+function removeTagFromEl(btn) {
+  var item = btn.parentNode;
+  var type = item.dataset.tagtype, idx = parseInt(item.dataset.tagidx);
+  if (!_cfg) return;
+  _cfg[TAG_MAP[type].key].splice(idx, 1);
+  renderTags(TAG_MAP[type].container, _cfg[TAG_MAP[type].key], type);
+  autoSaveSettings();
+}
 function renderTags(containerId, arr, type) {
-  const el = document.getElementById(containerId); if (!el) return;
-  const drag = (type === 'pile');
-  el.innerHTML = arr.map(function(v,i){
-    var grip = drag ? '<span style="font-size:10px;color:#94A3B8;margin-right:3px;user-select:none;">⠿</span>' : '';
-    var dAttr = drag ? ' draggable="true" data-idx="'+i+'" style="cursor:grab;"' : '';
-    return '<div class="tag-item"'+dAttr+'>'+grip+v+'<button class="tag-remove" onclick="removeTag(''+type+'','+i+')">×</button></div>';
+  var el = document.getElementById(containerId); if (!el) return;
+  var drag = (type === 'pile');
+  el.innerHTML = arr.map(function(v, i) {
+    var dAttr = drag ? ' draggable="true"' : '';
+    var grip = drag ? '<span style="font-size:10px;color:#94A3B8;margin-right:3px;user-select:none;">&#10003;</span>' : '';
+    return '<div class="tag-item" data-tagtype="' + type + '" data-tagidx="' + i + '"' + dAttr + '>' + grip + v + '<button class="tag-remove" onclick="removeTagFromEl(this)">&#215;</button></div>';
   }).join('');
   if (drag) _initTagDrag(el, type);
 }
 var _dragSrc = null;
 function _initTagDrag(container, type) {
-  container.querySelectorAll('.tag-item').forEach(function(item){
-    item.addEventListener('dragstart', function(e){ _dragSrc=item; item.style.opacity='0.4'; e.dataTransfer.effectAllowed='move'; });
-    item.addEventListener('dragend',   function(){ if(_dragSrc)_dragSrc.style.opacity=''; container.querySelectorAll('.tag-item').forEach(function(t){t.classList.remove('drag-over');}); });
-    item.addEventListener('dragover',  function(e){ e.preventDefault(); item.classList.add('drag-over'); });
-    item.addEventListener('dragleave', function(){ item.classList.remove('drag-over'); });
-    item.addEventListener('drop', function(e){
+  container.querySelectorAll('.tag-item').forEach(function(item) {
+    item.addEventListener('dragstart', function(e) { _dragSrc = item; item.style.opacity = '0.4'; e.dataTransfer.effectAllowed = 'move'; });
+    item.addEventListener('dragend',   function() { if (_dragSrc) _dragSrc.style.opacity = ''; container.querySelectorAll('.tag-item').forEach(function(t) { t.classList.remove('drag-over'); }); });
+    item.addEventListener('dragover',  function(e) { e.preventDefault(); item.classList.add('drag-over'); });
+    item.addEventListener('dragleave', function() { item.classList.remove('drag-over'); });
+    item.addEventListener('drop', function(e) {
       e.preventDefault(); item.classList.remove('drag-over');
-      if(!_dragSrc||_dragSrc===item) return;
-      var from=parseInt(_dragSrc.dataset.idx), to=parseInt(item.dataset.idx);
-      if(!_cfg) return;
-      var arr=_cfg[TAG_MAP[type].key]; var mv=arr.splice(from,1)[0]; arr.splice(to,0,mv);
+      if (!_dragSrc || _dragSrc === item) return;
+      var from = parseInt(_dragSrc.dataset.tagidx), to = parseInt(item.dataset.tagidx);
+      if (!_cfg) return;
+      var arr = _cfg[TAG_MAP[type].key]; var mv = arr.splice(from, 1)[0]; arr.splice(to, 0, mv);
       renderTags(TAG_MAP[type].container, arr, type);
       autoSaveSettings();
     });
   });
 }
 function autoSaveSettings() {
-  if (_currentRole!=='admin') return;
-  if (!_cfg) _cfg=JSON.parse(JSON.stringify(getConfig()));
+  if (_currentRole !== 'admin') return;
+  if (!_cfg) _cfg = JSON.parse(JSON.stringify(getConfig()));
   saveConfigData(_cfg); populateAllDropdowns();
-  showToast('💾 บันทึกอัตโนมัติแล้ว');
+  showToast('บันทึกอัตโนมัติแล้ว');
 }
 function addTag(type) {
-  var inp=document.getElementById('inp_'+type), val=inp?inp.value.trim():'';
-  if(!val) return;
-  if(!_cfg) _cfg=JSON.parse(JSON.stringify(getConfig()));
-  var key=TAG_MAP[type].key;
-  if(!_cfg[key].includes(val)){ _cfg[key].push(val); renderTags(TAG_MAP[type].container,_cfg[key],type); autoSaveSettings(); }
-  inp.value='';
+  var inp = document.getElementById('inp_' + type), val = inp ? inp.value.trim() : '';
+  if (!val) return;
+  if (!_cfg) _cfg = JSON.parse(JSON.stringify(getConfig()));
+  var key = TAG_MAP[type].key;
+  if (!_cfg[key].includes(val)) { _cfg[key].push(val); renderTags(TAG_MAP[type].container, _cfg[key], type); autoSaveSettings(); }
+  inp.value = '';
 }
 function removeTag(type, idx) {
-  if(!_cfg) return;
-  _cfg[TAG_MAP[type].key].splice(idx,1);
-  renderTags(TAG_MAP[type].container,_cfg[TAG_MAP[type].key],type);
+  if (!_cfg) return;
+  _cfg[TAG_MAP[type].key].splice(idx, 1);
+  renderTags(TAG_MAP[type].container, _cfg[TAG_MAP[type].key], type);
   autoSaveSettings();
 }
 
