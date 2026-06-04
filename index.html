@@ -1371,21 +1371,14 @@ function tcOrderSearch(q) {
     const items = getOrderItems(o);
     const piles = items.map(it=>it.pileType).join(', ');
     const hasCP = allCp.some(cp => cp.orderNum === o.orderNum && cp.online !== false);
-    if (hasCP) {
-      return `<div onclick="tcSelectOrder('${(o.orderNum||'').replace(/'/g,"\\'")}');event.stopPropagation();"
-        style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background 0.1s;"
-        onmouseenter="this.style.background='#EFF6FF'" onmouseleave="this.style.background=''">
-        <div style="font-size:13px;font-weight:700;color:#1E40AF;">${o.orderNum}</div>
-        <div style="font-size:11px;color:#374151;margin-top:1px;">👤 ${o.customer||'-'}${o.tel?' · 📞 '+o.tel:''}</div>
-        <div style="font-size:10px;color:#64748B;margin-top:1px;">📦 ${piles}</div>
-      </div>`;
-    } else {
-      return `<div style="padding:10px 14px;cursor:not-allowed;border-bottom:1px solid #F1F5F9;opacity:0.45;" title="ยังไม่มีเสาลูกค้า — ต้องย้ายเสาเข้าช่องลูกค้าก่อน">
-        <div style="font-size:13px;font-weight:700;color:#94A3B8;">${o.orderNum} <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;">ยังไม่มีเสาลูกค้า</span></div>
-        <div style="font-size:11px;color:#94A3B8;margin-top:1px;">👤 ${o.customer||'-'}</div>
-        <div style="font-size:10px;color:#CBD5E1;margin-top:1px;">📦 ${piles}</div>
-      </div>`;
-    }
+    const noStock = !hasCP;
+    return `<div onclick="tcSelectOrder('${(o.orderNum||'').replace(/'/g,"\\'")}');event.stopPropagation();"
+      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background 0.1s;"
+      onmouseenter="this.style.background='#EFF6FF'" onmouseleave="this.style.background=''">
+      <div style="font-size:13px;font-weight:700;color:${noStock?'#94A3B8':'#1E40AF'};">${o.orderNum}${noStock?' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;">ยังไม่มีเสา</span>':''}</div>
+      <div style="font-size:11px;color:${noStock?'#94A3B8':'#374151'};margin-top:1px;">👤 ${o.customer||'-'}${o.tel?' · 📞 '+o.tel:''}</div>
+      <div style="font-size:10px;color:${noStock?'#CBD5E1':'#64748B'};margin-top:1px;">📦 ${piles}</div>
+    </div>`;
   }).join('');
   dd.style.display = 'block';
 }
@@ -1415,11 +1408,31 @@ function tcSelectOrder(orderNum) {
     document.getElementById('tc_items_block').style.display = 'block';
   } else {
     listEl.dataset.cpMode = 'false';
-    listEl.dataset.cpCount = '0';
-    listEl.innerHTML = `<div style="padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;text-align:center;">
-      <div style="font-size:14px;font-weight:800;color:#92400E;margin-bottom:4px;">⚠️ ยังไม่มีเสาลูกค้าสำหรับออเดอร์นี้</div>
-      <div style="font-size:12px;color:#78350F;">กรุณาไปที่หน้าสต็อก → เปิดรายละเอียดกอง → กด <strong>"ย้ายกลับ"</strong> หรือ <strong>"ส่ง"</strong> เพื่อโอนเสาเข้าช่องลูกค้าก่อน</div>
-    </div>`;
+    const orderItems = getOrderItems(o);
+    if (orderItems.length) {
+      listEl.innerHTML = `<div style="padding:8px 12px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:8px;font-size:12px;color:#92400E;margin-bottom:8px;">⚠️ ยังไม่มีเสาในช่องลูกค้า — ยังไม่สามารถระบุจำนวนส่งได้</div>` +
+        orderItems.map((it, i) => {
+          const rem = Math.max(0,(it.qty||0)-(it.delivered||0));
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #FCA5A5;border-radius:9px;background:#FFF5F5;opacity:0.75;">
+            <input type="hidden" id="tc_item_chk_${i}" value="0">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:12px;font-weight:700;color:#991B1B;">${it.pileType||'-'}</div>
+              <div style="font-size:10px;color:#64748B;margin-top:1px;">ต้องส่ง <span style="color:#DC2626;font-weight:700;">${rem} ต้น</span> · <span style="color:#94A3B8;">สต็อก: 0 ต้น</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+              <input type="number" id="tc_item_qty_${i}" value="0" min="0" max="0" disabled
+                style="width:60px;padding:5px 8px;border:1.5px solid #FCA5A5;border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#FEE2E2;color:#991B1B;cursor:not-allowed;">
+              <span style="font-size:11px;color:#64748B;">ต้น</span>
+            </div>
+          </div>`;
+        }).join('');
+      listEl.dataset.cpCount = String(orderItems.length);
+    } else {
+      listEl.innerHTML = `<div style="padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;text-align:center;">
+        <div style="font-size:14px;font-weight:800;color:#92400E;margin-bottom:4px;">⚠️ ยังไม่มีเสาลูกค้าสำหรับออเดอร์นี้</div>
+      </div>`;
+      listEl.dataset.cpCount = '0';
+    }
     document.getElementById('tc_items_block').style.display = 'block';
   }
 }
