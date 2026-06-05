@@ -930,7 +930,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
           <div class="card-title">🏭 ออเดอร์สำหรับฝ่ายผลิต</div>
           <div class="card-sub">ออเดอร์ที่ฝ่ายผลิตรับแล้ว — กด "🏭 เริ่มเท" เมื่อเทลงราง → กด "✅ ผลิตเสร็จ" เมื่อยกออกจากราง</div>
         </div>
-        <button class="btn btn-sm" onclick="openFreeProdForm()" style="margin-left:auto;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #93C5FD;white-space:nowrap;flex-shrink:0;">📦 ผลิตเพิ่มสต็อก</button>
+        <button id="freeProdBtn" class="btn btn-sm" onclick="openFreeProdForm()" style="margin-left:auto;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #93C5FD;white-space:nowrap;flex-shrink:0;">📦 ผลิตเพิ่มสต็อก</button>
       </div>
       <div id="prodOrdersBody" style="padding:12px 16px;display:flex;flex-direction:column;gap:12px;"></div>
     </div>
@@ -1227,8 +1227,8 @@ function tcEntryHTML(e) {
     </div>
     <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-self:flex-start;">
       ${(!e._stocked && e.timeIn) ? `<button onclick="tcConfirmFinalize(${e._id})" style="padding:5px 10px;background:linear-gradient(135deg,#16A34A,#22C55E);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(22,163,74,0.3);">✅ ส่งจบ</button>` : ''}
-      <button onclick="tcEditEvent(${e._id})" style="padding:5px 10px;background:#EFF6FF;color:#1E40AF;border:1.5px solid #BFDBFE;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;">แก้ไข</button>
-      <button onclick="tcDeleteEvent(${e._id})" style="padding:5px 10px;background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;">ลบ</button>
+      ${canDo('log_shipping') ? `<button onclick="tcEditEvent(${e._id})" style="padding:5px 10px;background:#EFF6FF;color:#1E40AF;border:1.5px solid #BFDBFE;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;">แก้ไข</button>` : ''}
+      ${canDo('delete_shipping') ? `<button onclick="tcDeleteEvent(${e._id})" style="padding:5px 10px;background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;">ลบ</button>` : ''}
     </div>
   </div>`;
 }
@@ -1270,6 +1270,7 @@ function tcConfirmFinalize(id) {
   showToast(ok ? '📦 ส่งจบ — ตัดสต็อกและอัปเดต Order แล้ว' : '✅ บันทึกส่งจบแล้ว (ไม่มีสินค้าให้ตัดสต็อก)');
 }
 function tcDeleteEvent(id) {
+  if (!canDo('delete_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์ลบนัดส่ง'); return; }
   if (!confirm('ลบรายการนี้?')) return;
   tcSaveEvents(tcGetEvents().filter(e=>e._id!==id));
   tcRender();
@@ -1277,6 +1278,7 @@ function tcDeleteEvent(id) {
 }
 
 function tcEditEvent(id) {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขนัดส่ง'); return; }
   const e = tcGetEvents().find(x => x._id === id);
   if (!e) return;
   _tcEditId = id;
@@ -1537,6 +1539,7 @@ function tcUpdateTimeInMonthYear(dateStr) {
 }
 
 function openTransportModal(ds) {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์เพิ่มนัดส่ง'); return; }
   _tcSelectedOrder = null;
   _tcEditId = null;
   document.getElementById('tcModalTitle').textContent = 'เพิ่มนัดส่ง';
@@ -1674,6 +1677,7 @@ function tcClampStock(inp, maxVal) {
 }
 
 function submitTransport() {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกนัดส่ง'); return; }
   const date  = document.getElementById('tc_date').value;
   const oNum  = (document.getElementById('tc_order_input').value||'').trim();
   if (!date || !oNum) { alert('กรุณาระบุวันที่และเลข Order'); return; }
@@ -1956,7 +1960,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <!-- Add new customer -->
-    <div class="card">
+    <div class="card" id="custAddCard">
       <div class="card-header">
         <div>
           <div class="card-title">➕ เพิ่มลูกค้าใหม่</div>
@@ -3138,8 +3142,13 @@ function _applyNav() {
   showNav('nav-stock',     canDo('view_stock'));
   showNav('nav-customers', canDo('view_customers'));
   showNav('nav-settings',  _currentRole === 'admin');
-  const _addDelivBtn = document.getElementById('addDeliveryBtn');
-  if (_addDelivBtn) _addDelivBtn.style.display = canDo('log_shipping') ? '' : 'none';
+  // Hide/show action buttons based on permissions
+  const _adb = document.getElementById('addDeliveryBtn');
+  if (_adb) _adb.style.display = canDo('log_shipping') ? '' : 'none';
+  const _fpb = document.getElementById('freeProdBtn');
+  if (_fpb) _fpb.style.display = canDo('log_production') ? '' : 'none';
+  const _custForm = document.getElementById('custAddCard');
+  if (_custForm) _custForm.style.display = canDo('edit_customers') ? '' : 'none';
 }
 
 function goTab(name, el) {
@@ -3238,6 +3247,7 @@ function updateOrderValue() { renderOrderItemsDraft(); }
 
 // ── Submit Order ───────────────────────────────────────────────
 function submitOrder() {
+  if (!canDo('create_order')) { showToast('⛔ คุณไม่มีสิทธิ์สร้าง Order'); return; }
   const g = id => document.getElementById(id).value;
   const customer = g('f_customer').trim(), tel = g('f_tel').trim(),
         sale = g('f_sale'),
@@ -3876,6 +3886,7 @@ function renderActiveProd() {
 
 // ── Free Production (ผลิตเพิ่มสต็อก ไม่มี Order) ──────────────
 function openFreeProdForm() {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์ผลิตเพิ่มสต็อก'); return; }
   const cfg = getConfig();
   const sel = document.getElementById('fprod_pile');
   const piles = cfg.pileTypes && cfg.pileTypes.length ? cfg.pileTypes : [];
@@ -3952,6 +3963,7 @@ function closeStartProdForm() {
   document.getElementById('startProdFormCard').style.display = 'none';
 }
 function submitStartProd() {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   const orderNum  = document.getElementById('spf_order').value;
   const pileType  = document.getElementById('spf_pile').value;
   const length    = document.getElementById('spf_length').value || '-';
@@ -4015,6 +4027,7 @@ function updateFinishCalc() {
   document.getElementById('fp_net_display').textContent    = net;
 }
 function submitFinishProd() {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   const activeId = document.getElementById('fp_active_id').value;
   const a = getProdActive().find(x => x.id === activeId);
   if (!a) return;
@@ -4282,6 +4295,7 @@ function renderProdErrHistory() {
 
 // ── Submit Errors ──────────────────────────────────────────────
 function submitProdErr() {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกข้อมูลฝ่ายผลิต'); return; }
   const g = id => document.getElementById(id).value;
   const date=g('pe_date'), order=g('pe_order').trim(), type=g('pe_type'), qty=g('pe_qty'), cause=g('pe_cause').trim(), fix=g('pe_fix').trim(), staff=g('pe_staff');
   if (!date||!order||!type||!cause||!staff) { alert('กรุณากรอกข้อมูลที่มี * ให้ครบก่อนนะครับ'); return; }
@@ -4624,7 +4638,7 @@ function getLastStockTs(name) {
 }
 
 function quickFillStock(name) {
-  // open modal directly
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   openStockDetail(name);
 }
 
@@ -6397,6 +6411,7 @@ function editAddItem() {
 }
 
 function submitEditOrder() {
+  if (!canDo('edit_order')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไข Order'); return; }
   const g  = id => document.getElementById(id).value;
   const customer  = g('edit_customer').trim();
   const tel       = g('edit_tel').trim();
@@ -6865,6 +6880,11 @@ function saveEditProdErr() {
 //  ADMIN: ลบประวัติ
 // ════════════════════════════════════════════════════════════════
 function adminDeleteLog(type, fbKey) {
+  if (type === 'prodLog' || type === 'prodErr') {
+    if (!canDo('delete_production')) { showToast('⛔ คุณไม่มีสิทธิ์ลบข้อมูลฝ่ายผลิต'); return; }
+  } else if (type === 'stockLog') {
+    if (!canDo('delete_stock')) { showToast('⛔ คุณไม่มีสิทธิ์ลบข้อมูลสต็อก'); return; }
+  }
   if (!confirm('ลบรายการนี้?')) return;
   if (type === 'prodLog')   db.ref(K_PROD_LOG   + '/' + fbKey).remove();
   else if (type === 'stockLog') db.ref(K_STOCK_LOG + '/' + fbKey).remove();
