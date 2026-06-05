@@ -2236,7 +2236,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="sd-section">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <div style="font-size:12px;font-weight:800;color:#1E40AF;letter-spacing:.5px;">🟢 เสาลูกค้า (Online)</div>
-          <button onclick="openAddCustPoleModalFor(_sdCurrentPile)" style="padding:3px 10px;font-size:11px;font-weight:700;background:#3B82F6;color:#fff;border:none;border-radius:6px;cursor:pointer;">➕ เพิ่ม</button>
+          <button id="sdAddCustPoleBtn" onclick="openAddCustPoleModalFor(_sdCurrentPile)" style="padding:3px 10px;font-size:11px;font-weight:700;background:#3B82F6;color:#fff;border:none;border-radius:6px;cursor:pointer;">➕ เพิ่ม</button>
         </div>
         <div id="sdCpPanelOnline" style="margin-bottom:18px;"></div>
         <div style="font-size:12px;font-weight:800;color:#475569;letter-spacing:.5px;margin-bottom:8px;">⚫ เสาค้างสต็อก</div>
@@ -3149,6 +3149,8 @@ function _applyNav() {
   if (_fpb) _fpb.style.display = canDo('log_production') ? '' : 'none';
   const _custForm = document.getElementById('custAddCard');
   if (_custForm) _custForm.style.display = canDo('edit_customers') ? '' : 'none';
+  const _sdAddBtn = document.getElementById('sdAddCustPoleBtn');
+  if (_sdAddBtn) _sdAddBtn.style.display = canDo('edit_stock') ? '' : 'none';
 }
 
 function goTab(name, el) {
@@ -4699,9 +4701,9 @@ function renderSdCustPoles() {
           <div>${cpSpecChips(m.spec)}</div>
           <div style="font-size:18px;font-weight:900;color:#1E293B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span>${m.fromStockQty > 0 ? ` <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">สต็อกเก่า ${m.fromStockQty}</span>` : ''}</div>
           <div style="display:flex;gap:4px;margin-top:2px;">
-            <button onclick="shipCpToOrder('${orderEsc}','${pileEsc}',${m.qty},${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:5px;cursor:pointer;">🚚 ส่ง</button>
-            <button onclick="toggleCpOfflineAll(${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:5px;cursor:pointer;">🔒 ปิดงาน</button>
-            <button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>
+            ${canDo('edit_stock') ? `<button onclick="shipCpToOrder('${orderEsc}','${pileEsc}',${m.qty},${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:5px;cursor:pointer;">🚚 ส่ง</button>` : ''}
+            ${canDo('edit_stock') ? `<button onclick="toggleCpOfflineAll(${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:5px;cursor:pointer;">🔒 ปิดงาน</button>` : ''}
+            ${canDo('delete_stock') ? `<button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>` : ''}
           </div>
         </div>`;
       }).join('') + '</div>';
@@ -4727,8 +4729,8 @@ function renderSdCustPoles() {
           <div>${cpSpecChips(m.spec)}</div>
           <div style="font-size:18px;font-weight:900;color:#991B1B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span></div>
           <div style="display:flex;gap:4px;margin-top:2px;">
-            <button onclick="openAssignOrderModal(${idsJson},'${(pileName||'').replace(/'/g,"\\'")}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>
-            <button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>
+            ${canDo('edit_stock') ? `<button onclick="openAssignOrderModal(${idsJson},'${(pileName||'').replace(/'/g,"\\'")}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>` : ''}
+            ${canDo('delete_stock') ? `<button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>` : ''}
           </div>
         </div>`;
       }).join('') + '</div>';
@@ -4736,6 +4738,7 @@ function renderSdCustPoles() {
 }
 
 function openAddCustPoleModalFor(pileName) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const cfg = getConfig();
   const sel = document.getElementById('cp_pileType');
   sel.innerHTML = '<option value="">— เลือก —</option>' + cfg.pileTypes.map(t => `<option${t===pileName?' selected':''}>${t}</option>`).join('');
@@ -4751,6 +4754,7 @@ function closeCpModal() {
 }
 
 function submitCustPole() {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const orderNum = document.getElementById('cp_order').value.trim();
   const pileType = document.getElementById('cp_pileType').value;
   const spec     = document.getElementById('cp_spec').value.trim();
@@ -4777,6 +4781,7 @@ function toggleCpOffline(id) {
 }
 
 function toggleCpOfflineAll(ids) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const arr = getCustPoles();
   const items = ids.map(id => arr.find(x => x.id === id)).filter(Boolean);
   if (!items.length) return;
@@ -4788,6 +4793,7 @@ function toggleCpOfflineAll(ids) {
 }
 
 function shipCpToOrder(orderNum, pileType, maxQty, ids) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const orders = getOrders();
   const o = orders.find(x => x.orderNum === orderNum);
   if (!o) { alert('ไม่พบ Order ' + orderNum); return; }
@@ -4851,6 +4857,7 @@ function shipCpToOrder(orderNum, pileType, maxQty, ids) {
 let _assignOrderIds = [], _assignOrderPile = '';
 
 function openAssignOrderModal(ids, pileName) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   _assignOrderIds = ids;
   _assignOrderPile = pileName;
 
@@ -4929,6 +4936,7 @@ function deleteCpEntry(id) {
 }
 
 function deleteCpAll(ids) {
+  if (!canDo('delete_stock')) { showToast('⛔ คุณไม่มีสิทธิ์ลบข้อมูลสต็อก'); return; }
   if (!confirm('ยืนยันลบทั้งหมด ' + ids.length + ' รายการ?')) return;
   ids.forEach(id => deleteCustPole(id));
   if (_sdCurrentPile) renderSdCustPoles();
