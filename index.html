@@ -3151,6 +3151,8 @@ function _applyNav() {
   if (_custForm) _custForm.style.display = canDo('edit_customers') ? '' : 'none';
   const _sdAddBtn = document.getElementById('sdAddCustPoleBtn');
   if (_sdAddBtn) _sdAddBtn.style.display = canDo('edit_stock') ? '' : 'none';
+  const _sdLogForm = document.getElementById('sdLogForm');
+  if (_sdLogForm) _sdLogForm.style.display = canDo('edit_stock') ? '' : 'none';
 }
 
 function goTab(name, el) {
@@ -5874,6 +5876,11 @@ let _sdCurrentPile = null;
 
 function openStockDetail(name) {
   _sdCurrentPile = name;
+  // Apply permission visibility each time modal opens
+  const _lf = document.getElementById('sdLogForm');
+  if (_lf) _lf.style.display = canDo('edit_stock') ? '' : 'none';
+  const _ab = document.getElementById('sdAddCustPoleBtn');
+  if (_ab) _ab.style.display = canDo('edit_stock') ? '' : 'none';
   const cfg   = getConfig();
   const price = (cfg.pilePrices||{})[name] || 0;
 
