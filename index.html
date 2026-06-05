@@ -2590,10 +2590,14 @@ auth.onAuthStateChanged(user => {
     if (ls) ls.style.display = 'none';
     // Load role from Firebase DB
     loadRoleFromDB(user.uid, role => {
-      loadRolePerms(() => { applyRole(role); });
-      // Start data sync
+      // Start Firebase data sync immediately (don't wait for perms)
       if (!_fbReady) {
         startFirebaseListeners();
+      }
+      // Load role permissions FIRST, then apply role and render
+      // Prevents race condition where tables render before _userPerms is set
+      loadRolePerms(() => {
+        applyRole(role);
         onFbReady(() => {
           applyBranding();
           populateAllDropdowns();
@@ -2603,7 +2607,14 @@ auth.onAuthStateChanged(user => {
           renderStockCards();
           renderStockLog();
         });
-      }
+        // If FB data already arrived before perms were ready, re-render now
+        if (_fbReady) {
+          renderOrders();
+          renderSummary();
+          renderStockCards();
+          renderStockLog();
+        }
+      });
     });
   } else {
     _currentUser = null;
