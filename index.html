@@ -581,7 +581,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   <div class="nav-tab sale-only" id="nav-proderr" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ฝ่ายผลิต</div>
   <div class="nav-tab sale-only" id="nav-shiperr" data-tab="shiperr" onclick="goTab('shiperr',this)">⚠️ Error ขนส่ง</div>
   <div class="nav-tab" id="nav-transport" data-tab="transport" onclick="goTab('transport',this)">🚛 ฝ่ายขนส่ง</div>
-  <div class="nav-tab admin-manager-only" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ฝ่ายสต็อก</div>
+  <div class="nav-tab" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ฝ่ายสต็อก</div>
   <div class="nav-tab" id="nav-customers" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
   <div class="nav-tab admin-manager-only" id="nav-dashboard" data-tab="dashboard" onclick="goTab('dashboard',this)" style="display:none !important;">📈 Dashboard</div>
   <div class="nav-tab admin-only" id="nav-settings" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
@@ -1023,7 +1023,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <div style="font-size:17px;font-weight:800;color:#1E293B;">🚛 ปฏิทินขนส่ง</div>
         <div style="font-size:12px;color:#64748B;margin-top:2px;">จัดการนัดส่งของแต่ละวัน · คลิกวันเพื่อดูหรือซ่อนรายการ</div>
       </div>
-      <button onclick="openTransportModal()" style="padding:9px 20px;background:linear-gradient(135deg,#1E40AF,#2563EB);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(30,64,175,0.25);">＋ เพิ่มนัดส่ง</button>
+      <button id="addDeliveryBtn" onclick="openTransportModal()" style="padding:9px 20px;background:linear-gradient(135deg,#1E40AF,#2563EB);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(30,64,175,0.25);">＋ เพิ่มนัดส่ง</button>
     </div>
 
     <!-- ── ปฏิทิน ── -->
@@ -3138,6 +3138,8 @@ function _applyNav() {
   showNav('nav-stock',     canDo('view_stock'));
   showNav('nav-customers', canDo('view_customers'));
   showNav('nav-settings',  _currentRole === 'admin');
+  const _addDelivBtn = document.getElementById('addDeliveryBtn');
+  if (_addDelivBtn) _addDelivBtn.style.display = canDo('log_shipping') ? '' : 'none';
 }
 
 function goTab(name, el) {
