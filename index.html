@@ -575,7 +575,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
 
 <!-- NAV -->
 <div class="app-nav">
-  <div class="nav-tab admin-manager-only" id="nav-summary" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
+  <div class="nav-tab" id="nav-summary" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
   <div class="nav-tab sale-only active" id="nav-form" data-tab="form" onclick="goTab('form',this)">📱 ฝ่ายขาย</div>
   <div class="nav-tab" id="nav-status" data-tab="status" onclick="goTab('status',this)">📋 สถานะ Order <span class="nav-dot"></span></div>
   <div class="nav-tab sale-only" id="nav-proderr" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ฝ่ายผลิต</div>
@@ -583,7 +583,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   <div class="nav-tab" id="nav-transport" data-tab="transport" onclick="goTab('transport',this)">🚛 ฝ่ายขนส่ง</div>
   <div class="nav-tab" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ฝ่ายสต็อก</div>
   <div class="nav-tab" id="nav-customers" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
-  <div class="nav-tab admin-manager-only" id="nav-dashboard" data-tab="dashboard" onclick="goTab('dashboard',this)" style="display:none !important;">📈 Dashboard</div>
+  <div class="nav-tab" id="nav-dashboard" data-tab="dashboard" onclick="goTab('dashboard',this)" style="display:none !important;">📈 Dashboard</div>
   <div class="nav-tab admin-only" id="nav-settings" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
 </div>
 
@@ -1078,9 +1078,9 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <label class="field-label">เลข Order <span class="req">*</span></label>
         <div style="position:relative;">
           <input type="text" id="tc_order_input" placeholder="พิมพ์หรือเลือก Order..." autocomplete="off"
-            oninput="tcOrderSearch(this.value)" onfocus="tcOrderSearch(this.value)"
+            oninput="if(!this.value){_tcSelectedOrder=null;document.getElementById('tc_cust_block').style.display='none';document.getElementById('tc_items_block').style.display='none';}tcOrderSearch(this.value)" onfocus="tcOrderSearch(this.value)"
             style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;color:#111827;background:#F9FAFB;outline:none;font-family:inherit;">
-          <div id="tc_order_dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid #BFDBFE;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:50;max-height:220px;overflow-y:auto;"></div>
+          <div id="tc_order_dropdown" style="display:none;position:fixed;background:#fff;border:1.5px solid #BFDBFE;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.18);z-index:9999;max-height:220px;overflow-y:auto;"></div>
         </div>
       </div>
 
@@ -1367,12 +1367,22 @@ function tcGetActiveOrders() {
 }
 
 function tcOrderSearch(q) {
+  // ถ้าเลือก order แล้ว ไม่ต้องแสดง dropdown อีก
+  if (_tcSelectedOrder) { document.getElementById('tc_order_dropdown').style.display='none'; return; }
   const orders = tcGetActiveOrders();
   const dd = document.getElementById('tc_order_dropdown');
+  const inp = document.getElementById('tc_order_input');
   const filtered = q.trim()
     ? orders.filter(o => (o.orderNum||'').toLowerCase().includes(q.toLowerCase()) || (o.customer||'').toLowerCase().includes(q.toLowerCase()))
     : orders;
   if (!filtered.length) { dd.style.display='none'; return; }
+  // position dropdown using fixed coords (avoids overflow clipping)
+  if (inp) {
+    const r = inp.getBoundingClientRect();
+    dd.style.top    = (r.bottom + 4) + 'px';
+    dd.style.left   = r.left + 'px';
+    dd.style.width  = r.width + 'px';
+  }
   const allCp = getCustPoles();
   dd.innerHTML = filtered.map(o => {
     const items = getOrderItems(o);
@@ -1380,7 +1390,7 @@ function tcOrderSearch(q) {
     const hasCP = allCp.some(cp => cp.orderNum === o.orderNum && cp.online !== false);
     const noStock = !hasCP;
     const stockTag = noStock ? ' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;">ยังไม่มีเสาลูกค้า</span>' : '';
-    return `<div onclick="tcSelectOrder('${(o.orderNum||'').replace(/'/g,"\\'")});event.stopPropagation();"
+    return `<div data-ordernum="${(o.orderNum||'').replace(/"/g,'&quot;')}"
       style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background 0.1s;"
       onmouseenter="this.style.background='#EFF6FF'" onmouseleave="this.style.background=''">
       <div style="font-size:13px;font-weight:700;color:${noStock?'#94A3B8':'#1E40AF'}">${o.orderNum}${stockTag}</div>
@@ -1404,6 +1414,7 @@ function tcSelectOrder(orderNum) {
     `<strong>${o.customer||'-'}</strong>${o.tel ? ' · 📞 ' + o.tel : ''}` +
     (addr ? `<br>📍 ${addr}` : '');
   document.getElementById('tc_cust_block').style.display = 'block';
+  setTimeout(() => { const cb = document.getElementById('tc_cust_block'); if(cb) cb.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 50);
 
   // render รายการเสา: ต้องมี custPoles (เสาลูกค้า) เท่านั้น ถึงจะส่งได้
   const listEl = document.getElementById('tc_items_list');
@@ -1425,11 +1436,21 @@ function tcSelectOrder(orderNum) {
   }
 }
 
-// ปิด dropdown เมื่อคลิกที่อื่น (ไม่ปิดถ้าคลิกใน input หรือ dropdown เอง)
-document.addEventListener('click', (e) => {
-  const dd  = document.getElementById('tc_order_dropdown');
+// Event delegation สำหรับ dropdown: ใช้ mousedown เพื่อ capture ก่อน blur
+document.addEventListener('mousedown', (e) => {
+  const dd = document.getElementById('tc_order_dropdown');
+  if (!dd) return;
+  // หา item ที่ถูกคลิก (ตัว div[data-ordernum] หรือ child ของมัน)
+  const item = e.target.closest('[data-ordernum]');
+  if (item && dd.contains(item)) {
+    e.preventDefault(); // ป้องกัน input blur
+    const orderNum = item.getAttribute('data-ordernum');
+    tcSelectOrder(orderNum);
+    return;
+  }
+  // ถ้าคลิกนอก dropdown และ input → ปิด dropdown
   const inp = document.getElementById('tc_order_input');
-  if (dd && inp && !dd.contains(e.target) && e.target !== inp) {
+  if (!dd.contains(e.target) && e.target !== inp) {
     dd.style.display = 'none';
   }
 });
@@ -1560,7 +1581,7 @@ function openTransportModal(ds) {
   tcPopulateStaffVehicle();
   document.getElementById('transportModal').style.display    = 'flex';
 }
-function closeTransportModal() { document.getElementById('transportModal').style.display='none'; }
+function closeTransportModal() { document.getElementById('transportModal').style.display='none'; _tcSelectedOrder=null; _tcEditId=null; }
 
 
 function tcFinalizeDelivery(entry) {
@@ -4602,6 +4623,7 @@ function exportHistoryCSV() {
 // ── Stock Ref Dropdown ─────────────────────────────────────────
 function populateStockRefDropdown() {
   const sel = document.getElementById('sf_ref');
+  if (!sel) return;
   const orders = getOrders();
   const active = orders.filter(o => getOrderDelivered(o) < getOrderTotalQty(o)); // BugFix#2: multi-item orders
   const cur = sel.value;
