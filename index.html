@@ -3764,7 +3764,7 @@ function renderProdSection() {
         it.wire   && it.wire  !=='-' ? `<span style="background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">〰 ${it.wire}</span>`   : '',
         it.extra  && it.extra !=='-' ? `<span style="background:#F1F5F9;color:#475569;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📝 ${it.extra}</span>`  : '',
       ].filter(Boolean).join(' ');
-      const btn = inProd
+      const btn = !canDo('log_production') ? '' : inProd
         ? `<div style="margin-top:8px;">
             <div style="background:#FEF3C7;color:#92400E;border:1.5px solid #FDE68A;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;text-align:center;margin-bottom:4px;">🏭 กำลังผลิตอยู่...</div>
             <button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${it.qty},'${itLen}')" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;padding:6px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">➕ เริ่มเทเพิ่ม</button>
@@ -3852,7 +3852,7 @@ function renderActiveProd() {
         + '</div>'
         + '<div class="ap-row">'
         +   '<div style="font-size:11px;color:#92400E;">เทตั้งแต่: ' + new Date(a.startedAt).toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'}) + ' น.' + (a.note ? ' · ' + a.note : '') + '</div>'
-        +   '<button class="btn btn-success btn-sm" onclick="openFinishProd(\'' + a.id + '\')" style="font-size:11px;padding:5px 12px;background:#166534;color:#fff;">✅ ผลิตเสร็จ</button>'
+        +   (canDo('log_production') ? '<button class="btn btn-success btn-sm" onclick="openFinishProd(\'' + a.id + '\')" style="font-size:11px;padding:5px 12px;background:#166534;color:#fff;">✅ ผลิตเสร็จ</button>' : '')
         + '</div>'
         + '</div>';
     });
@@ -3898,6 +3898,7 @@ function closeFreeProdForm() {
   document.getElementById('freeProdFormCard').style.display = 'none';
 }
 function submitFreeProd() {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   const pileType  = document.getElementById('fprod_pile').value.trim();
   const length    = (document.getElementById('fprod_length').value || '').trim() || '-';
   const qty       = parseInt(document.getElementById('fprod_qty').value) || 0;
@@ -3928,6 +3929,7 @@ function submitFreeProd() {
 }
 
 function openStartProdForm(orderNum, pileType, qtyRequired, length) {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   document.getElementById('spf_order').value    = orderNum;
   document.getElementById('spf_pile').value     = pileType;
   document.getElementById('spf_length').value   = length || '-';
@@ -3973,6 +3975,7 @@ function submitStartProd() {
 }
 
 function openFinishProd(activeId) {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   const a = getProdActive().find(x => x.id === activeId);
   if (!a) return;
   const qty = a.qtyCasting || a.qtyRequired;
@@ -4286,6 +4289,7 @@ function submitProdErr() {
   showToast(`🏭 บันทึก Error ผลิตแล้ว — ${order}`);
 }
 function submitShipErr() {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกข้อมูลขนส่ง'); return; }
   const g = id => document.getElementById(id).value;
   const date=g('se_date'), order=g('se_order').trim(), type=g('se_type'), qty=g('se_qty'), cause=g('se_cause').trim(), fix=g('se_fix').trim(), staff=g('se_staff');
   if (!date||!order||!type||!cause||!staff) { alert('กรุณากรอกข้อมูลที่มี * ให้ครบก่อนนะครับ'); return; }
@@ -4956,7 +4960,7 @@ function renderStockCards() {
     const valHtml  = val > 0 ? `<div style="font-size:11px;color:#64748B;margin-bottom:4px;">💰 ${val.toLocaleString('th-TH')} ฿</div>` : '';
     const ts       = getLastStockTs(name);
     const tsHtml   = ts ? `<span class="stock-ts">อัปเดต: ${ts}</span>` : `<span class="stock-ts">ยังไม่มีประวัติ</span>`;
-    const quickBtn = `<button class="stock-quick-btn" onclick="quickFillStock('${name.replace(/'/g,"\'")}')">+ รับเข้า</button>`;
+    const quickBtn = canDo('edit_stock') ? `<button class="stock-quick-btn" onclick="quickFillStock('${name.replace(/'/g,"\'")}')">+ รับเข้า</button>` : '';
     const statusChip = `<span class="chip ${avail < cfg.stockLow ? 'ch-err' : avail < cfg.stockWarn ? 'ch-delay' : 'ch-in'}">${avail < cfg.stockLow ? '🚨 ต่ำมาก' : avail < cfg.stockWarn ? '⚠ ใกล้หมด' : '✓ ปกติ'}</span>`;
     return `<div class="stock-card ${cls}" onclick="openStockDetail('${name.replace(/'/g,'\\'+'\'')}')">
       <div class="stock-name">${name}</div>
@@ -5230,6 +5234,7 @@ function renderCustomers() {
 }
 
 function submitCustomer() {
+  if (!canDo('edit_customers')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขข้อมูลลูกค้า'); return; }
   const name=document.getElementById('c_name').value.trim(), tel=document.getElementById('c_tel').value.trim(), addr=document.getElementById('c_addr').value.trim();
   if (!name||!tel) { alert('กรุณากรอกชื่อและเบอร์โทรก่อนนะครับ'); return; }
   const custs = getCustomers();
@@ -6133,6 +6138,7 @@ function sdPreview() {
 }
 
 function submitSdLog() {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขข้อมูลสต็อก'); return; }
   const typeVal = document.getElementById('sd_logtype')?.value;
   const spec    = (document.getElementById('sd_logspec')?.value||'').trim();
   const qty     = parseInt(document.getElementById('sd_logqty')?.value)||0;
