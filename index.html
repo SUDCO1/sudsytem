@@ -291,6 +291,20 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .ap-timer{font-size:20px;font-weight:900;color:#92400E;font-variant-numeric:tabular-nums;}
 .ap-timer-lbl{font-size:10px;color:#92400E;font-weight:700;margin-top:1px;}
 .ap-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
+.ap-detail-btn{font-size:10px;color:#6B7280;background:none;border:1px solid #E5E7EB;border-radius:5px;padding:2px 7px;cursor:pointer;margin-top:5px;display:inline-block;}
+.ap-detail-btn:hover{background:#F9FAFB;color:#374151;}
+#prodDetailModal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;}
+#prodDetailModal.open{display:flex;}
+.pdm-box{background:#fff;border-radius:14px;width:90%;max-width:420px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.18);}
+.pdm-header{background:#FEF3C7;border-radius:14px 14px 0 0;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;}
+.pdm-title{font-size:17px;font-weight:800;color:#92400E;}
+.pdm-close{background:none;border:none;font-size:22px;cursor:pointer;color:#92400E;line-height:1;}
+.pdm-body{padding:18px 20px;display:flex;flex-direction:column;gap:10px;}
+.pdm-row{display:flex;gap:10px;align-items:flex-start;}
+.pdm-label{font-size:13px;color:#94A3B8;font-weight:600;min-width:90px;padding-top:1px;}
+.pdm-val{font-size:15px;color:#1E293B;font-weight:600;flex:1;}
+.pdm-divider{border:none;border-top:1px solid #F1F5F9;margin:4px 0;}
+.pdm-section{font-size:10px;font-weight:700;color:#94A3B8;letter-spacing:.5px;margin-top:4px;}
 
 /* ============================================================ ACTION BUTTONS IN TABLE ============================================================ */
 .act-btn{padding:3px 9px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;white-space:nowrap;transition:opacity .15s;}
@@ -3917,6 +3931,7 @@ function renderActiveProd() {
         +     '<div class="ap-timer-lbl">อยู่ในราง</div>'
         +   '</div>'
         + '</div>'
+        + '<div style="margin-top:4px;"><button class="ap-detail-btn" onclick="openProdDetail(\'' + a.id + '\')">📋 ดูรายละเอียดเสา</button></div>'
         + '<div class="ap-row">'
         +   '<div style="font-size:11px;color:#92400E;">เทตั้งแต่: ' + new Date(a.startedAt).toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'}) + ' น.' + (a.note ? ' · ' + a.note : '') + '</div>'
         +   (canDo('log_production') ? '<button class="btn btn-success btn-sm" onclick="openFinishProd(\'' + a.id + '\')" style="font-size:11px;padding:5px 12px;background:#166534;color:#fff;">✅ ผลิตเสร็จ</button>' : '')
@@ -7362,6 +7377,86 @@ document.addEventListener('DOMContentLoaded',()=>{
   _wrapFn('renderStockLog',  ()=>scRender());
   _wrapFn('renderProdLogHistory', ()=>pcRender());
 });
+</script>
+
+<!-- ── Prod Detail Modal ── -->
+<div id="prodDetailModal" onclick="if(event.target===this)closeProdDetail()">
+  <div class="pdm-box">
+    <div class="pdm-header">
+      <div class="pdm-title" id="pdm_title">รายละเอียดการผลิต</div>
+      <button class="pdm-close" onclick="closeProdDetail()">×</button>
+    </div>
+    <div class="pdm-body" id="pdm_body"></div>
+  </div>
+</div>
+
+<script>
+function openProdDetail(id) {
+  const list = getProdActive();
+  const a = list.find(x => x.id === id);
+  if (!a) return;
+
+  const modal = document.getElementById('prodDetailModal');
+  document.getElementById('pdm_title').textContent = a.isStockProd ? '📦 ผลิตเพิ่มสต็อก' : '🏭 ' + a.orderNum;
+
+  const fmt = v => (v && v !== '-') ? v : '—';
+  const startTime = a.startedAt ? new Date(a.startedAt).toLocaleString('th-TH', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+
+  // ดึง extra จาก order item (เหมือน logic ตอนผลิตเสร็จ)
+  let extraVal = a.extra || '-';
+  if (!a.isStockProd) {
+    const _o = (getOrders()||[]).find(x => x.orderNum === a.orderNum);
+    if (_o) {
+      const _items = getOrderItems(_o);
+      const _it = _items.find(it => it.pileType === a.pileType) || _items[0];
+      if (_it && _it.extra) extraVal = _it.extra;
+    }
+  }
+
+  const standRows = a.standRows && a.standRows.length ? a.standRows : (a.standQty > 0 ? [{qty:a.standQty,size:a.standSize}] : []);
+  const standHtml = standRows.length
+    ? standRows.map((r,i) => r.qty > 0
+        ? '<div class="pdm-row"><span class="pdm-label">ลูกตั้ง '+(standRows.length>1?'แถว'+(i+1):'')+'</span><span class="pdm-val">'+r.qty+(r.size?' · '+r.size:'')+'</span></div>'
+        : '').join('')
+    : '<div class="pdm-row"><span class="pdm-label">ลูกตั้ง</span><span class="pdm-val" style="color:#94A3B8;">—</span></div>';
+
+  // ดึงข้อมูลออเดอร์ต้นทาง (ถ้ามี)
+  let orderSection = '';
+  if (!a.isStockProd) {
+    const o = (getOrders()||[]).find(x => x.orderNum === a.orderNum);
+    if (o) {
+      orderSection = '<hr class="pdm-divider"/>'
+        + '<div class="pdm-section">ข้อมูลออเดอร์</div>'
+        + '<div class="pdm-row"><span class="pdm-label">ลูกค้า</span><span class="pdm-val">'+fmt(o.customer)+'</span></div>'
+        + (o.tel ? '<div class="pdm-row"><span class="pdm-label">เบอร์โทร</span><span class="pdm-val">'+o.tel+'</span></div>' : '')
+        + '<div class="pdm-row"><span class="pdm-label">ต้องผลิต</span><span class="pdm-val">'+fmt(a.qtyRequired)+' ต้น</span></div>';
+    }
+  }
+
+  document.getElementById('pdm_body').innerHTML =
+    '<div class="pdm-section">สเปคเสา</div>'
+    + '<div class="pdm-row"><span class="pdm-label">ชนิดเสา</span><span class="pdm-val">'+fmt(a.pileType)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">ความยาว</span><span class="pdm-val">'+fmt(a.length)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">การเชื่อม</span><span class="pdm-val">'+fmt(a.weld)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">เหล็กเสริม</span><span class="pdm-val">'+fmt(a.steel)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">ลวด</span><span class="pdm-val">'+fmt(a.wire)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">เพิ่มเติม</span><span class="pdm-val">'+fmt(extraVal)+'</span></div>'
+    + '<hr class="pdm-divider"/>'
+    + '<div class="pdm-section">การเท</div>'
+    + '<div class="pdm-row"><span class="pdm-label">จำนวนในราง</span><span class="pdm-val">'+(a.qtyCasting||a.qtyRequired)+' ต้น</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">เลน</span><span class="pdm-val">'+fmt(a.lane)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">ท้อง</span><span class="pdm-val">'+fmt(a.tong)+'</span></div>'
+    + standHtml
+    + '<div class="pdm-row"><span class="pdm-label">วันที่ผลิต</span><span class="pdm-val">'+fmt(a.prodDate)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">เริ่มเทเมื่อ</span><span class="pdm-val">'+startTime+'</span></div>'
+    + (a.note ? '<div class="pdm-row"><span class="pdm-label">หมายเหตุ</span><span class="pdm-val">'+a.note+'</span></div>' : '')
+    + orderSection;
+
+  modal.classList.add('open');
+}
+function closeProdDetail() {
+  document.getElementById('prodDetailModal').classList.remove('open');
+}
 </script>
 
 </body>
