@@ -1544,7 +1544,10 @@ function _tcCpRowsHtml(orderNum, savedItems) {
   if (o) {
     getOrderItems(o).forEach(it => {
       const rem = Math.max(0, (it.qty||0) - (it.delivered||0));
-      remainMap[it.pileType] = (remainMap[it.pileType]||0) + rem;
+      const specParts = [it.length, it.weld, it.steel, it.wire, it.extra].filter(x => x && x !== '-');
+      const spec = specParts.join('/') || '';
+      const key = (it.pileType||'') + '|' + spec;
+      remainMap[key] = (remainMap[key]||0) + rem;
     });
   }
   // group: production batches merged by pileType+spec; fromStock entries separate
@@ -1566,24 +1569,28 @@ function _tcCpRowsHtml(orderNum, savedItems) {
   return groups.map((g, i) => {
     const specLabel = g.spec && g.spec !== '-' ? ' · สเปค ' + g.spec : '';
     const stockTag = g.isStock ? ' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">สต็อกเก่า</span>' : '';
-    const saved = (savedItems||[]).find(s => s.cpIds && s.cpIds[0] === g.ids[0]);
+    const saved = (savedItems||[]).find(s => s.cpIds && s.cpIds[0] === g.ids[0])
+      || (savedItems||[]).find(s => s.pileType === g.pileType && s.spec === g.spec);
+    // ถ้ามี savedItems (mode แก้ไข) → ติ๊กเฉพาะที่เคยเลือกไว้ / ถ้าเพิ่มใหม่ → ติ๊กทุกตัว
+    const isChecked = savedItems && savedItems.length > 0 ? !!saved : true;
     const defQty = saved ? saved.qty : g.qty;
     const borderColor = g.qty <= 0 ? '#FCA5A5' : (g.isStock ? '#FCD34D' : '#BFDBFE');
-    const bg = g.isStock ? '#FFFBEB' : '#F0FDF4';
+    const bg = g.isStock ? '#FFFBEB' : (isChecked ? '#F0FDF4' : '#F8FAFC');
     const textColor = g.isStock ? '#92400E' : '#166534';
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:9px;background:${bg};">
-      <input type="checkbox" id="tc_cp_chk_${i}" checked style="width:16px;height:16px;cursor:pointer;accent-color:${textColor};" onchange="tcCpToggle(${i})">
+      <input type="checkbox" id="tc_cp_chk_${i}" ${isChecked?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:${textColor};" onchange="tcCpToggle(${i})">
       <input type="hidden" id="tc_cp_ids_${i}" value="${g.ids.join(',').replace(/"/g,'&quot;')}">
       <input type="hidden" id="tc_cp_pt_${i}" value="${(g.pileType||'').replace(/"/g,'&quot;')}">
       <input type="hidden" id="tc_cp_sp_${i}" value="${(g.spec||'').replace(/"/g,'&quot;')}">
       <input type="hidden" id="tc_cp_stk_${i}" value="${g.isStock?'1':'0'}">
       <div style="flex:1;min-width:0;">
         <div style="font-size:12px;font-weight:700;color:${textColor};">${g.pileType}${specLabel}${stockTag}</div>
-        <div style="font-size:10px;color:#64748B;margin-top:1px;">🪵 มี <span style="color:${textColor};font-weight:700;">${g.qty} ต้น</span>${remainMap[g.pileType]!==undefined?` · ต้องส่ง <span style="color:#DC2626;font-weight:700;">${remainMap[g.pileType]} ต้น</span>`:''}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:1px;">🪵 มี <span style="color:${textColor};font-weight:700;">${g.qty} ต้น</span>${remainMap[g.pileType+'|'+g.spec]!==undefined?` · ต้องส่ง <span style="color:#DC2626;font-weight:700;">${remainMap[g.pileType+'|'+g.spec]} ต้น</span>`:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
         <input type="number" id="tc_cp_qty_${i}" value="${Math.min(defQty,g.qty)}" min="0" max="${g.qty}"
-          style="width:60px;padding:5px 8px;border:1.5px solid ${borderColor};border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#fff;color:${textColor};" oninput="tcClampStock(this,${g.qty})">
+          ${isChecked?'':'disabled'}
+          style="width:60px;padding:5px 8px;border:1.5px solid ${borderColor};border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#fff;color:${textColor};opacity:${isChecked?'1':'0.4'};" oninput="tcClampStock(this,${g.qty})">
         <span style="font-size:11px;color:#64748B;">ต้น</span>
       </div>
     </div>`;
@@ -1708,7 +1715,18 @@ function tcFinalizeDelivery(entry) {
 
     // ── 3. อัปเดต delivered + stockDelivered ในออเดอร์ ──
     if (o && o.items) {
-      const it = o.items.find(x => x.pileType === si.pileType);
+      // หา item ที่ตรงทั้ง pileType และ spec (exact ก่อน ถ้าไม่ได้ใช้ subset match)
+      const _siParts = si.spec ? new Set(si.spec.split('/').filter(Boolean)) : null;
+      const matchBySpec = _siParts && _siParts.size > 0
+        ? o.items.find(x => {
+            if (x.pileType !== si.pileType) return false;
+            const itemFields = new Set([x.length, x.weld, x.steel, x.wire, x.extra].filter(v => v && v !== '-'));
+            const fullSpec = [...itemFields].join('/');
+            // exact match ก่อน ถ้าไม่ได้ใช้ subset (ทุก part ของ si.spec ต้องอยู่ใน item fields)
+            return fullSpec === si.spec || [..._siParts].every(p => itemFields.has(p));
+          })
+        : null;
+      const it = matchBySpec || o.items.find(x => x.pileType === si.pileType);
       if (it) {
         it.delivered = Math.min((it.delivered||0) + sendQty, it.qty);
         if (fromStockSent > 0) {
@@ -4141,7 +4159,7 @@ function submitFinishProd() {
   // บันทึก prod log โดยตรง (เหมือน submitProdLog แต่ bypass form)
   const netQty      = qty - defect;
   const required    = a.qtyRequired || 0;
-  const prevTotal   = getTotalProduced(a.orderNum, a.pileType);
+  const prevTotal   = getTotalProduced(a.orderNum, a.pileType, a.itemIdx);
   const newTotal    = prevTotal + netQty;
   const prevExcess  = Math.max(0, prevTotal - required);
   const newExcess   = Math.max(0, newTotal - required);
@@ -4154,7 +4172,10 @@ function submitFinishProd() {
     const _o = _orders.find(x => x.orderNum === a.orderNum);
     if (_o) {
       const _items = getOrderItems(_o);
-      const _it = _items.find(it => it.pileType === a.pileType) || _items[0];
+      // ใช้ itemIdx ก่อน ถ้าไม่มีค่อย fallback หา pileType ที่ตรง
+      const _it = (a.itemIdx !== undefined ? _items[a.itemIdx] : null)
+               || _items.find(it => it.pileType === a.pileType)
+               || _items[0];
       if (_it) itemSpecs = { weld: _it.weld||'-', steel: _it.steel||'-', wire: _it.wire||'-', extra: _it.extra||'-' };
     }
   }
@@ -4166,6 +4187,7 @@ function submitFinishProd() {
     dateISO, date: isoToThai(dateISO), qtyRequired: required, qtyProduced: qty,
     qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0, ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}) });
   saveProdLog(logs);
+  const _prodLogKey = logs[0]._fbKey; // key ที่ arrToFbObj assign ไว้ synchronously
 
   // อัปเดตสถานะออเดอร์
   const orders = getOrders();
@@ -4222,6 +4244,7 @@ function submitFinishProd() {
       spec: specLabel !== '-' ? specLabel : '',
       qty: netQty,
       online: !a.isStockProd,   // ผลิตตาม Order → เสาลูกค้า (online), ผลิตเพิ่มสต็อก → เสาค้างสต็อก (offline)
+      prodLogKey: _prodLogKey,
       createdAt: Date.now(),
       note: 'Auto: ' + (a.isStockProd ? 'ผลิตเพิ่มสต็อก' : 'ผลิตเสร็จ') + (defect > 0 ? ' (เสีย ' + defect + ' ต้น)' : '')
     });
@@ -4318,6 +4341,9 @@ function renderProdLogHistory() {
       l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;">📝 '+l.extra +'</span>' : null,
     ].filter(Boolean);
     const detailCell = detailParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+detailParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
+    const editBtn = _currentRole==='admin'
+      ? '<button onclick="openEditProdLog(\''+l._fbKey+'\')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #93C5FD;background:#EFF6FF;color:#1D4ED8;cursor:pointer;margin-right:4px;" title="แก้ไขรายการนี้">✏️</button>'
+      : '';
     const delBtn = _currentRole==='admin'
       ? '<button onclick="adminDeleteLog(\'prodLog\',\''+l._fbKey+'\')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;" title="ลบรายการนี้">🗑</button>'
       : '';
@@ -4331,7 +4357,7 @@ function renderProdLogHistory() {
       + '<td><strong style="color:#166534;">'+net+' ต้น</strong></td>'
       + '<td>'+excessBadge+'</td>'
       + '<td>'+stockBadge+'</td>'
-      + '<td>'+delBtn+'</td>'
+      + '<td>'+editBtn+delBtn+'</td>'
       + '</tr>';
   }).join('');
 
@@ -6982,13 +7008,204 @@ function saveEditProdErr() {
   showToast('✅ แก้ไข Error ผลิตแล้ว');
 }
 // ════════════════════════════════════════════════════════════════
+//  ADMIN: แก้ไขประวัติผลิต
+// ════════════════════════════════════════════════════════════════
+function openEditProdLog(fbKey) {
+  const log = getProdLog().find(l => l._fbKey === fbKey);
+  if (!log) return;
+
+  // สร้าง dropdown items ถ้าเป็น order ปกติ
+  let itemOptions = '<option value="">— ไม่ระบุ —</option>';
+  if (log.orderNum && log.orderNum !== 'STOCK') {
+    const o = getOrders().find(x => x.orderNum === log.orderNum);
+    if (o) {
+      getOrderItems(o).forEach((it, i) => {
+        const selected = log.itemIdx === i ? 'selected' : '';
+        itemOptions += `<option value="${i}" ${selected}>${i+1}. ${it.pileType} | ${it.steel||''} | ${it.length||''} (${it.qty} ต้น)</option>`;
+      });
+    }
+  }
+
+  const existing = document.getElementById('_editProdLogModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = '_editProdLogModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:28px 32px;min-width:360px;max-width:480px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.2);">
+      <div style="font-size:16px;font-weight:800;color:#1E293B;margin-bottom:18px;">✏️ แก้ไขประวัติผลิต</div>
+      <div style="font-size:12px;color:#64748B;margin-bottom:16px;">Order: <strong>${log.orderNum}</strong> | เสา: <strong>${log.pileType}</strong></div>
+
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">รายการที่ผลิต (Item)</label>
+      <select id="_epli" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:12px;margin-bottom:14px;">${itemOptions}</select>
+
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">จำนวนผลิต (ต้น)</label>
+      <input id="_eplq" type="number" min="0" value="${log.qtyProduced ?? log.qty ?? 0}"
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;margin-bottom:14px;box-sizing:border-box;" />
+
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">ของเสีย (ต้น)</label>
+      <input id="_epld" type="number" min="0" value="${log.qtyDefect ?? log.defect ?? 0}"
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;margin-bottom:20px;box-sizing:border-box;" />
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="document.getElementById('_editProdLogModal').remove()"
+          style="padding:8px 18px;border-radius:8px;border:1.5px solid #CBD5E1;background:#F8FAFC;color:#374151;font-size:13px;cursor:pointer;">ยกเลิก</button>
+        <button onclick="saveEditProdLog('${fbKey}')"
+          style="padding:8px 18px;border-radius:8px;border:none;background:#1D4ED8;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">💾 บันทึก</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function saveEditProdLog(fbKey) {
+  const log = getProdLog().find(l => l._fbKey === fbKey);
+  if (!log) return;
+
+  const qtyProduced = parseInt(document.getElementById('_eplq').value) || 0;
+  const qtyDefect   = parseInt(document.getElementById('_epld').value) || 0;
+  const itemIdxVal  = document.getElementById('_epli').value;
+  const itemIdx     = itemIdxVal !== '' ? parseInt(itemIdxVal) : undefined;
+
+  const oldQtyNet = log.qtyNet !== undefined ? log.qtyNet : Math.max(0, (log.qtyProduced||log.qty||0) - (log.qtyDefect||log.defect||0));
+  const newQtyNet = Math.max(0, qtyProduced - qtyDefect);
+  const diff = newQtyNet - oldQtyNet;
+
+  const update = { qtyProduced, qtyDefect, qtyNet: newQtyNet, qtyExcess: 0 };
+  if (itemIdx !== undefined) {
+    update.itemIdx = itemIdx;
+    // อัปเดต spec ให้ตรงกับ item ที่เลือก
+    if (log.orderNum && log.orderNum !== 'STOCK') {
+      const _o = getOrders().find(x => x.orderNum === log.orderNum);
+      if (_o) {
+        const _it = getOrderItems(_o)[itemIdx];
+        if (_it) {
+          update.weld  = _it.weld  || '-';
+          update.steel = _it.steel || '-';
+          update.wire  = _it.wire  || '-';
+          update.extra = _it.extra || '-';
+        }
+      }
+    }
+  }
+
+  // ปรับสต็อกถ้ามีการเพิ่มสต็อกไปแล้ว
+  if (log.addedToStock && (diff !== 0 || update.steel)) {
+    const oldSpecLabel = [log.length, log.weld, log.steel, log.wire, log.extra]
+      .filter(x => x && x !== '-').join('/') || '-';
+    const newSpecLabel = [log.length, update.weld||log.weld, update.steel||log.steel, update.wire||log.wire, update.extra||log.extra]
+      .filter(x => x && x !== '-').join('/') || '-';
+
+    if (oldSpecLabel !== newSpecLabel) {
+      // ย้าย: ลด spec เดิม แล้วเพิ่ม spec ใหม่
+      addToSpecStock(log.pileType, oldSpecLabel, -oldQtyNet);
+      addToSpecStock(log.pileType, newSpecLabel, newQtyNet);
+    } else if (diff !== 0) {
+      addToSpecStock(log.pileType, newSpecLabel, diff);
+    }
+
+    // บันทึก stockLog ว่ามีการแก้ไข
+    const logArr = getStockLog() || [];
+    logArr.unshift({
+      ts: nowTs(),
+      typeVal: diff > 0 ? '📥 รับเข้า (แก้ไขประวัติ)' : '📤 เบิกออก (แก้ไขประวัติ)',
+      name: log.pileType,
+      qty: Math.abs(diff),
+      qtyDisplay: (diff > 0 ? '+' : '') + diff,
+      newStock: (getStock()[log.pileType] || 0),
+      ref: log.orderNum || '-',
+      staff: (_currentUser && _currentUser.email) || '-',
+      note: '✏️ แก้ไข prodLog: ' + fbKey + ' (' + (diff > 0 ? '+' : '') + diff + ' ต้น)'
+    });
+    saveStockLog(logArr);
+  }
+
+  // อัปเดต custPole entry ที่ตรงกัน
+  if (log.addedToStock) {
+    const oldSpecLabel = [log.length, log.weld, log.steel, log.wire, log.extra]
+      .filter(x => x && x !== '-').join('/') || '';
+    const newSpecLabel = [log.length, update.weld||log.weld, update.steel||log.steel, update.wire||log.wire, update.extra||log.extra]
+      .filter(x => x && x !== '-').join('/') || '';
+    const allCp = getCustPoles();
+    // หา custPole ที่ตรงกัน: ใช้ prodLogKey ก่อน (entries ใหม่) fallback qty match (entries เก่า)
+    const matchCp = allCp.find(cp => cp.prodLogKey === fbKey)
+      || allCp.find(cp =>
+          cp.pileType === log.pileType &&
+          (cp.orderNum === log.orderNum || (log.orderNum === 'STOCK' && !cp.online)) &&
+          cp.qty === oldQtyNet &&
+          (!oldSpecLabel || !cp.spec || cp.spec === oldSpecLabel)
+        );
+    if (matchCp) {
+      matchCp.qty = newQtyNet;
+      if (newSpecLabel) matchCp.spec = newSpecLabel;
+      saveSingleCustPole(matchCp);
+    }
+  }
+
+  db.ref(K_PROD_LOG + '/' + fbKey).update(update).then(() => {
+    document.getElementById('_editProdLogModal')?.remove();
+    showToast('✅ แก้ไขแล้ว' + (log.addedToStock && diff !== 0 ? ' | สต็อก ' + (diff > 0 ? '+' : '') + diff + ' ต้น' : ''));
+    renderProdLogHistory();
+    renderSummary();
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
 //  ADMIN: ลบประวัติ
 // ════════════════════════════════════════════════════════════════
 function adminDeleteLog(type, fbKey) {
   if (!confirm('ลบรายการนี้?')) return;
-  if (type === 'prodLog')   db.ref(K_PROD_LOG   + '/' + fbKey).remove();
-  else if (type === 'stockLog') db.ref(K_STOCK_LOG + '/' + fbKey).remove();
-  else if (type === 'prodErr')  db.ref(K_PROD_ERR  + '/' + fbKey).remove();
+
+  if (type === 'prodLog') {
+    const log = getProdLog().find(l => l._fbKey === fbKey);
+    if (log && log.addedToStock) {
+      const qtyNet = log.qtyNet !== undefined ? log.qtyNet : Math.max(0, (log.qtyProduced||log.qty||0) - (log.qtyDefect||log.defect||0));
+
+      // 1. คืนสต็อก (ลบออกจาก spec stock)
+      if (qtyNet > 0) {
+        const specLabel = [log.length, log.weld, log.steel, log.wire, log.extra]
+          .filter(x => x && x !== '-').join('/') || '-';
+        addToSpecStock(log.pileType, specLabel, -qtyNet);
+
+        // บันทึก stockLog ว่าลบ
+        const logArr = getStockLog() || [];
+        logArr.unshift({
+          ts: nowTs(),
+          typeVal: '📤 เบิกออก (ลบประวัติผลิต)',
+          name: log.pileType,
+          qty: qtyNet,
+          qtyDisplay: '-' + qtyNet,
+          newStock: (getStock()[log.pileType] || 0),
+          ref: log.orderNum || '-',
+          staff: (_currentUser && _currentUser.email) || '-',
+          note: '🗑 ลบ prodLog: ' + fbKey
+        });
+        saveStockLog(logArr);
+      }
+
+      // 2. ลบ custPole ที่ตรงกัน
+      const oldSpecLabel = [log.length, log.weld, log.steel, log.wire, log.extra]
+        .filter(x => x && x !== '-').join('/') || '';
+      const matchCp = getCustPoles().find(cp => cp.prodLogKey === fbKey)
+        || getCustPoles().find(cp =>
+            cp.pileType === log.pileType &&
+            (cp.orderNum === log.orderNum || (log.orderNum === 'STOCK' && !cp.online)) &&
+            cp.qty === qtyNet &&
+            (!oldSpecLabel || !cp.spec || cp.spec === oldSpecLabel)
+          );
+      if (matchCp) deleteCustPole(matchCp.id);
+    }
+
+    db.ref(K_PROD_LOG + '/' + fbKey).remove();
+    renderProdLogHistory(); renderSummary();
+
+  } else if (type === 'stockLog') {
+    db.ref(K_STOCK_LOG + '/' + fbKey).remove();
+  } else if (type === 'prodErr') {
+    db.ref(K_PROD_ERR  + '/' + fbKey).remove();
+  }
+
   showToast('🗑 ลบรายการแล้ว');
 }
 
