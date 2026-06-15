@@ -95,7 +95,7 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .table-wrap{overflow-x:auto;}
 .data-table{width:100%;border-collapse:collapse;font-size:12.5px;}
 .data-table th{background:#F8FAFC;color:#475569;font-weight:700;font-size:11px;padding:10px 12px;text-align:left;border-bottom:2px solid #E2E8F0;white-space:nowrap;}
-.data-table td{padding:9px 12px;border-bottom:1px solid #F1F5F9;vertical-align:middle;}
+.data-table td{padding:9px 12px;border-bottom:1px solid #F1F5F9;vertical-align:top;}
 .data-table tr:last-child td{border-bottom:none;}
 .data-table tr:hover td{background:#FAFBFF;}
 .data-table .new-row td{background:#F0FDF4 !important;}
@@ -770,6 +770,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
       </div>
       <div class="card-body">
         <input type="hidden" id="spf_order"/>
+        <input type="hidden" id="spf_item_idx" value="">
         <input type="hidden" id="spf_pile"/>
         <input type="hidden" id="spf_length"/>
         <input type="hidden" id="spf_required"/>
@@ -3607,7 +3608,7 @@ function renderOrders() {
             it.wire   && it.wire!=='-'   ? '〰 '+it.wire   : null,
             it.extra  && it.extra!=='-'  ? '📝 '+it.extra  : null,
           ].filter(Boolean);
-          const lenDisp     = specParts.length ? specParts.join('<br>') : '<span style="color:#CBD5E1;">—</span>';
+          const lenDisp     = specParts.length ? '<span style="white-space:nowrap;">'+specParts.join(' · ')+'</span>' : '<span style="color:#CBD5E1;">—</span>';
           const valDisp     = o.orderValue > 0 ? o.orderValue.toLocaleString('th-TH')+' ฿' : '—';
           const rowCls      = deadlineRowClass(o.deliveryDateISO, iPct);
 
@@ -3804,9 +3805,16 @@ function acceptOrder(orderNum) {
 }
 
 // ── Production Log Helpers ─────────────────────────────────────
-function getTotalProduced(orderNum, pileType) {
+function getTotalProduced(orderNum, pileType, itemIdx) {
   return getProdLog()
-    .filter(l => l.orderNum === orderNum && l.pileType === pileType)
+    .filter(l => {
+      if (l.orderNum !== orderNum || l.pileType !== pileType) return false;
+      if (itemIdx !== undefined) {
+        if (l.itemIdx !== undefined) return l.itemIdx === itemIdx;
+        return itemIdx === 0; // log เก่าที่ไม่มี itemIdx → นับให้รายการแรกเสมอ
+      }
+      return true;
+    })
     .reduce((s, l) => s + (l.qtyNet !== undefined ? l.qtyNet : l.qtyProduced || 0), 0);
 }
 
@@ -3827,14 +3835,14 @@ function renderProdSection() {
     const bg  = STATUS_COLOR[o.status] || '#F1F5F9';
     const tc  = STATUS_TEXT[o.status]  || '#374151';
     const delivLine = o.delivDate ? `<span style="font-size:11px;color:#64748B;">📅 ส่ง ${isoToThai(o.delivDate)}</span>` : '';
-    const pilesHtml = items.map(it => {
+    const pilesHtml = items.map((it, itemIdx) => {
       const pileType = it.pileType || o.pileType || '-';
-      const totalProduced = getTotalProduced(o.orderNum, pileType);
+      const totalProduced = getTotalProduced(o.orderNum, pileType, itemIdx);
       const stockDelivered = it.stockDelivered || 0;
       const pct = it.qty > 0 ? Math.min(100, Math.round((totalProduced + stockDelivered) / it.qty * 100)) : 0;
       const remaining = Math.max(0, it.qty - totalProduced - stockDelivered);
       const excess    = Math.max(0, totalProduced - it.qty);
-      const inProd = getProdActive().find(a => a.orderNum === o.orderNum && a.pileType === pileType);
+      const inProd = getProdActive().find(a => a.orderNum === o.orderNum && a.pileType === pileType && (a.itemIdx === undefined || a.itemIdx === itemIdx));
       const itLen  = (it.length||o.length||'-').replace(/'/g,"\\'");
       // spec tags
       const tags = [
@@ -3847,9 +3855,9 @@ function renderProdSection() {
       const btn = !canDo('log_production') ? '' : inProd
         ? `<div style="margin-top:8px;">
             <div style="background:#FEF3C7;color:#92400E;border:1.5px solid #FDE68A;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;text-align:center;margin-bottom:4px;">🏭 กำลังผลิตอยู่...</div>
-            <button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${it.qty},'${itLen}')" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;padding:6px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">➕ เริ่มเทเพิ่ม</button>
+            <button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${it.qty},'${itLen}',${itemIdx})" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;padding:6px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">➕ เริ่มเทเพิ่ม</button>
            </div>`
-        : `<button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${it.qty},'${itLen}')" style="width:100%;margin-top:8px;background:#D1FAE5;color:#065F46;border:1.5px solid #6EE7B7;padding:7px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">🏭 เริ่มเท</button>`;
+        : `<button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${it.qty},'${itLen}',${itemIdx})" style="width:100%;margin-top:8px;background:#D1FAE5;color:#065F46;border:1.5px solid #6EE7B7;padding:7px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">🏭 เริ่มเท</button>`;
       return `<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
           <span style="font-size:15px;font-weight:800;color:#1E293B;">${pileType}</span>
@@ -4019,7 +4027,7 @@ function submitFreeProd() {
   renderActiveProd(); renderProdSection();
 }
 
-function openStartProdForm(orderNum, pileType, qtyRequired, length) {
+function openStartProdForm(orderNum, pileType, qtyRequired, length, itemIdx) {
   if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   document.getElementById('spf_order').value    = orderNum;
   document.getElementById('spf_pile').value     = pileType;
@@ -4038,6 +4046,7 @@ function openStartProdForm(orderNum, pileType, qtyRequired, length) {
   document.getElementById('spf_date').value = new Date().toISOString().slice(0, 10);
   const specLabel = (length && length !== '-') ? ' · ' + length : '';
   document.getElementById('spfSub').textContent = orderNum + ' — ' + pileType + specLabel + ' (ต้องผลิต ' + qtyRequired + ' ต้น)';
+  document.getElementById('spf_item_idx').value = itemIdx !== undefined ? itemIdx : '';
   document.getElementById('startProdFormCard').style.display = '';
   document.getElementById('startProdFormCard').scrollIntoView({ behavior:'smooth', block:'start' });
 }
@@ -4062,8 +4071,10 @@ function submitStartProd() {
   const standSize3 = document.getElementById('spf_stand_size3').value.trim();
   const standRows = [{qty:standQty,size:standSize},{qty:standQty2,size:standSize2},{qty:standQty3,size:standSize3}].filter(r=>r.qty>0||r.size);
   if (qtyCasting < 1) { showToast('⚠️ กรุณากรอกจำนวนที่เทลงราง'); return; }
+  const _spfItemIdx = document.getElementById('spf_item_idx')?.value;
+  const _itemIdxNum = (_spfItemIdx !== '' && _spfItemIdx !== undefined && _spfItemIdx !== null) ? parseInt(_spfItemIdx) : undefined;
   const list = getProdActive();
-  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, note, prodDate, lane, tong, standQty, standSize, standRows, startedAt: Date.now(), startedBy: (_currentUser && _currentUser.email) || '-' });
+  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, note, prodDate, lane, tong, standQty, standSize, standRows, startedAt: Date.now(), startedBy: (_currentUser && _currentUser.email) || '-', ...(_itemIdxNum !== undefined ? { itemIdx: _itemIdxNum } : {}) });
   saveProdActive(list);
   // อัปเดตสถานะออเดอร์ → กำลังผลิต
   const orders = getOrders();
@@ -4153,7 +4164,7 @@ function submitFinishProd() {
     isStockProd: a.isStockProd || false,
     pileType: a.pileType, length: a.length, ...itemSpecs,
     dateISO, date: isoToThai(dateISO), qtyRequired: required, qtyProduced: qty,
-    qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0 });
+    qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0, ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}) });
   saveProdLog(logs);
 
   // อัปเดตสถานะออเดอร์
@@ -4161,9 +4172,9 @@ function submitFinishProd() {
   const o = orders.find(x => x.orderNum === a.orderNum);
   if (o) {
     const items = getOrderItems(o);
-    const allDone = items.every(it => {
+    const allDone = items.every((it, i) => {
       const pt = it.pileType || o.pileType;
-      return (pt === a.pileType ? newTotal : getTotalProduced(a.orderNum, pt)) >= it.qty;
+      return (pt === a.pileType && i === a.itemIdx ? newTotal : getTotalProduced(a.orderNum, pt, i)) >= it.qty;
     });
     if (allDone && ['รับออเดอร์','ยืนยัน Order','กำลังผลิต'].includes(o.status||'')) {
       o.status = 'พร้อมส่ง'; saveOrders(orders); showToast('✅ ผลิตครบแล้ว! ' + a.orderNum + ' → พร้อมส่ง');
@@ -4533,7 +4544,7 @@ function renderHistorySummary() {
     const totalQty  = items.reduce((s,it) => s+(it.qty||0), 0);
     const totalDel  = items.reduce((s,it) => s+(it.delivered||0), 0);
     const totalStk  = items.reduce((s,it) => s+(it.stockDelivered||0), 0);
-    const totalProd = items.reduce((s,it) => s + getTotalProduced(o.orderNum, it.pileType), 0);
+    const totalProd = items.reduce((s,it,idx) => s + getTotalProduced(o.orderNum, it.pileType, idx), 0);
     const effProd   = totalProd + totalStk;
     if (totalDel >= totalQty && totalQty > 0) return 'จบงาน';
     if (totalProd < totalQty && totalDel > 0) return 'ผลิต+จัดส่ง';
@@ -4623,16 +4634,16 @@ function renderHistorySummary() {
     const span = items.length;
     items.forEach((it, idx) => {
       const _sc=[
-        it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;font-weight:700;">&#128208; '+it.length+'</span>':'',
-        it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;font-weight:700;">&#128293; '+it.weld+'</span>':'',
-        it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;border-radius:4px;padding:1px 5px;font-weight:700;">&#129525; '+it.steel+'</span>':'',
-        it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#FAF5FF;color:#7E22CE;border:1px solid #D8B4FE;border-radius:4px;padding:1px 5px;font-weight:700;">&#129526; '+it.wire+'</span>':'',
-        it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;border-radius:4px;padding:1px 5px;font-weight:700;">+ '+it.extra+'</span>':'',
+        it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#128208; '+it.length+'</span>':'',
+        it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#128293; '+it.weld+'</span>':'',
+        it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#129525; '+it.steel+'</span>':'',
+        it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#FAF5FF;color:#7E22CE;border:1px solid #D8B4FE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#129526; '+it.wire+'</span>':'',
+        it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">+ '+it.extra+'</span>':'',
       ].filter(Boolean).join(' ');
-      const label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;">'+_sc+'</div>':'');
+      const label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:nowrap;gap:3px;margin-top:3px;align-items:center;">'+_sc+'</div>':'');
       const del = it.delivered || 0;
       const qty = it.qty || 0;
-      const prod = getTotalProduced(o.orderNum, it.pileType);
+      const prod = getTotalProduced(o.orderNum, it.pileType, idx);
       const stockDel = it.stockDelivered || 0;
       const prodColor = (prod + stockDel) >= qty ? '#15803D' : prod > 0 ? '#C2410C' : '#94A3B8';
       const stockTag = stockDel > 0
@@ -4641,9 +4652,9 @@ function renderHistorySummary() {
       const prodCell = `<span style="font-weight:700;color:${prodColor};">${prod}</span>${stockTag}<span style="color:#94A3B8;font-size:11px;"> / ${qty} ต้น</span>`;
       if (idx === 0) {
         rows.push(`<tr style="border-top:2px solid #E2E8F0;${rowBg}">
-          <td rowspan="${span}" style="${rowBg}"><span class="order-id">${o.orderNum}</span></td>
-          <td rowspan="${span}" style="font-size:11px;color:#64748B;">${dateStr}</td>
-          <td rowspan="${span}"><strong>${o.customer||'-'}</strong><br><span style="font-size:11px;color:#64748B;">${o.tel||''}</span></td>
+          <td rowspan="${span}" style="${rowBg}vertical-align:middle;"><span class="order-id">${o.orderNum}</span></td>
+          <td rowspan="${span}" style="font-size:11px;color:#64748B;vertical-align:middle;">${dateStr}</td>
+          <td rowspan="${span}" style="vertical-align:middle;"><strong>${o.customer||'-'}</strong><br><span style="font-size:11px;color:#64748B;">${o.tel||''}</span></td>
           <td style="font-size:12px;">${label}</td>
           <td style="font-weight:700;">${qty} ต้น</td>
           <td>${prodCell}</td>
