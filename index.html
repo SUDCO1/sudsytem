@@ -3824,9 +3824,15 @@ function acceptOrder(orderNum) {
 
 // ── Production Log Helpers ─────────────────────────────────────
 function getTotalProduced(orderNum, pileType, itemIdx) {
+  // หา timestamp ของ order ปัจจุบัน เพื่อกรอง prodLog เก่าจาก order รอบก่อนที่ใช้เลขเดียวกัน
+  const activeOrder = getOrders().find(o => o.orderNum === orderNum);
+  const orderTs = activeOrder ? (activeOrder.timestamp || 0) : 0;
   return getProdLog()
     .filter(l => {
+      if (l.archived) return false; // ข้าม log ที่ mark ว่าจบบิลแล้ว
       if (l.orderNum !== orderNum || l.pileType !== pileType) return false;
+      // ถ้า log เก่ากว่า order ปัจจุบัน → ข้ามไป (เป็น log จากรอบผลิตก่อนหน้า)
+      if (orderTs && (l.timestamp || 0) < orderTs) return false;
       if (itemIdx !== undefined) {
         if (l.itemIdx !== undefined) return l.itemIdx === itemIdx;
         return itemIdx === 0; // log เก่าที่ไม่มี itemIdx → นับให้รายการแรกเสมอ
@@ -5330,6 +5336,12 @@ function closeBill(orderNum) {
     custs[ci].lastOrderDate = o.deliveryDate || '-';
     saveCustomers(custs);
   }
+
+  // Mark prodLog entries for this order as archived (ไม่นับรวมถ้า order ถูกเปิดใหม่ด้วยเลขเดิม)
+  const updatedProdLog = getProdLog().map(l =>
+    l.orderNum === orderNum ? { ...l, archived: true } : l
+  );
+  saveProdLog(updatedProdLog);
 
   // Remove from active orders
   const newOrders = orders.filter(x => x.orderNum !== orderNum);
