@@ -1987,7 +1987,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="card-title">📋 ประวัติการเคลื่อนไหวสต็อก</div>
       </div>
       <div class="toolbar">
-        <input type="search" class="search-inp" id="logSearch" placeholder="🔍 ค้นหาชนิดเสา / อ้างอิง..." oninput="renderStockLog()"/>
+        <input type="search" class="search-inp" id="logSearch" placeholder="🔍 ค้นหาชนิดเสา / อ้างอิง / วันที่..." oninput="renderStockLog()"/>
         <select class="filter-sel" id="logTypeFilter" onchange="renderStockLog()">
           <option value="">ทุกประเภท</option>
           <option value="รับเข้า">📥 รับเข้า</option>
@@ -4674,7 +4674,7 @@ function renderHistorySummary() {
   const rows = [];
   orders.forEach(o => {
     const items = (o._done && o.archivedItems) ? o.archivedItems : getOrderItems(o);
-    const dateStr = o.deliveryDateISO || o.deliveryDate || o.orderDate || o.closedAt || '-';
+    const dateStr = o.orderDate || (o.orderDateISO ? isoToThai(o.orderDateISO) : '') || o.closedAt || '-';
     const rowBg = o._done ? 'background:#F0FDF4;' : '';
     const span = items.length;
     items.forEach((it, idx) => {
@@ -5191,7 +5191,7 @@ function renderStockLog(resetPage) {
   const pileF     = document.getElementById('logPileFilter')?.value || '';
 
   let log = allLog;
-  if (query)  log = log.filter(e => (e.name||'').toLowerCase().includes(query) || (e.ref||'').toLowerCase().includes(query) || (e.note||'').toLowerCase().includes(query));
+  if (query)  log = log.filter(e => (e.name||'').toLowerCase().includes(query) || (e.ref||'').toLowerCase().includes(query) || (e.note||'').toLowerCase().includes(query) || (e.ts||'').toLowerCase().includes(query));
   if (typeF)  log = log.filter(e => e.typeVal.includes(typeF));
   if (pileF)  log = log.filter(e => e.name === pileF);
 
