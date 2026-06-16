@@ -673,6 +673,10 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
                 <label class="field-label">ลวด</label>
                 <input type="text" id="f_wire" placeholder="เช่น 4mm"/>
               </div>
+              <div class="field" style="min-width:80px;flex:1;">
+                <label class="field-label">บ่า</label>
+                <input type="text" id="f_ba" placeholder="เช่น มี, ไม่มี"/>
+              </div>
               <div class="field" style="min-width:120px;flex:1.5;">
                 <label class="field-label">เพิ่มเติม</label>
                 <input type="text" id="f_extra" placeholder="เช่น ท้อง, ลูกตั้ง, หมายเหตุ"/>
@@ -891,6 +895,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
           <div><label class="field-label" style="font-size:11px;">เชื่อม</label><input type="text" id="eap_weld" placeholder="เช่น มี, ไม่มี" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
           <div><label class="field-label" style="font-size:11px;">เหล็กเสริม</label><input type="text" id="eap_steel" placeholder="เช่น DB12" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
           <div><label class="field-label" style="font-size:11px;">ลวด</label><input type="text" id="eap_wire" placeholder="เช่น 4mm" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:11px;">บ่า</label><input type="text" id="eap_ba" placeholder="เช่น มี, ไม่มี" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
           <div style="grid-column:1/-1;"><label class="field-label" style="font-size:11px;">เพิ่มเติม</label><input type="text" id="eap_extra" placeholder="เช่น ท้อง, ลูกตั้ง..." style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
         </div>
         </div><!-- /eap_spec_section -->
@@ -961,6 +966,10 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
             <div class="field">
               <label class="field-label">ลวด</label>
               <input type="text" id="fprod_wire" placeholder="เช่น 4mm"/>
+            </div>
+            <div class="field">
+              <label class="field-label">บ่า</label>
+              <input type="text" id="fprod_ba" placeholder="เช่น มี, ไม่มี"/>
             </div>
             <div class="field">
               <label class="field-label">เพิ่มเติม <span style="font-weight:400;color:#94A3B8;">(ไม่บังคับ)</span></label>
@@ -1587,7 +1596,7 @@ function _tcCpRowsHtml(orderNum, savedItems) {
   if (o) {
     getOrderItems(o).forEach(it => {
       const rem = Math.max(0, (it.qty||0) - (it.delivered||0));
-      const specParts = [it.length, it.weld, it.steel, it.wire, it.extra].filter(x => x && x !== '-');
+      const specParts = [it.length, it.weld, it.steel, it.wire, it.ba, it.extra].filter(x => x && x !== '-');
       const spec = specParts.join('/') || '';
       const key = (it.pileType||'') + '|' + spec;
       remainMap[key] = (remainMap[key]||0) + rem;
@@ -1763,7 +1772,7 @@ function tcFinalizeDelivery(entry) {
       const matchBySpec = _siParts && _siParts.size > 0
         ? o.items.find(x => {
             if (x.pileType !== si.pileType) return false;
-            const itemFields = new Set([x.length, x.weld, x.steel, x.wire, x.extra].filter(v => v && v !== '-'));
+            const itemFields = new Set([x.length, x.weld, x.steel, x.wire, x.ba, x.extra].filter(v => v && v !== '-'));
             const fullSpec = [...itemFields].join('/');
             // exact match ก่อน ถ้าไม่ได้ใช้ subset (ทุก part ของ si.spec ต้องอยู่ใน item fields)
             return fullSpec === si.spec || [..._siParts].every(p => itemFields.has(p));
@@ -2426,6 +2435,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <input type="text" id="sd_logwire" placeholder="เช่น 4mm"/>
           </div>
           <div class="field">
+            <label class="field-label">บ่า <span style="font-weight:400;color:#94A3B8;">(ไม่บังคับ)</span></label>
+            <input type="text" id="sd_logba" placeholder="เช่น มี, ไม่มี"/>
+          </div>
+          <div class="field">
             <label class="field-label">หมายเหตุ</label>
             <input type="text" id="sd_lognote" placeholder="เช่น ผลิต batch 3, ส่งลูกค้า ABC"/>
           </div>
@@ -2521,6 +2534,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="field" style="min-width:80px;flex:1;"><label class="field-label">เชื่อม</label><input type="text" id="edit_f_weld" placeholder="เช่น มี, ไม่มี" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
               <div class="field" style="min-width:80px;flex:1;"><label class="field-label">เหล็กเสริม</label><input type="text" id="edit_f_steel" placeholder="เช่น DB12" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
               <div class="field" style="min-width:70px;flex:1;"><label class="field-label">ลวด</label><input type="text" id="edit_f_wire" placeholder="เช่น 4mm" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
+              <div class="field" style="min-width:70px;flex:1;"><label class="field-label">บ่า</label><input type="text" id="edit_f_ba" placeholder="เช่น มี, ไม่มี" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
               <div class="field" style="min-width:100px;flex:2;"><label class="field-label">เพิ่มเติม</label><input type="text" id="edit_f_extra" placeholder="เช่น ท้อง, ลูกตั้ง" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
               <div class="field" style="align-self:flex-end;flex-shrink:0;"><button class="btn btn-ghost btn-sm" onclick="editAddItem()" style="white-space:nowrap;">+ เพิ่มรายการ</button></div>
             </div>
@@ -3324,17 +3338,19 @@ function renderOrderItemsDraft() {
     const weldDisp  = it.weld  && it.weld  !== '-' ? it.weld  : '—';
     const steelDisp = it.steel && it.steel !== '-' ? it.steel : '—';
     const wireDisp  = it.wire  && it.wire  !== '-' ? it.wire  : '—';
+    const baDisp    = it.ba    && it.ba    !== '-' ? it.ba    : '—';
     return '<tr><td style="font-weight:600;">' + it.pileType + '</td>'
       + '<td style="font-weight:700;color:#1E293B;">' + it.qty + ' ต้น</td>'
       + '<td style="color:#64748B;">' + lenDisp + '</td>'
       + '<td style="color:#64748B;">' + weldDisp + '</td>'
       + '<td style="color:#64748B;">' + steelDisp + '</td>'
       + '<td style="color:#64748B;">' + wireDisp + '</td>'
+      + '<td style="color:#64748B;">' + baDisp + '</td>'
       + '<td style="color:#166534;">' + valDisp + '</td>'
       + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
   }).join('');
   listEl.innerHTML = '<table class="items-draft-table"><thead><tr>'
-    + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th></th>'
+    + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>บ่า</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>';
   if (box) {
     box.className = 'order-value-box has-value';
@@ -3353,17 +3369,19 @@ function addOrderItem() {
   const weld  = (document.getElementById('f_weld').value  || '').trim();
   const steel = (document.getElementById('f_steel').value || '').trim();
   const wire  = (document.getElementById('f_wire').value  || '').trim();
+  const ba    = (document.getElementById('f_ba').value    || '').trim();
   const extra = (document.getElementById('f_extra').value || '').trim();
   if (!type) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
   if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (ต้น)'); return; }
   const value = calcOrderValue(type, qty);
-  orderItemsDraft.push({ pileType: type, qty, length: len || '-', weld: weld || '-', steel: steel || '-', wire: wire || '-', extra: extra || '-', value });
+  orderItemsDraft.push({ pileType: type, qty, length: len || '-', weld: weld || '-', steel: steel || '-', wire: wire || '-', ba: ba || '-', extra: extra || '-', value });
   document.getElementById('f_type').selectedIndex = 0;
   document.getElementById('f_qty').value    = '';
   document.getElementById('f_length').value = '';
   document.getElementById('f_weld').value   = '';
   document.getElementById('f_steel').value  = '';
   document.getElementById('f_wire').value   = '';
+  document.getElementById('f_ba').value     = '';
   document.getElementById('f_extra').value  = '';
   renderOrderItemsDraft();
 }
@@ -3667,6 +3685,7 @@ function renderOrders() {
             it.weld   && it.weld!=='-'   ? '🔗 '+it.weld   : null,
             it.steel  && it.steel!=='-'  ? '🔩 '+it.steel  : null,
             it.wire   && it.wire!=='-'   ? '〰 '+it.wire   : null,
+            it.ba     && it.ba!=='-'     ? '🔷 '+it.ba     : null,
             it.extra  && it.extra!=='-'  ? '📝 '+it.extra  : null,
           ].filter(Boolean);
           const lenDisp     = specParts.length ? '<span style="white-space:nowrap;">'+specParts.join(' · ')+'</span>' : '<span style="color:#CBD5E1;">—</span>';
@@ -3917,6 +3936,7 @@ function renderProdSection() {
         it.weld   && it.weld  !=='-' ? `<span style="background:#FEF9C3;color:#854D0E;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔗 ${it.weld}</span>`   : '',
         it.steel  && it.steel !=='-' ? `<span style="background:#F3E8FF;color:#6D28D9;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔩 ${it.steel}</span>`  : '',
         it.wire   && it.wire  !=='-' ? `<span style="background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">〰 ${it.wire}</span>`   : '',
+        it.ba     && it.ba    !=='-' ? `<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔷 ${it.ba}</span>`     : '',
         it.extra  && it.extra !=='-' ? `<span style="background:#F1F5F9;color:#475569;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📝 ${it.extra}</span>`  : '',
       ].filter(Boolean).join(' ');
       const btn = !canDo('log_production') ? '' : inProd
@@ -3999,6 +4019,7 @@ function openEditActiveProd(id) {
     document.getElementById('eap_weld').value   = (a.weld   && a.weld   !== '-') ? a.weld   : '';
     document.getElementById('eap_steel').value  = (a.steel  && a.steel  !== '-') ? a.steel  : '';
     document.getElementById('eap_wire').value   = (a.wire   && a.wire   !== '-') ? a.wire   : '';
+    document.getElementById('eap_ba').value     = (a.ba     && a.ba     !== '-') ? a.ba     : '';
     document.getElementById('eap_extra').value  = (a.extra  && a.extra  !== '-') ? a.extra  : '';
   }
   modal.style.display = 'flex';
@@ -4027,6 +4048,7 @@ function saveEditActiveProd() {
     a.weld   = document.getElementById('eap_weld').value.trim()   || '-';
     a.steel  = document.getElementById('eap_steel').value.trim()  || '-';
     a.wire   = document.getElementById('eap_wire').value.trim()   || '-';
+    a.ba     = document.getElementById('eap_ba').value.trim()     || '-';
     a.extra  = document.getElementById('eap_extra').value.trim()  || '-';
   }
   saveProdActive(list);
@@ -4102,6 +4124,7 @@ function openFreeProdForm() {
   document.getElementById('fprod_weld').value       = '';
   document.getElementById('fprod_steel').value      = '';
   document.getElementById('fprod_wire').value       = '';
+  document.getElementById('fprod_ba').value         = '';
   document.getElementById('fprod_note').value       = '';
   document.getElementById('fprod_lane').value       = '';
   document.getElementById('fprod_tong').value       = '';
@@ -4127,6 +4150,7 @@ function submitFreeProd() {
   const weld      = (document.getElementById('fprod_weld')?.value  || '').trim() || '-';
   const steel     = (document.getElementById('fprod_steel')?.value || '').trim() || '-';
   const wire      = (document.getElementById('fprod_wire')?.value  || '').trim() || '-';
+  const ba        = (document.getElementById('fprod_ba')?.value    || '').trim() || '-';
   const note      = document.getElementById('fprod_note').value.trim();
   const prodDate  = document.getElementById('fprod_date').value || new Date().toISOString().slice(0, 10);
   const lane      = document.getElementById('fprod_lane').value.trim();
@@ -4145,7 +4169,7 @@ function submitFreeProd() {
     id: genVid(),
     orderNum: 'STOCK',
     isStockProd: true,
-    pileType, length, weld, steel, wire, qtyRequired: 0, qtyCasting: qty, note, prodDate, lane, tong, standQty, standSize, standRows,
+    pileType, length, weld, steel, wire, ba, qtyRequired: 0, qtyCasting: qty, note, prodDate, lane, tong, standQty, standSize, standRows,
     startedAt: Date.now(),
     startedBy: (_currentUser && _currentUser.email) || '-'
   });
@@ -4276,7 +4300,7 @@ function submitFinishProd() {
   const stockToAdd  = newExcess - prevExcess;
 
   // ดึง weld/steel/wire/extra จาก order item
-  let itemSpecs = { weld: a.weld||'-', steel: a.steel||'-', wire: a.wire||'-', extra: a.extra||'-' };
+  let itemSpecs = { weld: a.weld||'-', steel: a.steel||'-', wire: a.wire||'-', ba: a.ba||'-', extra: a.extra||'-' };
   if (!a.isStockProd) {
     const _orders = getOrders();
     const _o = _orders.find(x => x.orderNum === a.orderNum);
@@ -4286,7 +4310,7 @@ function submitFinishProd() {
       const _it = (a.itemIdx !== undefined ? _items[a.itemIdx] : null)
                || _items.find(it => it.pileType === a.pileType)
                || _items[0];
-      if (_it) itemSpecs = { weld: _it.weld||'-', steel: _it.steel||'-', wire: _it.wire||'-', extra: _it.extra||'-' };
+      if (_it) itemSpecs = { weld: _it.weld||'-', steel: _it.steel||'-', wire: _it.wire||'-', ba: _it.ba||'-', extra: _it.extra||'-' };
     }
   }
   const logs = getProdLog();
@@ -4343,6 +4367,7 @@ function submitFinishProd() {
       itemSpecs.weld        && itemSpecs.weld         !== '-' ? itemSpecs.weld        : null,
       itemSpecs.steel       && itemSpecs.steel        !== '-' ? itemSpecs.steel       : null,
       itemSpecs.wire        && itemSpecs.wire         !== '-' ? itemSpecs.wire        : null,
+      itemSpecs.ba          && itemSpecs.ba           !== '-' ? itemSpecs.ba          : null,
     ].filter(Boolean);
     const specLabel = _specParts.length ? _specParts.join('/') : '-';
     addToSpecStock(a.pileType, specLabel, netQty);
@@ -4453,6 +4478,7 @@ function renderProdLogHistory() {
       l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:1px 6px;border-radius:4px;font-size:10px;">🔗 '+l.weld  +'</span>' : null,
       l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:1px 6px;border-radius:4px;font-size:10px;">🔩 '+l.steel +'</span>' : null,
       l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;">〰 '+l.wire  +'</span>' : null,
+      l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">🔷 '+l.ba   +'</span>' : null,
       l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;">📝 '+l.extra +'</span>' : null,
     ].filter(Boolean);
     const prodParts = [
@@ -4786,6 +4812,7 @@ function renderHistorySummary() {
         it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#128293; '+it.weld+'</span>':'',
         it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#129525; '+it.steel+'</span>':'',
         it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#FAF5FF;color:#7E22CE;border:1px solid #D8B4FE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#129526; '+it.wire+'</span>':'',
+        it.ba&&it.ba!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">🔷 '+it.ba+'</span>':'',
         it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">+ '+it.extra+'</span>':'',
       ].filter(Boolean).join(' ');
       const label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:nowrap;gap:3px;margin-top:3px;align-items:center;">'+_sc+'</div>':'');
@@ -4894,6 +4921,7 @@ function cpSpecChips(specStr) {
     { icon:'🔗', bg:'#FEF9C3', tc:'#854D0E' },
     { icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9' },
     { icon:'〰', bg:'#DCFCE7', tc:'#166534' },
+    { icon:'🔷', bg:'#DBEAFE', tc:'#1D4ED8' },
     { icon:'📝', bg:'#F1F5F9', tc:'#475569' },
   ];
   const parts = String(specStr).split('/').filter(Boolean);
@@ -6174,19 +6202,21 @@ function renderSpecGrid() {
     { key:'weld',   icon:'🔗', bg:'#FEF9C3', tc:'#854D0E' },
     { key:'steel',  icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9' },
     { key:'wire',   icon:'〰', bg:'#DCFCE7', tc:'#166534' },
+    { key:'ba',     icon:'🔷', bg:'#DBEAFE', tc:'#1D4ED8' },
   ];
   grid.innerHTML = specs.map(v => {
     const pct   = total > 0 ? Math.round((v.qty||0)/total*100) : 0;
     const color = (v.qty||0) === 0 ? '#E2E8F0' : '#3B82F6';
     // สร้าง tag จาก field แยก (ใหม่) หรือ parse "/" (เก่า)
     let tagsHtml = '';
-    if (v.weld || v.steel || v.wire) {
+    if (v.weld || v.steel || v.wire || v.ba) {
       // format ใหม่: มี field แยก
       const parts = [
         v.spec   && v.spec  !=='-' ? { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8', val:v.spec  } : null,
         v.weld   && v.weld  !=='-' ? { icon:'🔗', bg:'#FEF9C3', tc:'#854D0E', val:v.weld  } : null,
         v.steel  && v.steel !=='-' ? { icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9', val:v.steel } : null,
-        v.wire   && v.wire  !=='-' ? { icon:'〰', bg:'#DCFCE7', tc:'#166534', val:v.wire  } : null,
+        v.wire   && v.wire  !=='-' ? { icon:'〰', bg:'#DCFCE7', tc:'#166634', val:v.wire  } : null,
+        v.ba     && v.ba    !=='-' ? { icon:'🔷', bg:'#DBEAFE', tc:'#1D4ED8', val:v.ba    } : null,
       ].filter(Boolean);
       tagsHtml = parts.map(p => `<span style="background:${p.bg};color:${p.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${p.icon} ${escHtml(p.val)}</span>`).join(' ');
     } else if (String(v.spec||'').includes('/')) {
@@ -6412,6 +6442,7 @@ function submitSdLog() {
   const weld    = (document.getElementById('sd_logweld')?.value||'').trim()||'-';
   const steel   = (document.getElementById('sd_logsteel')?.value||'').trim()||'-';
   const wire    = (document.getElementById('sd_logwire')?.value||'').trim()||'-';
+  const ba      = (document.getElementById('sd_logba')?.value||'').trim()||'-';
 
   if (!typeVal)  { showToast('⚠️ เลือกประเภทก่อน'); return; }
   if (!spec)     { showToast('⚠️ กรอกสเปคก่อน'); return; }
@@ -6432,7 +6463,8 @@ function submitSdLog() {
       if (weld!=='-') existing.weld=weld;
       if (steel!=='-') existing.steel=steel;
       if (wire!=='-') existing.wire=wire;
-    } else { specs.push({ id:genVid(), spec, qty, weld, steel, wire }); }
+      if (ba!=='-') existing.ba=ba;
+    } else { specs.push({ id:genVid(), spec, qty, weld, steel, wire, ba }); }
     newMain += qty;
     qtyDisplay = '+'+qty;
     typeLabel  = '📥 รับเข้า (ผลิตเสร็จ)';
@@ -6453,7 +6485,8 @@ function submitSdLog() {
       if (weld!=='-') existing.weld=weld;
       if (steel!=='-') existing.steel=steel;
       if (wire!=='-') existing.wire=wire;
-    } else { specs.push({ id:genVid(), spec, qty, weld, steel, wire }); }
+      if (ba!=='-') existing.ba=ba;
+    } else { specs.push({ id:genVid(), spec, qty, weld, steel, wire, ba }); }
     const specTotal = specs.reduce((s,v)=>s+(v.qty||0), 0);
     newMain = specTotal;
     qtyDisplay = '→'+qty;
@@ -6493,7 +6526,7 @@ function submitSdLog() {
 }
 
 function clearSdLog() {
-  ['sd_logqty','sd_lognote','sd_logspec','sd_logweld','sd_logsteel','sd_logwire'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['sd_logqty','sd_lognote','sd_logspec','sd_logweld','sd_logsteel','sd_logwire','sd_logba'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   const t=document.getElementById('sd_logtype'); if(t) t.selectedIndex=0;
   const s=document.getElementById('sd_logstaff'); if(s) s.selectedIndex=0;
   const p=document.getElementById('sdLogPreview');
@@ -6567,7 +6600,7 @@ function openEditOrder(orderNum) {
   document.getElementById('edit_note').value       = (o.note && o.note !== '-') ? o.note : '';
   document.getElementById('edit_f_qty').value      = '';
   document.getElementById('edit_f_len').value      = '';
-  ['edit_f_weld','edit_f_steel','edit_f_wire','edit_f_extra'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  ['edit_f_weld','edit_f_steel','edit_f_wire','edit_f_ba','edit_f_extra'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
 
   renderEditItemsTable();
   document.getElementById('editOrderOverlay').style.display = 'flex';
@@ -6600,6 +6633,7 @@ function renderEditItemsTable() {
       <td>${fld('weld','เชื่อม')}</td>
       <td>${fld('steel','เหล็กเสริม')}</td>
       <td>${fld('wire','ลวด')}</td>
+      <td>${fld('ba','บ่า')}</td>
       <td>${fld('extra','เพิ่มเติม')}</td>
       <td style="color:#166534;font-size:12px;font-weight:600;">${valDisp}</td>
       <td>${delCell}</td>
@@ -6607,7 +6641,7 @@ function renderEditItemsTable() {
   }).join('');
 
   listEl.innerHTML = `<table class="edit-items-table">
-    <thead><tr><th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>เพิ่มเติม</th><th></th></tr></thead>
+    <thead><tr><th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>บ่า</th><th>เพิ่มเติม</th><th></th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 
@@ -6660,13 +6694,14 @@ function editAddItem() {
   const weld  = (document.getElementById('edit_f_weld')  ? document.getElementById('edit_f_weld').value  : '').trim();
   const steel = (document.getElementById('edit_f_steel') ? document.getElementById('edit_f_steel').value : '').trim();
   const wire  = (document.getElementById('edit_f_wire')  ? document.getElementById('edit_f_wire').value  : '').trim();
+  const ba    = (document.getElementById('edit_f_ba')    ? document.getElementById('edit_f_ba').value    : '').trim();
   const extra = (document.getElementById('edit_f_extra') ? document.getElementById('edit_f_extra').value : '').trim();
   if (!type) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
   if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (ต้น)'); return; }
   const value = calcOrderValue(type, qty);
-  _editItemsDraft.push({ pileType: type, qty, length: len||'-', weld: weld||'-', steel: steel||'-', wire: wire||'-', extra: extra||'-', value, delivered: 0 });
+  _editItemsDraft.push({ pileType: type, qty, length: len||'-', weld: weld||'-', steel: steel||'-', wire: wire||'-', ba: ba||'-', extra: extra||'-', value, delivered: 0 });
   document.getElementById('edit_f_type').selectedIndex = 0;
-  ['edit_f_qty','edit_f_len','edit_f_weld','edit_f_steel','edit_f_wire','edit_f_extra'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  ['edit_f_qty','edit_f_len','edit_f_weld','edit_f_steel','edit_f_wire','edit_f_ba','edit_f_extra'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   renderEditItemsTable();
 }
 
@@ -7212,6 +7247,7 @@ function saveEditProdLog(fbKey) {
           update.weld  = _it.weld  || '-';
           update.steel = _it.steel || '-';
           update.wire  = _it.wire  || '-';
+          update.ba    = _it.ba    || '-';
           update.extra = _it.extra || '-';
         }
       }
@@ -7220,9 +7256,9 @@ function saveEditProdLog(fbKey) {
 
   // ปรับสต็อกถ้ามีการเพิ่มสต็อกไปแล้ว
   if (log.addedToStock && (diff !== 0 || update.steel)) {
-    const oldSpecLabel = [log.length, log.weld, log.steel, log.wire, log.extra]
+    const oldSpecLabel = [log.length, log.weld, log.steel, log.wire, log.ba, log.extra]
       .filter(x => x && x !== '-').join('/') || '-';
-    const newSpecLabel = [log.length, update.weld||log.weld, update.steel||log.steel, update.wire||log.wire, update.extra||log.extra]
+    const newSpecLabel = [log.length, update.weld||log.weld, update.steel||log.steel, update.wire||log.wire, update.ba||log.ba, update.extra||log.extra]
       .filter(x => x && x !== '-').join('/') || '-';
 
     if (oldSpecLabel !== newSpecLabel) {
@@ -7251,9 +7287,9 @@ function saveEditProdLog(fbKey) {
 
   // อัปเดต custPole entry ที่ตรงกัน
   if (log.addedToStock) {
-    const oldSpecLabel = [log.length, log.weld, log.steel, log.wire, log.extra]
+    const oldSpecLabel = [log.length, log.weld, log.steel, log.wire, log.ba, log.extra]
       .filter(x => x && x !== '-').join('/') || '';
-    const newSpecLabel = [log.length, update.weld||log.weld, update.steel||log.steel, update.wire||log.wire, update.extra||log.extra]
+    const newSpecLabel = [log.length, update.weld||log.weld, update.steel||log.steel, update.wire||log.wire, update.ba||log.ba, update.extra||log.extra]
       .filter(x => x && x !== '-').join('/') || '';
     const allCp = getCustPoles();
     // หา custPole ที่ตรงกัน: ใช้ prodLogKey ก่อน (entries ใหม่) fallback qty match (entries เก่า)
@@ -7292,7 +7328,7 @@ function adminDeleteLog(type, fbKey) {
 
       // 1. คืนสต็อก (ลบออกจาก spec stock)
       if (qtyNet > 0) {
-        const specLabel = [log.length, log.weld, log.steel, log.wire, log.extra]
+        const specLabel = [log.length, log.weld, log.steel, log.wire, log.ba, log.extra]
           .filter(x => x && x !== '-').join('/') || '-';
         addToSpecStock(log.pileType, specLabel, -qtyNet);
 
@@ -7313,7 +7349,7 @@ function adminDeleteLog(type, fbKey) {
       }
 
       // 2. ลบ custPole ที่ตรงกัน
-      const oldSpecLabel = [log.length, log.weld, log.steel, log.wire, log.extra]
+      const oldSpecLabel = [log.length, log.weld, log.steel, log.wire, log.ba, log.extra]
         .filter(x => x && x !== '-').join('/') || '';
       const matchCp = getCustPoles().find(cp => cp.prodLogKey === fbKey)
         || getCustPoles().find(cp =>
@@ -7758,14 +7794,26 @@ function openProdDetail(id) {
   const fmt = v => (v && v !== '-') ? v : '—';
   const startTime = a.startedAt ? new Date(a.startedAt).toLocaleString('th-TH', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
 
-  // ดึง extra จาก order item (เหมือน logic ตอนผลิตเสร็จ)
+  // ดึง spec จาก order item สำหรับการผลิตที่ผูกกับออเดอร์
+  let weldVal  = a.weld  || '-';
+  let steelVal = a.steel || '-';
+  let wireVal  = a.wire  || '-';
+  let baVal    = a.ba    || '-';
   let extraVal = a.extra || '-';
   if (!a.isStockProd) {
     const _o = (getOrders()||[]).find(x => x.orderNum === a.orderNum);
     if (_o) {
       const _items = getOrderItems(_o);
-      const _it = _items.find(it => it.pileType === a.pileType) || _items[0];
-      if (_it && _it.extra) extraVal = _it.extra;
+      const _it = (a.itemIdx !== undefined ? _items[a.itemIdx] : null)
+               || _items.find(it => it.pileType === a.pileType)
+               || _items[0];
+      if (_it) {
+        if (_it.weld)  weldVal  = _it.weld;
+        if (_it.steel) steelVal = _it.steel;
+        if (_it.wire)  wireVal  = _it.wire;
+        if (_it.ba)    baVal    = _it.ba;
+        if (_it.extra) extraVal = _it.extra;
+      }
     }
   }
 
@@ -7793,9 +7841,10 @@ function openProdDetail(id) {
     '<div class="pdm-section">สเปคเสา</div>'
     + '<div class="pdm-row"><span class="pdm-label">ชนิดเสา</span><span class="pdm-val">'+fmt(a.pileType)+'</span></div>'
     + '<div class="pdm-row"><span class="pdm-label">ความยาว</span><span class="pdm-val">'+fmt(a.length)+'</span></div>'
-    + '<div class="pdm-row"><span class="pdm-label">การเชื่อม</span><span class="pdm-val">'+fmt(a.weld)+'</span></div>'
-    + '<div class="pdm-row"><span class="pdm-label">เหล็กเสริม</span><span class="pdm-val">'+fmt(a.steel)+'</span></div>'
-    + '<div class="pdm-row"><span class="pdm-label">ลวด</span><span class="pdm-val">'+fmt(a.wire)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">การเชื่อม</span><span class="pdm-val">'+fmt(weldVal)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">เหล็กเสริม</span><span class="pdm-val">'+fmt(steelVal)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">ลวด</span><span class="pdm-val">'+fmt(wireVal)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">บ่า</span><span class="pdm-val">'+fmt(baVal)+'</span></div>'
     + '<div class="pdm-row"><span class="pdm-label">เพิ่มเติม</span><span class="pdm-val">'+fmt(extraVal)+'</span></div>'
     + '<hr class="pdm-divider"/>'
     + '<div class="pdm-section">การเท</div>'
