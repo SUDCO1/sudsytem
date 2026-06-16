@@ -876,6 +876,48 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
       </div>
     </div>
 
+    <!-- ── Modal แก้ไขรายการกำลังผลิต ── -->
+    <div id="editActiveProdModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:min(480px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div style="font-size:15px;font-weight:800;color:#1E293B;">✏️ แก้ไขรายการในราง</div>
+          <button onclick="closeEditActiveProd()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#94A3B8;">✕</button>
+        </div>
+        <input type="hidden" id="eap_id"/>
+        <div id="eap_spec_section">
+        <div style="font-size:11px;font-weight:700;color:#1D4ED8;letter-spacing:0.05em;margin-bottom:8px;">📐 สเปคเสา</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div><label class="field-label" style="font-size:11px;">ความยาว</label><input type="text" id="eap_length" placeholder="เช่น 6m, 9m" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:11px;">เชื่อม</label><input type="text" id="eap_weld" placeholder="เช่น มี, ไม่มี" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:11px;">เหล็กเสริม</label><input type="text" id="eap_steel" placeholder="เช่น DB12" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:11px;">ลวด</label><input type="text" id="eap_wire" placeholder="เช่น 4mm" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div style="grid-column:1/-1;"><label class="field-label" style="font-size:11px;">เพิ่มเติม</label><input type="text" id="eap_extra" placeholder="เช่น ท้อง, ลูกตั้ง..." style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+        </div>
+        </div><!-- /eap_spec_section -->
+        <div style="font-size:11px;font-weight:700;color:#92400E;letter-spacing:0.05em;margin-bottom:8px;">🏗️ รายละเอียดการผลิต</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><label class="field-label" style="font-size:11px;">วันที่ผลิต</label><input type="date" id="eap_date" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:11px;">จำนวนในราง (ต้น)</label><input type="number" id="eap_qty" min="1" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:11px;">เลน</label><input type="text" id="eap_lane" placeholder="เช่น 1, 2, A" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:11px;">ท้อง</label><input type="text" id="eap_tong" placeholder="เช่น มี, ไม่มี" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div style="grid-column:1/-1;"><label class="field-label" style="font-size:11px;">หมายเหตุ</label><input type="text" id="eap_note" placeholder="หมายเหตุ" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+        </div>
+        <div style="margin-top:14px;font-size:11px;font-weight:700;color:#64748B;margin-bottom:8px;">ลูกตั้ง</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div><label class="field-label" style="font-size:10px;">จำนวน (แถว 1)</label><input type="number" id="eap_sq1" min="0" placeholder="เช่น 4" style="width:100%;padding:6px 8px;border:1.5px solid #E2E8F0;border-radius:6px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:10px;">ขนาด (แถว 1)</label><input type="text" id="eap_ss1" placeholder="เช่น DB12" style="width:100%;padding:6px 8px;border:1.5px solid #E2E8F0;border-radius:6px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:10px;">จำนวน (แถว 2)</label><input type="number" id="eap_sq2" min="0" placeholder="เช่น 4" style="width:100%;padding:6px 8px;border:1.5px solid #E2E8F0;border-radius:6px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:10px;">ขนาด (แถว 2)</label><input type="text" id="eap_ss2" placeholder="เช่น DB12" style="width:100%;padding:6px 8px;border:1.5px solid #E2E8F0;border-radius:6px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:10px;">จำนวน (แถว 3)</label><input type="number" id="eap_sq3" min="0" placeholder="เช่น 4" style="width:100%;padding:6px 8px;border:1.5px solid #E2E8F0;border-radius:6px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:10px;">ขนาด (แถว 3)</label><input type="text" id="eap_ss3" placeholder="เช่น DB12" style="width:100%;padding:6px 8px;border:1.5px solid #E2E8F0;border-radius:6px;font-size:12px;"/></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:18px;">
+          <button onclick="saveEditActiveProd()" class="btn btn-primary" style="flex:1;">💾 บันทึก</button>
+          <button onclick="closeEditActiveProd()" class="btn btn-ghost" style="flex:1;">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ── ฟอร์มผลิตเพิ่มสต็อก (ไม่มี Order) ── -->
     <div class="card" id="freeProdFormCard" style="display:none;border:2px solid #93C5FD;">
       <div class="card-header" style="justify-content:space-between;background:#EFF6FF;border-radius:10px 10px 0 0;">
@@ -3930,6 +3972,67 @@ function fmtElapsed(startedAt) {
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   return h > 0 ? h + ' ชม. ' + m + ' นาที' : m + ' นาที';
+}
+
+function openEditActiveProd(id) {
+  const a = getProdActive().find(x => x.id === id);
+  if (!a) return;
+  const modal = document.getElementById('editActiveProdModal');
+  document.getElementById('eap_id').value   = id;
+  document.getElementById('eap_date').value = a.prodDate || new Date().toISOString().slice(0,10);
+  document.getElementById('eap_qty').value  = a.qtyCasting || a.qtyRequired || '';
+  document.getElementById('eap_lane').value = a.lane || '';
+  document.getElementById('eap_tong').value = a.tong || '';
+  document.getElementById('eap_note').value = a.note || '';
+  const rows = a.standRows && a.standRows.length ? a.standRows : (a.standQty > 0 ? [{qty:a.standQty,size:a.standSize}] : [{},{},{}]);
+  document.getElementById('eap_sq1').value = rows[0]?.qty || '';
+  document.getElementById('eap_ss1').value = rows[0]?.size || '';
+  document.getElementById('eap_sq2').value = rows[1]?.qty || '';
+  document.getElementById('eap_ss2').value = rows[1]?.size || '';
+  document.getElementById('eap_sq3').value = rows[2]?.qty || '';
+  document.getElementById('eap_ss3').value = rows[2]?.size || '';
+  // สเปคเสา — แสดงเฉพาะผลิตเพิ่มสต็อก
+  const specSection = document.getElementById('eap_spec_section');
+  if (specSection) specSection.style.display = a.isStockProd ? '' : 'none';
+  if (a.isStockProd) {
+    document.getElementById('eap_length').value = (a.length && a.length !== '-') ? a.length : '';
+    document.getElementById('eap_weld').value   = (a.weld   && a.weld   !== '-') ? a.weld   : '';
+    document.getElementById('eap_steel').value  = (a.steel  && a.steel  !== '-') ? a.steel  : '';
+    document.getElementById('eap_wire').value   = (a.wire   && a.wire   !== '-') ? a.wire   : '';
+    document.getElementById('eap_extra').value  = (a.extra  && a.extra  !== '-') ? a.extra  : '';
+  }
+  modal.style.display = 'flex';
+}
+function closeEditActiveProd() {
+  document.getElementById('editActiveProdModal').style.display = 'none';
+}
+function saveEditActiveProd() {
+  const id = document.getElementById('eap_id').value;
+  const list = getProdActive();
+  const a = list.find(x => x.id === id);
+  if (!a) return;
+  a.prodDate    = document.getElementById('eap_date').value || a.prodDate;
+  a.qtyCasting  = parseInt(document.getElementById('eap_qty').value) || a.qtyCasting;
+  a.lane        = document.getElementById('eap_lane').value.trim();
+  a.tong        = document.getElementById('eap_tong').value.trim();
+  a.note        = document.getElementById('eap_note').value.trim();
+  a.standRows   = [
+    {qty: parseInt(document.getElementById('eap_sq1').value)||0, size: document.getElementById('eap_ss1').value.trim()},
+    {qty: parseInt(document.getElementById('eap_sq2').value)||0, size: document.getElementById('eap_ss2').value.trim()},
+    {qty: parseInt(document.getElementById('eap_sq3').value)||0, size: document.getElementById('eap_ss3').value.trim()},
+  ].filter(r => r.qty > 0 || r.size);
+  // บันทึกสเปคเฉพาะผลิตเพิ่มสต็อก
+  if (a.isStockProd) {
+    a.length = document.getElementById('eap_length').value.trim() || '-';
+    a.weld   = document.getElementById('eap_weld').value.trim()   || '-';
+    a.steel  = document.getElementById('eap_steel').value.trim()  || '-';
+    a.wire   = document.getElementById('eap_wire').value.trim()   || '-';
+    a.extra  = document.getElementById('eap_extra').value.trim()  || '-';
+  }
+  saveProdActive(list);
+  closeEditActiveProd();
+  renderActiveProd();
+  showToast('✅ แก้ไขรายการในรางเรียบร้อยแล้ว');
 }
 
 function renderActiveProd() {
@@ -7703,7 +7806,10 @@ function openProdDetail(id) {
     + '<div class="pdm-row"><span class="pdm-label">วันที่ผลิต</span><span class="pdm-val">'+fmt(a.prodDate)+'</span></div>'
     + '<div class="pdm-row"><span class="pdm-label">เริ่มเทเมื่อ</span><span class="pdm-val">'+startTime+'</span></div>'
     + (a.note ? '<div class="pdm-row"><span class="pdm-label">หมายเหตุ</span><span class="pdm-val">'+a.note+'</span></div>' : '')
-    + orderSection;
+    + orderSection
+    + '<div style="display:flex;justify-content:flex-end;margin-top:8px;">'
+    +   '<button onclick="closeProdDetail();openEditActiveProd(\''+a.id+'\')" style="padding:8px 18px;background:#1D4ED8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">✏️ แก้ไขข้อมูล</button>'
+    + '</div>';
 
   modal.classList.add('open');
 }
