@@ -1011,6 +1011,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
               <th>เลข Order</th>
               <th>ชนิดเสา</th>
               <th>รายละเอียดเสา</th>
+              <th>รายละเอียดการผลิต</th>
               <th>ผลิตได้</th>
               <th>เสีย</th>
               <th>พร้อมส่ง</th>
@@ -4117,7 +4118,7 @@ function openFinishProd(activeId) {
   document.getElementById('fp_active_id').value      = activeId;
   document.getElementById('fp_defect').value         = '';
   document.getElementById('fp_defect_note').value    = '';
-  document.getElementById('fp_date').value           = new Date().toISOString().slice(0,10);
+  document.getElementById('fp_date').value           = a.prodDate || new Date().toISOString().slice(0,10);
   document.getElementById('fp_produced_display').textContent = qty;
   document.getElementById('fp_defect_display').textContent   = '0';
   document.getElementById('fp_net_display').textContent      = qty;
@@ -4191,7 +4192,8 @@ function submitFinishProd() {
     isStockProd: a.isStockProd || false,
     pileType: a.pileType, length: a.length, ...itemSpecs,
     dateISO, date: isoToThai(dateISO), qtyRequired: required, qtyProduced: qty,
-    qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0, ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}) });
+    qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0,
+    lane: a.lane||'', tong: a.tong||'', standRows: a.standRows||[], ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}) });
   saveProdLog(logs);
   const _prodLogKey = logs[0]._fbKey; // key ที่ arrToFbObj assign ไว้ synchronously
 
@@ -4297,7 +4299,7 @@ function renderProdLogHistory() {
   const countEl = document.getElementById('prodLogCount');
   let logs = getProdLog();
   if (!logs.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="10">ยังไม่มีประวัติการผลิต</td></tr>';
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="11">ยังไม่มีประวัติการผลิต</td></tr>';
     if (countEl) countEl.textContent = '';
     return;
   }
@@ -4309,12 +4311,14 @@ function renderProdLogHistory() {
       const cust = orderMap[l.orderNum] || '';
       return l.orderNum.toLowerCase().includes(q)
           || (l.pileType || '').toLowerCase().includes(q)
-          || cust.includes(q);
+          || cust.includes(q)
+          || (l.date || '').toLowerCase().includes(q)
+          || (l.dateISO || '').includes(q);
     });
   }
   if (countEl) countEl.textContent = q ? logs.length + ' รายการที่พบ' : logs.length + ' รายการ';
   if (!logs.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="10">ไม่พบประวัติที่ค้นหา</td></tr>';
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="11">ไม่พบประวัติที่ค้นหา</td></tr>';
     return;
   }
   tbody.innerHTML = logs.map(l => {
@@ -4339,14 +4343,22 @@ function renderProdLogHistory() {
     const stockBadge = (l.addedToStock || isStock)
       ? '<span style="font-size:11px;background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-weight:700;">✅ เพิ่มสต็อกแล้ว</span>'
       : '<span style="color:#94A3B8;">-</span>';
-    const detailParts = [
+    const standRowsData = l.standRows && l.standRows.length ? l.standRows : (l.standQty > 0 ? [{qty:l.standQty,size:l.standSize}] : []);
+    const standParts = standRowsData.filter(r=>r.qty>0||r.size).map(r=>'<span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;">🪝 ลูกตั้ง '+r.qty+(r.size?' '+r.size:'')+'</span>');
+    const specParts = [
       l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">📐 '+l.length+'</span>' : null,
       l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:1px 6px;border-radius:4px;font-size:10px;">🔗 '+l.weld  +'</span>' : null,
       l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:1px 6px;border-radius:4px;font-size:10px;">🔩 '+l.steel +'</span>' : null,
       l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;">〰 '+l.wire  +'</span>' : null,
       l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;">📝 '+l.extra +'</span>' : null,
     ].filter(Boolean);
-    const detailCell = detailParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+detailParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
+    const prodParts = [
+      l.lane && l.lane!=='' ? '<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;font-size:10px;">🏗️ เลน '+l.lane+'</span>' : null,
+      l.tong && l.tong!=='' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:1px 6px;border-radius:4px;font-size:10px;">⬜ ท้อง '+l.tong+'</span>' : null,
+      ...standParts,
+    ].filter(Boolean);
+    const detailCell = specParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+specParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
+    const prodDetailCell = prodParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+prodParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
     const editBtn = _currentRole==='admin'
       ? '<button onclick="openEditProdLog(\''+l._fbKey+'\')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #93C5FD;background:#EFF6FF;color:#1D4ED8;cursor:pointer;margin-right:4px;" title="แก้ไขรายการนี้">✏️</button>'
       : '';
@@ -4358,6 +4370,7 @@ function renderProdLogHistory() {
       + '<td>'+orderCell+'</td>'
       + '<td style="font-weight:600;">'+l.pileType+'</td>'
       + '<td>'+detailCell+'</td>'
+      + '<td>'+prodDetailCell+'</td>'
       + '<td><strong style="color:#1E40AF;">'+produced+' ต้น</strong></td>'
       + '<td>'+defectBadge+'</td>'
       + '<td><strong style="color:#166534;">'+net+' ต้น</strong></td>'
