@@ -784,6 +784,10 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
             <input type="date" id="spf_date"/>
           </div>
           <div class="field">
+            <label class="field-label">เวลาเริ่มผลิต</label>
+            <input type="time" id="spf_time"/>
+          </div>
+          <div class="field">
             <label class="field-label">เลน <span class="req">*</span></label>
             <input type="text" id="spf_lane" placeholder="เช่น 1, 2, A"/>
           </div>
@@ -868,6 +872,10 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
             <div style="font-size:11px;color:#64748B;font-weight:700;margin-bottom:6px;">วันที่ผลิต</div>
             <input type="date" id="fp_date"/>
           </div>
+          <div class="field" style="align-self:flex-end;">
+            <div style="font-size:11px;color:#64748B;font-weight:700;margin-bottom:6px;">เวลาผลิตเสร็จ</div>
+            <input type="time" id="fp_time"/>
+          </div>
           <div class="field full-col">
             <label class="field-label">หมายเหตุผลิตเสีย <span style="font-weight:400;color:#94A3B8;">(ไม่บังคับ)</span></label>
             <input type="text" id="fp_defect_note" placeholder="เช่น เบ้าแตก, คอนกรีตไม่ได้มาตรฐาน, ผสมผิดสัดส่วน..."/>
@@ -940,6 +948,10 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
             <div class="field">
               <label class="field-label">วันที่ผลิต</label>
               <input type="date" id="fprod_date"/>
+            </div>
+            <div class="field">
+              <label class="field-label">เวลาเริ่มผลิต</label>
+              <input type="time" id="fprod_time"/>
             </div>
             <div class="field">
               <label class="field-label">ชนิดเสา <span class="req">*</span></label>
@@ -1063,11 +1075,11 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
               <th>ชนิดเสา</th>
               <th>รายละเอียดเสา</th>
               <th>รายละเอียดการผลิต</th>
+              <th>ระยะเวลาผลิต</th>
               <th>ผลิตได้</th>
               <th>เสีย</th>
               <th>พร้อมส่ง</th>
               <th>ผลิตเกิน</th>
-              <th>เพิ่มสต็อก</th>
               <th class="admin-only"></th>
             </tr>
           </thead>
@@ -4134,7 +4146,9 @@ function openFreeProdForm() {
   document.getElementById('fprod_stand_size2').value = '';
   document.getElementById('fprod_stand_qty3').value  = '';
   document.getElementById('fprod_stand_size3').value = '';
-  document.getElementById('fprod_date').value = new Date().toISOString().slice(0, 10);
+  const _fpNow = new Date();
+  document.getElementById('fprod_date').value = _fpNow.toISOString().slice(0, 10);
+  document.getElementById('fprod_time').value = _fpNow.toTimeString().slice(0, 5);
   const card = document.getElementById('freeProdFormCard');
   card.style.display = '';
   card.scrollIntoView({ behavior:'smooth', block:'start' });
@@ -4153,6 +4167,8 @@ function submitFreeProd() {
   const ba        = (document.getElementById('fprod_ba')?.value    || '').trim() || '-';
   const note      = document.getElementById('fprod_note').value.trim();
   const prodDate  = document.getElementById('fprod_date').value || new Date().toISOString().slice(0, 10);
+  const _fpTime   = document.getElementById('fprod_time').value;
+  const _fpStartedAt = (() => { try { const d = new Date(prodDate + 'T' + (_fpTime || new Date().toTimeString().slice(0,5)) + ':00'); return isNaN(d) ? Date.now() : d.getTime(); } catch(e) { return Date.now(); } })();
   const lane      = document.getElementById('fprod_lane').value.trim();
   const tong      = document.getElementById('fprod_tong').value.trim();
   const standQty  = parseInt(document.getElementById('fprod_stand_qty').value) || 0;
@@ -4170,7 +4186,7 @@ function submitFreeProd() {
     orderNum: 'STOCK',
     isStockProd: true,
     pileType, length, weld, steel, wire, ba, qtyRequired: 0, qtyCasting: qty, note, prodDate, lane, tong, standQty, standSize, standRows,
-    startedAt: Date.now(),
+    startedAt: _fpStartedAt,
     startedBy: (_currentUser && _currentUser.email) || '-'
   });
   saveProdActive(list);
@@ -4195,7 +4211,9 @@ function openStartProdForm(orderNum, pileType, qtyRequired, length, itemIdx) {
   document.getElementById('spf_stand_size2').value = '';
   document.getElementById('spf_stand_qty3').value  = '';
   document.getElementById('spf_stand_size3').value = '';
-  document.getElementById('spf_date').value = new Date().toISOString().slice(0, 10);
+  const _now = new Date();
+  document.getElementById('spf_date').value = _now.toISOString().slice(0, 10);
+  document.getElementById('spf_time').value = _now.toTimeString().slice(0, 5);
   const specLabel = (length && length !== '-') ? ' · ' + length : '';
   document.getElementById('spfSub').textContent = orderNum + ' — ' + pileType + specLabel + ' (ต้องผลิต ' + qtyRequired + ' ต้น)';
   document.getElementById('spf_item_idx').value = itemIdx !== undefined ? itemIdx : '';
@@ -4213,6 +4231,8 @@ function submitStartProd() {
   const qtyCasting = parseInt(document.getElementById('spf_qty').value) || 0;
   const note       = document.getElementById('spf_note').value.trim();
   const prodDate   = document.getElementById('spf_date').value || new Date().toISOString().slice(0, 10);
+  const _spfTime   = document.getElementById('spf_time').value;
+  const _startedAt = (() => { try { const d = new Date(prodDate + 'T' + (_spfTime || new Date().toTimeString().slice(0,5)) + ':00'); return isNaN(d) ? Date.now() : d.getTime(); } catch(e) { return Date.now(); } })();
   const lane       = document.getElementById('spf_lane').value.trim();
   const tong       = document.getElementById('spf_tong').value.trim();
   const standQty   = parseInt(document.getElementById('spf_stand_qty').value) || 0;
@@ -4226,7 +4246,7 @@ function submitStartProd() {
   const _spfItemIdx = document.getElementById('spf_item_idx')?.value;
   const _itemIdxNum = (_spfItemIdx !== '' && _spfItemIdx !== undefined && _spfItemIdx !== null) ? parseInt(_spfItemIdx) : undefined;
   const list = getProdActive();
-  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, note, prodDate, lane, tong, standQty, standSize, standRows, startedAt: Date.now(), startedBy: (_currentUser && _currentUser.email) || '-', ...(_itemIdxNum !== undefined ? { itemIdx: _itemIdxNum } : {}) });
+  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, note, prodDate, lane, tong, standQty, standSize, standRows, startedAt: _startedAt, startedBy: (_currentUser && _currentUser.email) || '-', ...(_itemIdxNum !== undefined ? { itemIdx: _itemIdxNum } : {}) });
   saveProdActive(list);
   // อัปเดตสถานะออเดอร์ → กำลังผลิต
   const orders = getOrders();
@@ -4245,7 +4265,9 @@ function openFinishProd(activeId) {
   document.getElementById('fp_active_id').value      = activeId;
   document.getElementById('fp_defect').value         = '';
   document.getElementById('fp_defect_note').value    = '';
-  document.getElementById('fp_date').value           = a.prodDate || new Date().toISOString().slice(0,10);
+  const _fpFinishNow = new Date();
+  document.getElementById('fp_date').value           = a.prodDate || _fpFinishNow.toISOString().slice(0,10);
+  document.getElementById('fp_time').value           = _fpFinishNow.toTimeString().slice(0,5);
   document.getElementById('fp_produced_display').textContent = qty;
   document.getElementById('fp_defect_display').textContent   = '0';
   document.getElementById('fp_net_display').textContent      = qty;
@@ -4280,6 +4302,8 @@ function submitFinishProd() {
   const a = getProdActive().find(x => x.id === activeId);
   if (!a) return;
   const dateISO    = document.getElementById('fp_date').value;
+  const _fpFinTime = document.getElementById('fp_time').value;
+  const finishedAt = (() => { try { const d = new Date(dateISO + 'T' + (_fpFinTime || new Date().toTimeString().slice(0,5)) + ':00'); return isNaN(d) ? Date.now() : d.getTime(); } catch(e) { return Date.now(); } })();
   const defect     = Math.max(0, parseInt(document.getElementById('fp_defect').value) || 0);
   const defectNote = (document.getElementById('fp_defect_note')?.value || '').trim();
   const qty        = a.qtyCasting || a.qtyRequired;
@@ -4318,7 +4342,8 @@ function submitFinishProd() {
     orderNum: a.isStockProd ? 'STOCK' : a.orderNum,
     isStockProd: a.isStockProd || false,
     pileType: a.pileType, length: a.length, ...itemSpecs,
-    dateISO, date: isoToThai(dateISO), qtyRequired: required, qtyProduced: qty,
+    dateISO, date: isoToThai(dateISO), startedAt: a.startedAt || null, finishedAt,
+    qtyRequired: required, qtyProduced: qty,
     qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0,
     lane: a.lane||'', tong: a.tong||'', standRows: a.standRows||[], ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}) });
   saveProdLog(logs);
@@ -4488,6 +4513,22 @@ function renderProdLogHistory() {
     ].filter(Boolean);
     const detailCell = specParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+specParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
     const prodDetailCell = prodParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+prodParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
+    const durationCell = (() => {
+      const startStr = l.startedAt  ? new Date(l.startedAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.' : '—';
+      const endStr   = l.finishedAt ? new Date(l.finishedAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.' : '—';
+      let durStr = '—';
+      if (l.startedAt && l.finishedAt) {
+        const diff = Math.max(0, l.finishedAt - l.startedAt);
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        durStr = h > 0 ? h+' ชม. '+m+' นาที' : m+' นาที';
+      }
+      return '<div style="font-size:11px;line-height:1.8;white-space:nowrap;">'
+        + '<span style="color:#64748B;">🟢 เริ่ม: </span><span style="font-weight:600;">'+startStr+'</span><br>'
+        + '<span style="color:#64748B;">🔴 เสร็จ: </span><span style="font-weight:600;">'+endStr+'</span><br>'
+        + '<span style="color:#92400E;font-weight:700;">⏱ '+durStr+'</span>'
+        + '</div>';
+    })();
     const editBtn = _currentRole==='admin'
       ? '<button onclick="openEditProdLog(\''+l._fbKey+'\')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #93C5FD;background:#EFF6FF;color:#1D4ED8;cursor:pointer;margin-right:4px;" title="แก้ไขรายการนี้">✏️</button>'
       : '';
@@ -4500,11 +4541,11 @@ function renderProdLogHistory() {
       + '<td style="font-weight:600;">'+l.pileType+'</td>'
       + '<td>'+detailCell+'</td>'
       + '<td>'+prodDetailCell+'</td>'
+      + '<td style="white-space:nowrap;">'+durationCell+'</td>'
       + '<td><strong style="color:#1E40AF;">'+produced+' ต้น</strong></td>'
       + '<td>'+defectBadge+'</td>'
       + '<td><strong style="color:#166534;">'+net+' ต้น</strong></td>'
       + '<td>'+excessBadge+'</td>'
-      + '<td>'+stockBadge+'</td>'
       + '<td>'+editBtn+delBtn+'</td>'
       + '</tr>';
   }).join('');
@@ -7557,8 +7598,20 @@ function pcPrev(){_pcM--;if(_pcM<0){_pcM=11;_pcY--;}pcRender();}
 function pcNext(){_pcM++;if(_pcM>11){_pcM=0;_pcY++;}pcRender();}
 function pcDay(ds){_pcSel=_pcSel===ds?null:ds;pcRender();if(_pcSel)_scrollTo('pcd-'+ds);}
 function pcByDate(){const bd={};(typeof getProdLog==='function'?getProdLog():[]).forEach(l=>{if(!l.dateISO)return;(bd[l.dateISO]=bd[l.dateISO]||[]).push({...l,_chip:l.pileType||'-'});});return bd;}
+function pcTodayTotal(){
+  const todayISO=new Date().toISOString().slice(0,10);
+  return (typeof getProdLog==='function'?getProdLog():[])
+    .filter(l=>l.dateISO===todayISO)
+    .reduce((s,l)=>{const n=l.qtyNet!==undefined?l.qtyNet:(l.qtyProduced!==undefined?l.qtyProduced:(l.qty||0));return s+n;},0);
+}
 function pcRender(){
   const bd=pcByDate();_renderGrid('pc',_pcY,_pcM,bd,_pcSel,PC_DOT,PC_BG,PC_TX);
+  // ใส่ยอดต้นผลิตรวมในแต่ละช่องวัน
+  const logs=typeof getProdLog==='function'?getProdLog():[];
+  const totByDate={};
+  logs.forEach(l=>{if(!l.dateISO)return;const n=l.qtyNet!==undefined?l.qtyNet:(l.qtyProduced!==undefined?l.qtyProduced:(l.qty||0));totByDate[l.dateISO]=(totByDate[l.dateISO]||0)+n;});
+  const grid=document.getElementById('pcGrid');
+  if(grid){grid.querySelectorAll('.tc-day').forEach(cell=>{const onclick=cell.getAttribute('onclick')||'';const m=onclick.match(/'(\d{4}-\d{2}-\d{2})'/);if(!m)return;const ds=m[1];const tot=totByDate[ds];if(!tot)return;const span=document.createElement('div');span.style.cssText='font-size:10px;font-weight:800;color:'+PC_TX+';margin-top:2px;';span.textContent='+'+tot+' ต้น';cell.appendChild(span);});}
   const panel=document.getElementById('pcPanel');if(!panel)return;
   if(!_pcSel){panel.innerHTML='';return;}
   const list=bd[_pcSel]||[];
