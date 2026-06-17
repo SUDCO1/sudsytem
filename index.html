@@ -1250,6 +1250,11 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         </div>
       </div>
 
+      <!-- ลิ้งค์พิกัด -->
+      <div class="field">
+        <label class="field-label">📍 ลิ้งค์พิกัด / แผนที่</label>
+        <input type="url" id="tc_location_url" placeholder="วาง Google Maps URL หรือลิ้งค์อื่นๆ" style="width:100%;"/>
+      </div>
       <!-- หมายเหตุ -->
       <div class="field"><label class="field-label">หมายเหตุ</label><textarea id="tc_note" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea></div>
 
@@ -1365,7 +1370,7 @@ function tcEntryHTML(e) {
   };
   const timeRow = (e.timeOut||e.timeIn) ? `<div style="font-size:11px;color:#64748B;margin-top:4px;display:flex;flex-wrap:wrap;gap:10px;">${e.timeOut?`<span>🚀 ออก <strong>${fmtDT(e.timeOut)}</strong></span>`:''}${e.timeIn?`<span>🏁 เข้า <strong>${fmtDT(e.timeIn)}</strong></span>`:''}</div>` : '';
   const stockBadge = e._stocked ? `<span style="font-size:9px;background:#DCFCE7;color:#166534;border:1px solid #86EFAC;border-radius:12px;padding:1px 7px;font-weight:700;">✅ ตัดสต็อกแล้ว</span>` : '';
-  return `<div class="tc-entry" style="border-left:4px solid ${st.border};">
+  return `<div class="tc-entry" style="border-left:4px solid ${st.border};cursor:pointer;" onclick="tcShowEntryDetail(${e._id})">
     <div class="tc-entry-icon">🚛</div>
     <div style="flex:1;min-width:0;">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
@@ -1381,12 +1386,70 @@ function tcEntryHTML(e) {
       ${timeRow}
       ${e.note?`<div style="font-size:11px;color:#64748B;margin-top:5px;line-height:1.4;">${e.note}</div>`:''}
     </div>
-    <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-self:flex-start;">
-      ${(!e._stocked && e.timeIn) ? `<button onclick="tcConfirmFinalize(${e._id})" style="padding:5px 10px;background:linear-gradient(135deg,#16A34A,#22C55E);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(22,163,74,0.3);">✅ ส่งจบ</button>` : ''}
-      ${canDo('log_shipping') ? `<button onclick="tcEditEvent(${e._id})" style="padding:5px 10px;background:#EFF6FF;color:#1E40AF;border:1.5px solid #BFDBFE;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;">แก้ไข</button>` : ''}
-      ${canDo('delete_shipping') ? `<button onclick="tcDeleteEvent(${e._id})" style="padding:5px 10px;background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;">ลบ</button>` : ''}
-    </div>
+    <div style="color:#CBD5E1;font-size:18px;align-self:center;">›</div>
   </div>`;
+}
+
+function tcShowEntryDetail(id) {
+  const e = tcGetEvents().find(x => x._id === id);
+  if (!e) return;
+  const st = tcShipStatus(e);
+  const fmtDT = dt => {
+    if (!dt) return '—';
+    const dd = new Date(dt);
+    const thM = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    return `${dd.getDate()} ${thM[dd.getMonth()]} ${dd.getFullYear()+543} ${String(dd.getHours()).padStart(2,'0')}:${String(dd.getMinutes()).padStart(2,'0')} น.`;
+  };
+  const row = (icon, label, val) => val && val !== '-' ? `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9;align-items:flex-start;"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0;">${icon}</span><div><div style="font-size:11px;color:#94A3B8;font-weight:600;margin-bottom:2px;">${label}</div><div style="font-size:13px;font-weight:700;color:#1E293B;">${val}</div></div></div>` : '';
+  const itemsHTML = (e.selectedItems||[]).length
+    ? (e.selectedItems||[]).map(si=>`<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;color:#166534;">📦 ${si.pileType||''} ${si.spec?'('+si.spec+')':''} ${si.qty||''} ต้น</div>`).join('')
+    : (e.piles ? `<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;color:#166534;">📦 ${e.piles}</div>` : '');
+  const stockBadge = e._stocked ? `<span style="font-size:11px;background:#DCFCE7;color:#166534;border:1px solid #86EFAC;border-radius:12px;padding:3px 10px;font-weight:700;">✅ ตัดสต็อกแล้ว</span>` : '';
+
+  let modal = document.getElementById('tcEntryDetailModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'tcEntryDetailModal';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:flex-end;justify-content:center;';
+    modal.innerHTML = `<div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 -4px 30px rgba(0,0,0,0.15);overflow:hidden;">
+      <div style="padding:16px 20px 12px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <div id="tcEntryDetailStatus"></div>
+        <button onclick="tcCloseEntryDetail()" style="background:none;border:none;font-size:22px;color:#94A3B8;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <div id="tcEntryDetailBody" style="overflow-y:auto;padding:16px 20px;flex:1;"></div>
+      <div id="tcEntryDetailActions" style="padding:12px 20px;border-top:1px solid #E2E8F0;display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;"></div>
+    </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', ev => { if(ev.target===modal) tcCloseEntryDetail(); });
+  }
+  document.getElementById('tcEntryDetailStatus').innerHTML =
+    `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:11px;font-weight:700;background:${st.bg};color:${st.color};border:1px solid ${st.border};border-radius:20px;padding:3px 12px;">${st.label}</span>
+      ${stockBadge}
+    </div>`;
+  document.getElementById('tcEntryDetailBody').innerHTML =
+    `<div style="font-size:16px;font-weight:800;color:#1E293B;margin-bottom:4px;">🚛 ${e.cust||'-'}</div>
+    ${e.tel?`<div style="font-size:13px;color:#64748B;margin-bottom:14px;">📞 ${e.tel}</div>`:' <div style="margin-bottom:14px;"></div>'}
+    ${row('📋','เลข Order',e.order)}
+    ${row('📅','วันที่ส่ง',e.date)}
+    ${row('🚀','ออก',fmtDT(e.timeOut))}
+    ${row('🏁','กลับ',fmtDT(e.timeIn))}
+    ${row('🧑‍✈️','คนขับ',e.driver)}
+    ${row('🚚','ทะเบียน',e.vehicle)}
+    ${e.locationUrl ? `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9;align-items:flex-start;"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0;">📍</span><div><div style="font-size:11px;color:#94A3B8;font-weight:600;margin-bottom:2px;">ลิ้งค์พิกัด</div><a href="${e.locationUrl}" target="_blank" rel="noopener" style="font-size:13px;font-weight:700;color:#1E40AF;word-break:break-all;">เปิดแผนที่ →</a></div></div>` : ''}
+    ${row('📝','หมายเหตุ',e.note)}
+    ${itemsHTML ? `<div style="margin-top:12px;"><div style="font-size:11px;color:#94A3B8;font-weight:600;margin-bottom:8px;">สินค้า</div><div style="display:flex;flex-direction:column;gap:6px;">${itemsHTML}</div></div>` : ''}`;
+  document.getElementById('tcEntryDetailActions').innerHTML =
+    `${(!e._stocked && e.timeIn) ? `<button onclick="tcCloseEntryDetail();tcConfirmFinalize(${e._id})" style="flex:1;padding:10px;background:linear-gradient(135deg,#16A34A,#22C55E);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">✅ ส่งจบ</button>` : ''}
+    ${canDo('log_shipping') ? `<button onclick="tcCloseEntryDetail();tcEditEvent(${e._id})" style="flex:1;padding:10px;background:#EFF6FF;color:#1E40AF;border:1.5px solid #BFDBFE;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">✏️ แก้ไข</button>` : ''}
+    ${canDo('delete_shipping') ? `<button onclick="tcCloseEntryDetail();tcDeleteEvent(${e._id})" style="padding:10px 16px;background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">🗑</button>` : ''}`;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function tcCloseEntryDetail() {
+  const m = document.getElementById('tcEntryDetailModal');
+  if (m) m.style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 function tcRenderAllDays() {
@@ -1503,6 +1566,7 @@ function tcEditEvent(id) {
     document.getElementById('tc_time_in_time').value = '';
   }
   document.getElementById('tc_note').value = e.note || '';
+  document.getElementById('tc_location_url').value = e.locationUrl || '';
 
   // update modal title
   document.getElementById('tcModalTitle').textContent = 'แก้ไขนัดส่ง';
@@ -1724,6 +1788,7 @@ function openTransportModal(ds) {
   document.getElementById('tc_date').value         = dateVal;
   document.getElementById('tc_order_input').value  = '';
   document.getElementById('tc_note').value         = '';
+  document.getElementById('tc_location_url').value = '';
   document.getElementById('tc_order_dropdown').style.display = 'none';
   document.getElementById('tc_cust_block').style.display     = 'none';
   document.getElementById('tc_cust_info').innerHTML          = '';
@@ -1938,7 +2003,7 @@ function submitTransport() {
     timeIn = yr + '-' + mo + '-' + String(tiDay).padStart(2,'0') + 'T' + tiTime;
   }
   const oldEntry = _tcEditId ? tcGetEvents().find(e => e._id === _tcEditId) : null;
-  const newEntry = { _id: _tcEditId || Date.now(), date, cust, tel, order:oNum, selectedItems, piles, driver, vehicle, timeOut, timeIn, note:document.getElementById('tc_note').value.trim() };
+  const newEntry = { _id: _tcEditId || Date.now(), date, cust, tel, order:oNum, selectedItems, piles, driver, vehicle, timeOut, timeIn, note:document.getElementById('tc_note').value.trim(), locationUrl: document.getElementById('tc_location_url').value.trim() };
   // คงสถานะ _stocked เดิมไว้ (ไม่ auto-deduct อีกต่อไป → ใช้ปุ่ม "ส่งจบ" แทน)
   if (oldEntry && oldEntry._stocked) newEntry._stocked = true;
   let arr = tcGetEvents();
