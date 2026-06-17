@@ -1255,6 +1255,13 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <label class="field-label">📍 ลิ้งค์พิกัด / แผนที่</label>
         <input type="url" id="tc_location_url" placeholder="วาง Google Maps URL หรือลิ้งค์อื่นๆ" style="width:100%;"/>
       </div>
+      <!-- แนบรูป -->
+      <div class="field">
+        <label class="field-label">🖼️ แนบรูป</label>
+        <input type="file" id="tc_images_input" accept="image/*" multiple style="display:none;" onchange="tcHandleImages(this)"/>
+        <div id="tc_images_preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>
+        <button type="button" onclick="document.getElementById('tc_images_input').click()" style="padding:8px 16px;background:#F1F5F9;border:1.5px dashed #CBD5E1;border-radius:8px;font-size:12px;color:#64748B;cursor:pointer;width:100%;">＋ เลือกรูป</button>
+      </div>
       <!-- หมายเหตุ -->
       <div class="field"><label class="field-label">หมายเหตุ</label><textarea id="tc_note" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea></div>
 
@@ -1313,51 +1320,54 @@ function tcRender() {
 }
 
 function tcToggleDay(ds) {
-  _tcSelectedDate = ds;
-  tcRender();
-  // เปิด popup modal
-  const TC_MONTHS_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-  const p = ds.split('-');
-  const label = `${+p[2]} ${TC_MONTHS_TH[+p[1]-1]} ${+p[0]+543}`;
-  const evs = tcGetEvents();
-  const list = evs.filter(e => e.date === ds);
-  const body = list.length
-    ? list.map(e => tcEntryHTML(e)).join('')
-    : `<div style="text-align:center;padding:32px 16px;color:#94A3B8;"><div style="font-size:36px;margin-bottom:8px;">📭</div><div style="font-size:13px;">ยังไม่มีนัดส่งวันนี้</div></div>`;
-  let modal = document.getElementById('tcDayModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'tcDayModal';
-    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:flex-end;justify-content:center;';
-    modal.innerHTML = `<div id="tcDayModalBox" style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 -4px 30px rgba(0,0,0,0.15);overflow:hidden;">
-      <div style="padding:16px 20px 12px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-        <div>
-          <div id="tcDayModalTitle" style="font-size:16px;font-weight:800;color:#1E293B;"></div>
-          <div id="tcDayModalSub" style="font-size:12px;color:#64748B;margin-top:2px;"></div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button id="tcDayModalAddBtn" style="padding:7px 16px;background:#1E40AF;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">＋ เพิ่ม</button>
-          <button onclick="tcCloseDayModal()" style="background:none;border:none;font-size:22px;color:#94A3B8;cursor:pointer;line-height:1;">✕</button>
-        </div>
-      </div>
-      <div id="tcDayModalBody" style="overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px;flex:1;"></div>
-    </div>`;
-    document.body.appendChild(modal);
-    modal.addEventListener('click', e => { if(e.target===modal) tcCloseDayModal(); });
-  }
-  document.getElementById('tcDayModalTitle').textContent = '📅 ' + label;
-  document.getElementById('tcDayModalSub').textContent = list.length ? list.length + ' รายการขนส่ง' : 'ยังไม่มีรายการ';
-  document.getElementById('tcDayModalBody').innerHTML = body;
-  document.getElementById('tcDayModalAddBtn').onclick = () => { tcCloseDayModal(); openTransportModal(ds); };
-  modal.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-}
-function tcCloseDayModal() {
-  const m = document.getElementById('tcDayModal');
-  if (m) m.style.display = 'none';
-  document.body.style.overflow = '';
+  _tcSelectedDate = ds; tcRender();
+  setTimeout(() => {
+    const el = document.getElementById('tcday-' + ds);
+    if (el) {
+      el.scrollIntoView({ behavior:'smooth', block:'start' });
+      el.style.transition = 'box-shadow 0.3s';
+      el.style.boxShadow = '0 0 0 3px #3B82F6, 0 4px 20px rgba(59,130,246,0.3)';
+      setTimeout(() => { el.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)'; }, 1800);
+    }
+  }, 80);
 }
 
+let _tcImages = [];
+function tcHandleImages(input) {
+  const files = Array.from(input.files);
+  files.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 900;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        _tcImages.push(canvas.toDataURL('image/jpeg', 0.72));
+        tcRenderImagePreview();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value = '';
+}
+function tcRenderImagePreview() {
+  const box = document.getElementById('tc_images_preview');
+  if (!box) return;
+  box.innerHTML = _tcImages.map((src, i) =>
+    `<div style="position:relative;width:72px;height:72px;flex-shrink:0;">
+      <img src="${src}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1.5px solid #E2E8F0;"/>
+      <button onclick="_tcImages.splice(${i},1);tcRenderImagePreview()" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#EF4444;color:#fff;border:none;font-size:11px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>`
+  ).join('');
+}
 function tcClosePanel() { }
 
 function tcEntryHTML(e) {
@@ -1438,6 +1448,7 @@ function tcShowEntryDetail(id) {
     ${row('🚚','ทะเบียน',e.vehicle)}
     ${e.locationUrl ? `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9;align-items:flex-start;"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0;">📍</span><div><div style="font-size:11px;color:#94A3B8;font-weight:600;margin-bottom:2px;">ลิ้งค์พิกัด</div><a href="${e.locationUrl}" target="_blank" rel="noopener" style="font-size:13px;font-weight:700;color:#1E40AF;word-break:break-all;">เปิดแผนที่ →</a></div></div>` : ''}
     ${row('📝','หมายเหตุ',e.note)}
+    ${(e.images && e.images.length) ? `<div style="margin-top:12px;"><div style="font-size:11px;color:#94A3B8;font-weight:600;margin-bottom:8px;">🖼️ รูปภาพ</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${e.images.map((src,i)=>`<img src="${src}" onclick="_tcViewerImages=tcGetEvents().find(x=>x._id===${e._id}).images;tcOpenImageFull(${i})" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1.5px solid #E2E8F0;cursor:pointer;"/>`).join('')}</div></div>` : ''}
     ${itemsHTML ? `<div style="margin-top:12px;"><div style="font-size:11px;color:#94A3B8;font-weight:600;margin-bottom:8px;">สินค้า</div><div style="display:flex;flex-direction:column;gap:6px;">${itemsHTML}</div></div>` : ''}`;
   document.getElementById('tcEntryDetailActions').innerHTML =
     `${(!e._stocked && e.timeIn) ? `<button onclick="tcCloseEntryDetail();tcConfirmFinalize(${e._id})" style="flex:1;padding:10px;background:linear-gradient(135deg,#16A34A,#22C55E);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">✅ ส่งจบ</button>` : ''}
@@ -1445,6 +1456,35 @@ function tcShowEntryDetail(id) {
     ${canDo('delete_shipping') ? `<button onclick="tcCloseEntryDetail();tcDeleteEvent(${e._id})" style="padding:10px 16px;background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">🗑</button>` : ''}`;
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+}
+let _tcViewerImages = [], _tcViewerCur = 0;
+function tcViewerRender() {
+  const overlay = document.getElementById('tcImageViewerOverlay');
+  if (!overlay) return;
+  const imgs = _tcViewerImages, cur = _tcViewerCur;
+  overlay.innerHTML = `
+    <button onclick="tcViewerClose()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;z-index:1;">✕</button>
+    <img src="${imgs[cur]}" style="max-width:95vw;max-height:80vh;object-fit:contain;border-radius:8px;"/>
+    <div style="display:flex;gap:16px;align-items:center;margin-top:4px;">
+      ${cur>0?`<button onclick="tcViewerNav(-1)" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:22px;border-radius:50%;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button>`:'<div style="width:44px;"></div>'}
+      <span style="color:#fff;font-size:13px;">${cur+1} / ${imgs.length}</span>
+      ${cur<imgs.length-1?`<button onclick="tcViewerNav(1)" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:22px;border-radius:50%;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;">›</button>`:'<div style="width:44px;"></div>'}
+    </div>`;
+}
+function tcViewerNav(dir) { _tcViewerCur = Math.max(0, Math.min(_tcViewerImages.length-1, _tcViewerCur+dir)); tcViewerRender(); }
+function tcViewerClose() { const o = document.getElementById('tcImageViewerOverlay'); if(o) o.remove(); document.body.style.overflow=''; }
+function tcOpenImageFull(idx) {
+  _tcViewerCur = parseInt(idx);
+  let overlay = document.getElementById('tcImageViewerOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'tcImageViewerOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:20000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;';
+    overlay.addEventListener('click', e => { if(e.target===overlay) tcViewerClose(); });
+    document.body.appendChild(overlay);
+  }
+  document.body.style.overflow = 'hidden';
+  tcViewerRender();
 }
 function tcCloseEntryDetail() {
   const m = document.getElementById('tcEntryDetailModal');
@@ -1567,6 +1607,8 @@ function tcEditEvent(id) {
   }
   document.getElementById('tc_note').value = e.note || '';
   document.getElementById('tc_location_url').value = e.locationUrl || '';
+  _tcImages = e.images ? [...e.images] : [];
+  tcRenderImagePreview();
 
   // update modal title
   document.getElementById('tcModalTitle').textContent = 'แก้ไขนัดส่ง';
@@ -1789,6 +1831,8 @@ function openTransportModal(ds) {
   document.getElementById('tc_order_input').value  = '';
   document.getElementById('tc_note').value         = '';
   document.getElementById('tc_location_url').value = '';
+  _tcImages = [];
+  tcRenderImagePreview();
   document.getElementById('tc_order_dropdown').style.display = 'none';
   document.getElementById('tc_cust_block').style.display     = 'none';
   document.getElementById('tc_cust_info').innerHTML          = '';
@@ -2003,7 +2047,7 @@ function submitTransport() {
     timeIn = yr + '-' + mo + '-' + String(tiDay).padStart(2,'0') + 'T' + tiTime;
   }
   const oldEntry = _tcEditId ? tcGetEvents().find(e => e._id === _tcEditId) : null;
-  const newEntry = { _id: _tcEditId || Date.now(), date, cust, tel, order:oNum, selectedItems, piles, driver, vehicle, timeOut, timeIn, note:document.getElementById('tc_note').value.trim(), locationUrl: document.getElementById('tc_location_url').value.trim() };
+  const newEntry = { _id: _tcEditId || Date.now(), date, cust, tel, order:oNum, selectedItems, piles, driver, vehicle, timeOut, timeIn, note:document.getElementById('tc_note').value.trim(), locationUrl: document.getElementById('tc_location_url').value.trim(), images: _tcImages || [] };
   // คงสถานะ _stocked เดิมไว้ (ไม่ auto-deduct อีกต่อไป → ใช้ปุ่ม "ส่งจบ" แทน)
   if (oldEntry && oldEntry._stocked) newEntry._stocked = true;
   let arr = tcGetEvents();
