@@ -473,6 +473,9 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
 .toolbar-mob-row{display:none;}
 /* ========== MOBILE RESPONSIVE ========== */
 @media(max-width:768px){
+  /* === ทดลอง: ขยายฟอนต์ทุกอย่างเป็น 20px (ลบบล็อกนี้เพื่อกลับค่าเดิม) === */
+  body, body * { font-size:20px !important; line-height:1.4 !important; }
+  /* === จบบล็อกทดลอง === */
   .mob-nav{display:flex;}
   .app-nav{display:none !important;}
   .app-header{padding:8px 12px;gap:8px;user-select:none;-webkit-user-select:none;}
@@ -4239,7 +4242,7 @@ function renderActiveProd() {
       const orderLabel = a.isStockProd
         ? '<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border-radius:4px;padding:2px 7px;font-weight:700;">📦 ผลิตเพิ่มสต็อก</span>'
         : '<span class="ap-order">' + a.orderNum + '</span>';
-      html += '<div class="active-prod-card">'
+      html += '<div class="active-prod-card" onclick="openProdDetail(\'' + a.id + '\')" style="cursor:pointer;" title="แตะเพื่อดูรายละเอียดเสา">'
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
         +   '<div><div>' + orderLabel + '</div>'
         +   '<div class="ap-pile">' + a.pileType + '</div>'
@@ -4251,10 +4254,9 @@ function renderActiveProd() {
         +     '<div class="ap-timer-lbl">อยู่ในราง</div>'
         +   '</div>'
         + '</div>'
-        + '<div style="margin-top:4px;"><button class="ap-detail-btn" onclick="openProdDetail(\'' + a.id + '\')">📋 ดูรายละเอียดเสา</button></div>'
         + '<div class="ap-row">'
         +   '<div style="font-size:11px;color:#92400E;">เทตั้งแต่: ' + new Date(a.startedAt).toLocaleTimeString('th-TH', {hour:'2-digit',minute:'2-digit'}) + ' น.' + (a.note ? ' · ' + a.note : '') + '</div>'
-        +   (canDo('log_production') ? '<button class="btn btn-success btn-sm" onclick="openFinishProd(\'' + a.id + '\')" style="font-size:11px;padding:5px 12px;background:#166534;color:#fff;">✅ ผลิตเสร็จ</button>' : '')
+        +   (canDo('log_production') ? '<button class="btn btn-success btn-sm" onclick="event.stopPropagation(); openFinishProd(\'' + a.id + '\')" style="font-size:11px;padding:5px 12px;background:#166534;color:#fff;">✅ ผลิตเสร็จ</button>' : '')
         + '</div>'
         + '</div>';
     });
@@ -4416,7 +4418,7 @@ function openFinishProd(activeId) {
   document.getElementById('fp_defect').value         = '';
   document.getElementById('fp_defect_note').value    = '';
   const _fpFinishNow = new Date();
-  document.getElementById('fp_date').value           = a.prodDate || _fpFinishNow.toISOString().slice(0,10);
+  document.getElementById('fp_date').value           = _fpFinishNow.toISOString().slice(0,10);
   document.getElementById('fp_time').value           = _fpFinishNow.toTimeString().slice(0,5);
   document.getElementById('fp_produced_display').textContent = qty;
   document.getElementById('fp_defect_display').textContent   = '0';
@@ -4664,14 +4666,16 @@ function renderProdLogHistory() {
     const detailCell = specParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+specParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
     const prodDetailCell = prodParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+prodParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
     const durationCell = (() => {
-      const startStr = l.startedAt  ? new Date(l.startedAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.' : '—';
-      const endStr   = l.finishedAt ? new Date(l.finishedAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.' : '—';
+      const _fmtDT = ts => new Date(ts).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' น.';
+      const startStr = l.startedAt  ? _fmtDT(l.startedAt)  : '—';
+      const endStr   = l.finishedAt ? _fmtDT(l.finishedAt) : '—';
       let durStr = '—';
       if (l.startedAt && l.finishedAt) {
         const diff = Math.max(0, l.finishedAt - l.startedAt);
-        const h = Math.floor(diff / 3600000);
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
         const m = Math.floor((diff % 3600000) / 60000);
-        durStr = h > 0 ? h+' ชม. '+m+' นาที' : m+' นาที';
+        durStr = (d > 0 ? d+' วัน ' : '') + (h > 0 ? h+' ชม. ' : '') + m+' นาที';
       }
       return '<div style="font-size:11px;line-height:1.8;white-space:nowrap;">'
         + '<span style="color:#64748B;">🟢 เริ่ม: </span><span style="font-weight:600;">'+startStr+'</span><br>'
@@ -7383,6 +7387,13 @@ function openEditProdLog(fbKey) {
   const existing = document.getElementById('_editProdLogModal');
   if (existing) existing.remove();
 
+  // แปลง timestamp → ค่าสำหรับ input datetime-local (เวลาท้องถิ่น)
+  const _tsToLocal = ts => {
+    if (!ts) return '';
+    const d = new Date(ts), p = n => String(n).padStart(2,'0');
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());
+  };
+
   const modal = document.createElement('div');
   modal.id = '_editProdLogModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
@@ -7400,7 +7411,16 @@ function openEditProdLog(fbKey) {
 
       <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">ของเสีย (ต้น)</label>
       <input id="_epld" type="number" min="0" value="${log.qtyDefect ?? log.defect ?? 0}"
-        style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;margin-bottom:20px;box-sizing:border-box;" />
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;margin-bottom:14px;box-sizing:border-box;" />
+
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">🟢 เวลาเริ่มผลิต (วันที่ + เวลา)</label>
+      <input id="_epstart" type="datetime-local" value="${_tsToLocal(log.startedAt)}"
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;margin-bottom:14px;box-sizing:border-box;" />
+
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">🔴 เวลาผลิตเสร็จ (วันที่ + เวลา)</label>
+      <input id="_epfinish" type="datetime-local" value="${_tsToLocal(log.finishedAt)}"
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
+      <div id="_epdur" style="font-size:11px;color:#92400E;font-weight:700;margin-bottom:20px;min-height:14px;"></div>
 
       <div style="display:flex;gap:10px;justify-content:flex-end;">
         <button onclick="document.getElementById('_editProdLogModal').remove()"
@@ -7411,6 +7431,26 @@ function openEditProdLog(fbKey) {
     </div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  // แสดงระยะเวลาผลิตแบบสด เมื่อแก้ไขวันที่/เวลา
+  const _epDurPreview = () => {
+    const s = document.getElementById('_epstart').value;
+    const f = document.getElementById('_epfinish').value;
+    const el = document.getElementById('_epdur');
+    if (!s || !f) { el.textContent = ''; return; }
+    const st = new Date(s).getTime(), ft = new Date(f).getTime();
+    if (isNaN(st) || isNaN(ft)) { el.textContent = ''; return; }
+    if (ft < st) { el.textContent = '⚠️ เวลาเสร็จมาก่อนเวลาเริ่ม'; el.style.color = '#DC2626'; return; }
+    const diff = ft - st;
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    el.style.color = '#92400E';
+    el.textContent = '⏱ ระยะเวลาผลิต: ' + (d > 0 ? d+' วัน ' : '') + (h > 0 ? h+' ชม. ' : '') + m+' นาที';
+  };
+  document.getElementById('_epstart').addEventListener('input', _epDurPreview);
+  document.getElementById('_epfinish').addEventListener('input', _epDurPreview);
+  _epDurPreview();
 }
 
 function saveEditProdLog(fbKey) {
@@ -7422,11 +7462,26 @@ function saveEditProdLog(fbKey) {
   const itemIdxVal  = document.getElementById('_epli').value;
   const itemIdx     = itemIdxVal !== '' ? parseInt(itemIdxVal) : undefined;
 
+  // อ่านวันที่+เวลา เริ่ม/เสร็จ ที่แก้ไข
+  const _startVal = document.getElementById('_epstart').value;
+  const _finVal   = document.getElementById('_epfinish').value;
+  const startedAt  = _startVal ? new Date(_startVal).getTime() : null;
+  const finishedAt = _finVal   ? new Date(_finVal).getTime()   : null;
+  if (startedAt && finishedAt && finishedAt < startedAt) {
+    showToast('⚠️ เวลาผลิตเสร็จมาก่อนเวลาเริ่มผลิต'); return;
+  }
+
   const oldQtyNet = log.qtyNet !== undefined ? log.qtyNet : Math.max(0, (log.qtyProduced||log.qty||0) - (log.qtyDefect||log.defect||0));
   const newQtyNet = Math.max(0, qtyProduced - qtyDefect);
   const diff = newQtyNet - oldQtyNet;
 
-  const update = { qtyProduced, qtyDefect, qtyNet: newQtyNet, qtyExcess: 0 };
+  const update = { qtyProduced, qtyDefect, qtyNet: newQtyNet, qtyExcess: 0, startedAt, finishedAt };
+  // อัปเดตวันที่ผลิต (คอลัมน์วันที่) ให้ตรงกับวันที่เริ่มผลิต
+  if (startedAt) {
+    const _sd = new Date(startedAt), _p = n => String(n).padStart(2,'0');
+    update.dateISO = _sd.getFullYear()+'-'+_p(_sd.getMonth()+1)+'-'+_p(_sd.getDate());
+    update.date    = isoToThai(update.dateISO);
+  }
   if (itemIdx !== undefined) {
     update.itemIdx = itemIdx;
     // อัปเดต spec ให้ตรงกับ item ที่เลือก
