@@ -473,9 +473,11 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
 .toolbar-mob-row{display:none;}
 /* ========== MOBILE RESPONSIVE ========== */
 @media(max-width:768px){
-  /* === ทดลอง: ขยายฟอนต์ทุกอย่างเป็น 20px (ลบบล็อกนี้เพื่อกลับค่าเดิม) === */
-  body, body * { font-size:20px !important; line-height:1.4 !important; }
-  /* === จบบล็อกทดลอง === */
+  /* === ขยายฟอนต์เป็น 20px เฉพาะแท็บ ฝ่ายผลิต / ฝ่ายขนส่ง / ฝ่ายสต็อก === */
+  #sec-proderr.active, #sec-proderr.active *,
+  #sec-transport.active, #sec-transport.active *,
+  #sec-stock.active, #sec-stock.active * { font-size:20px !important; line-height:1.4 !important; }
+  /* === จบบล็อกขยายฟอนต์ === */
   /* === คีย์ข้อมูล: ช่องที่ล้นขอบขวาให้ตกลงมาเรียงต่อด้านล่าง (เฉพาะฟอร์มที่ต้องคีย์) === */
   .form-grid{grid-template-columns:1fr !important;}
   [style*="grid-template-columns"]:has(input),
