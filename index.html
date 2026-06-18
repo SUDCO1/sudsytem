@@ -1187,7 +1187,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <div style="font-size:17px;font-weight:800;color:#1E293B;">🚛 ปฏิทินขนส่ง</div>
         <div style="font-size:12px;color:#64748B;margin-top:2px;">จัดการนัดส่งของแต่ละวัน · คลิกวันเพื่อดูหรือซ่อนรายการ</div>
       </div>
-      <button onclick="openTransportModal()" style="padding:9px 20px;background:linear-gradient(135deg,#1E40AF,#2563EB);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(30,64,175,0.25);">＋ เพิ่มนัดส่ง</button>
+      <button id="addDeliveryBtn" onclick="openTransportModal()" style="padding:9px 20px;background:linear-gradient(135deg,#1E40AF,#2563EB);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(30,64,175,0.25);">＋ เพิ่มนัดส่ง</button>
     </div>
 
     <!-- ── ปฏิทิน ── -->
@@ -1550,12 +1550,13 @@ function tcRenderAllDays() {
     const isSel = ds === _tcSelectedDate;
     const hBg = isSel ? 'linear-gradient(135deg,#DBEAFE,#EFF6FF)' : 'linear-gradient(135deg,#EFF6FF,#F0F7FF)';
     const body = list.length ? list.map(e => tcEntryHTML(e)).join('') : `<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ยังไม่มีนัดส่งวันนี้</div>`;
-    return `<div id="tcday-${ds}" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;transition:box-shadow 0.3s;"><div class="card-header" style="background:${hBg};border-radius:12px 12px 0 0;"><div style="flex:1;"><div class="card-title" style="color:#1E40AF;">${label}</div><div class="card-sub">${list.length ? list.length+' รายการขนส่ง':'ยังไม่มีรายการ'}</div></div><button onclick="openTransportModal('${ds}')" style="padding:7px 16px;background:#1E40AF;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">＋ เพิ่ม</button></div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">${body}</div></div>`;
+    return `<div id="tcday-${ds}" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;transition:box-shadow 0.3s;"><div class="card-header" style="background:${hBg};border-radius:12px 12px 0 0;"><div style="flex:1;"><div class="card-title" style="color:#1E40AF;">${label}</div><div class="card-sub">${list.length ? list.length+' รายการขนส่ง':'ยังไม่มีรายการ'}</div></div>${canDo('log_shipping') ? `<button onclick="openTransportModal('${ds}')" style="padding:7px 16px;background:#1E40AF;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">＋ เพิ่ม</button>` : ''}</div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">${body}</div></div>`;
   }).join('');
 }
 
 function tcShowDay(ds) { }
 function tcConfirmFinalize(id) {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์ปิดงานขนส่ง'); return; }
   const arr = tcGetEvents();
   const entry = arr.find(e => e._id === id);
   if (!entry) return;
@@ -1571,6 +1572,7 @@ function tcConfirmFinalize(id) {
   showToast(ok ? '📦 ส่งจบ — ตัดสต็อกและอัปเดต Order แล้ว' : '✅ บันทึกส่งจบแล้ว (ไม่มีสินค้าให้ตัดสต็อก)');
 }
 function tcDeleteEvent(id) {
+  if (!canDo('delete_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์ลบการขนส่ง'); return; }
   if (!confirm('ลบรายการนี้?')) return;
   tcSaveEvents(tcGetEvents().filter(e=>e._id!==id));
   tcRender();
@@ -1578,6 +1580,7 @@ function tcDeleteEvent(id) {
 }
 
 function tcEditEvent(id) {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขการขนส่ง'); return; }
   const e = tcGetEvents().find(x => x._id === id);
   if (!e) return;
   _tcEditId = id;
@@ -1864,6 +1867,7 @@ function tcUpdateTimeInMonthYear(dateStr) {
 }
 
 function openTransportModal(ds) {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณดูได้อย่างเดียว ไม่มีสิทธิ์เพิ่มนัดส่ง'); return; }
   _tcSelectedOrder = null;
   _tcEditId = null;
   document.getElementById('tcModalTitle').textContent = 'เพิ่มนัดส่ง';
@@ -2015,6 +2019,7 @@ function tcClampStock(inp, maxVal) {
 }
 
 function submitTransport() {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการขนส่ง'); return; }
   const date  = document.getElementById('tc_date').value;
   const oNum  = (document.getElementById('tc_order_input').value||'').trim();
   if (!date || !oNum) { alert('กรุณาระบุวันที่และเลข Order'); return; }
@@ -2573,7 +2578,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="sd-section">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <div style="font-size:12px;font-weight:800;color:#1E40AF;letter-spacing:.5px;">🟢 เสาลูกค้า (Online)</div>
-          <button onclick="openAddCustPoleModalFor(_sdCurrentPile)" style="padding:3px 10px;font-size:11px;font-weight:700;background:#3B82F6;color:#fff;border:none;border-radius:6px;cursor:pointer;">➕ เพิ่ม</button>
+          <button id="sdAddCustPoleBtn" onclick="openAddCustPoleModalFor(_sdCurrentPile)" style="padding:3px 10px;font-size:11px;font-weight:700;background:#3B82F6;color:#fff;border:none;border-radius:6px;cursor:pointer;">➕ เพิ่ม</button>
         </div>
         <div id="sdCpPanelOnline" style="margin-bottom:18px;"></div>
         <div style="font-size:12px;font-weight:800;color:#475569;letter-spacing:.5px;margin-bottom:8px;">⚫ เสาค้างสต็อก</div>
@@ -3621,6 +3626,7 @@ function updateOrderValue() { renderOrderItemsDraft(); }
 
 // ── Submit Order ───────────────────────────────────────────────
 function submitOrder() {
+  if (!canDo('create_order')) { showToast('⛔ คุณไม่มีสิทธิ์สร้าง Order'); return; }
   const g = id => document.getElementById(id).value;
   const customer = g('f_customer').trim(), tel = g('f_tel').trim(),
         sale = g('f_sale'),
@@ -4013,7 +4019,7 @@ function setSumStatus(orderNum, selectEl) {
 }
 
 function updateOrderStatus(orderNum, selectEl) {
-  if (_currentRole === 'manager') { showToast('👁 Manager ดูได้อย่างเดียว'); renderOrders(); return; }
+  if (!canDo('change_order_status')) { showToast('👁 คุณดูได้อย่างเดียว ไม่มีสิทธิ์เปลี่ยนสถานะ'); renderOrders(); return; }
   const newStatus = selectEl.value;
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
@@ -4266,6 +4272,7 @@ function closeEditActiveProd() {
   document.getElementById('editActiveProdModal').style.display = 'none';
 }
 function saveEditActiveProd() {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขการผลิต'); return; }
   const id = document.getElementById('eap_id').value;
   const list = getProdActive();
   const a = list.find(x => x.id === id);
@@ -4351,6 +4358,7 @@ function renderActiveProd() {
 
 // ── Free Production (ผลิตเพิ่มสต็อก ไม่มี Order) ──────────────
 function openFreeProdForm() {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   const cfg = getConfig();
   const sel = document.getElementById('fprod_pile');
   const piles = cfg.pileTypes && cfg.pileTypes.length ? cfg.pileTypes : [];
@@ -4449,6 +4457,7 @@ function closeStartProdForm() {
   document.getElementById('startProdFormCard').style.display = 'none';
 }
 function submitStartProd() {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   const orderNum  = document.getElementById('spf_order').value;
   const pileType  = document.getElementById('spf_pile').value;
   const length    = document.getElementById('spf_length').value || '-';
@@ -4523,6 +4532,7 @@ function updateFinishCalc() {
   document.getElementById('fp_net_display').textContent    = net;
 }
 function submitFinishProd() {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   const activeId = document.getElementById('fp_active_id').value;
   const a = getProdActive().find(x => x.id === activeId);
   if (!a) return;
@@ -5277,9 +5287,9 @@ function renderSdCustPoles() {
           <div>${cpSpecChips(m.spec)}</div>
           <div style="font-size:18px;font-weight:900;color:#1E293B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span>${m.fromStockQty > 0 ? ` <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">สต็อกเก่า ${m.fromStockQty}</span>` : ''}</div>
           <div style="display:flex;gap:4px;margin-top:2px;">
-            <button onclick="shipCpToOrder('${orderEsc}','${pileEsc}',${m.qty},${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:5px;cursor:pointer;">🚚 ส่ง</button>
-            <button onclick="toggleCpOfflineAll(${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:5px;cursor:pointer;">🔒 ปิดงาน</button>
-            <button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>
+            ${canDo('edit_stock') ? `<button onclick="shipCpToOrder('${orderEsc}','${pileEsc}',${m.qty},${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:5px;cursor:pointer;">🚚 ส่ง</button>
+            <button onclick="toggleCpOfflineAll(${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:5px;cursor:pointer;">🔒 ปิดงาน</button>` : ''}
+            ${canDo('delete_stock') ? `<button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>` : ''}
           </div>
         </div>`;
       }).join('') + '</div>';
@@ -5305,8 +5315,8 @@ function renderSdCustPoles() {
           <div>${cpSpecChips(m.spec)}</div>
           <div style="font-size:18px;font-weight:900;color:#991B1B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span></div>
           <div style="display:flex;gap:4px;margin-top:2px;">
-            <button onclick="openAssignOrderModal(${idsJson},'${(pileName||'').replace(/'/g,"\\'")}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>
-            <button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>
+            ${canDo('edit_stock') ? `<button onclick="openAssignOrderModal(${idsJson},'${(pileName||'').replace(/'/g,"\\'")}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>` : ''}
+            ${canDo('delete_stock') ? `<button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>` : ''}
           </div>
         </div>`;
       }).join('') + '</div>';
@@ -5314,6 +5324,7 @@ function renderSdCustPoles() {
 }
 
 function openAddCustPoleModalFor(pileName) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์เพิ่มเสาลูกค้า'); return; }
   const cfg = getConfig();
   const sel = document.getElementById('cp_pileType');
   sel.innerHTML = '<option value="">— เลือก —</option>' + cfg.pileTypes.map(t => `<option${t===pileName?' selected':''}>${t}</option>`).join('');
@@ -5329,6 +5340,7 @@ function closeCpModal() {
 }
 
 function submitCustPole() {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์เพิ่มเสาลูกค้า'); return; }
   const orderNum = document.getElementById('cp_order').value.trim();
   const pileType = document.getElementById('cp_pileType').value;
   const spec     = document.getElementById('cp_spec').value.trim();
@@ -5343,6 +5355,7 @@ function submitCustPole() {
 }
 
 function toggleCpOffline(id) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const arr = getCustPoles();
   const item = arr.find(x => x.id === id);
   if (!item) return;
@@ -5355,6 +5368,7 @@ function toggleCpOffline(id) {
 }
 
 function toggleCpOfflineAll(ids) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const arr = getCustPoles();
   const items = ids.map(id => arr.find(x => x.id === id)).filter(Boolean);
   if (!items.length) return;
@@ -5366,6 +5380,7 @@ function toggleCpOfflineAll(ids) {
 }
 
 function shipCpToOrder(orderNum, pileType, maxQty, ids) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์ส่งเสา/แก้ไขสต็อก'); return; }
   const orders = getOrders();
   const o = orders.find(x => x.orderNum === orderNum);
   if (!o) { alert('ไม่พบ Order ' + orderNum); return; }
@@ -5469,6 +5484,7 @@ function closeAssignOrderModal() {
 }
 
 function confirmAssignOrder(orderNum, ids) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const arr = getCustPoles();
   ids.forEach(id => {
     const item = arr.find(x => x.id === id);
@@ -5480,6 +5496,7 @@ function confirmAssignOrder(orderNum, ids) {
 }
 
 function toggleCpOnline(id) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const arr = getCustPoles();
   const item = arr.find(x => x.id === id);
   if (!item) return;
@@ -5490,6 +5507,7 @@ function toggleCpOnline(id) {
 }
 
 function toggleCpOnlineAll(ids) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const arr = getCustPoles();
   ids.forEach(id => {
     const item = arr.find(x => x.id === id);
@@ -5500,6 +5518,7 @@ function toggleCpOnlineAll(ids) {
 }
 
 function deleteCpEntry(id) {
+  if (!canDo('delete_stock')) { showToast('⛔ คุณไม่มีสิทธิ์ลบสต็อก'); return; }
   if (!confirm('ยืนยันลบรายการนี้?')) return;
   deleteCustPole(id);
   if (_sdCurrentPile) renderSdCustPoles();
@@ -5507,6 +5526,7 @@ function deleteCpEntry(id) {
 }
 
 function deleteCpAll(ids) {
+  if (!canDo('delete_stock')) { showToast('⛔ คุณไม่มีสิทธิ์ลบสต็อก'); return; }
   if (!confirm('ยืนยันลบทั้งหมด ' + ids.length + ' รายการ?')) return;
   ids.forEach(id => deleteCustPole(id));
   if (_sdCurrentPile) renderSdCustPoles();
@@ -5590,6 +5610,7 @@ function stockUpdatePreview() {
 }
 
 function submitStock() {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกสต็อก'); return; }
   const name=document.getElementById('sf_stype').value, typeVal=document.getElementById('sf_type').value;
   const qty=parseInt(document.getElementById('sf_qty').value), date=document.getElementById('sf_date').value;
   const staff=document.getElementById('sf_staff').value, ref=document.getElementById('sf_ref').value.trim()||'-';
@@ -7016,6 +7037,7 @@ function editAddItem() {
 }
 
 function submitEditOrder() {
+  if (!canDo('edit_order')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไข Order'); return; }
   const g  = id => document.getElementById(id).value;
   const customer  = g('edit_customer').trim();
   const tel       = g('edit_tel').trim();
@@ -7463,6 +7485,7 @@ function closeEditProdErr() {
   document.getElementById('editProdErrOverlay').style.display = 'none';
 }
 function saveEditProdErr() {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขข้อมูลนี้'); return; }
   const idx     = parseInt(document.getElementById('epe_idx').value);
   const qty     = Math.max(0, parseInt(document.getElementById('epe_qty').value) || 0);
   const cause   = document.getElementById('epe_cause').value.trim();
@@ -7569,6 +7592,7 @@ function openEditProdLog(fbKey) {
 }
 
 function saveEditProdLog(fbKey) {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขประวัติการผลิต'); return; }
   const log = getProdLog().find(l => l._fbKey === fbKey);
   if (!log) return;
 
