@@ -476,6 +476,15 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   /* === ทดลอง: ขยายฟอนต์ทุกอย่างเป็น 20px (ลบบล็อกนี้เพื่อกลับค่าเดิม) === */
   body, body * { font-size:20px !important; line-height:1.4 !important; }
   /* === จบบล็อกทดลอง === */
+  /* === คีย์ข้อมูล: ช่องที่ล้นขอบขวาให้ตกลงมาเรียงต่อด้านล่าง (เฉพาะฟอร์มที่ต้องคีย์) === */
+  .form-grid{grid-template-columns:1fr !important;}
+  [style*="grid-template-columns"]:has(input),
+  [style*="grid-template-columns"]:has(select),
+  [style*="grid-template-columns"]:has(textarea){grid-template-columns:1fr !important;}
+  [style*="display:flex"]:has(> .field){flex-direction:column !important;align-items:stretch !important;}
+  .field{min-width:0 !important;}
+  .field input,.field select,.field textarea{width:100% !important;box-sizing:border-box !important;min-width:0 !important;}
+  /* === จบบล็อกคีย์ข้อมูล === */
   .mob-nav{display:flex;}
   .app-nav{display:none !important;}
   .app-header{padding:8px 12px;gap:8px;user-select:none;-webkit-user-select:none;}
