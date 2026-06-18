@@ -1089,8 +1089,16 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <div class="card-title">📋 ประวัติการผลิต</div>
         <span style="margin-left:auto;font-size:11px;color:#94A3B8;" id="prodLogCount"></span>
       </div>
-      <div class="toolbar">
+      <div class="toolbar" style="flex-wrap:wrap;gap:8px;align-items:center;">
         <input type="search" class="search-inp" id="prodLogSearch" placeholder="🔍 ค้นหาเลข Order / ชื่อลูกค้า / ชนิดเสา..." oninput="renderProdLogHistory()" style="max-width:380px;"/>
+        <select id="prodLogMonth" onchange="renderProdLogHistory()" style="padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;background:#fff;cursor:pointer;">
+          <option value="">📅 ทุกเดือน</option>
+        </select>
+        <select id="prodLogType" onchange="renderProdLogHistory()" style="padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;background:#fff;cursor:pointer;">
+          <option value="">ทุกประเภท</option>
+          <option value="order">📋 ตาม Order</option>
+          <option value="stock">📦 เข้าสต็อก</option>
+        </select>
       </div>
       <div id="prodLogTableWrap" class="table-wrap">
         <table class="data-table">
@@ -2847,13 +2855,33 @@ function applyRole(role) {
     badge.style.display = 'inline-block';
   }
   applyPermissions();
-  // ปรับ default tab ตาม role
-  if (role === 'manager') {
-    const sumTab = document.querySelector('[data-tab="summary"]');
-    if (sumTab) { goTab('summary', sumTab); }
-  } else if (role === 'admin') {
-    const sumTab = document.querySelector('[data-tab="summary"]');
-    if (sumTab) { goTab('summary', sumTab); }
+  // ปรับ default tab ตาม role → ไปหน้าแรกที่ role นี้มีสิทธิ์ดู (ไม่ใช่หน้า settings)
+  goToFirstAllowedTab();
+}
+
+// ไปยังแท็บแรกที่ role ปัจจุบันมีสิทธิ์เข้าดู (เรียงตามลำดับความสำคัญ)
+function goToFirstAllowedTab() {
+  const order = [
+    ['summary',   'view_summary'],
+    ['status',    'view_orders'],
+    ['proderr',   'view_production'],
+    ['transport', 'view_shipping'],
+    ['shiperr',   'view_shipping'],
+    ['stock',     'view_stock'],
+    ['customers', 'view_customers'],
+    ['form',      'create_order'],
+  ];
+  for (const [tab, perm] of order) {
+    if (canDo(perm)) {
+      const el = document.querySelector('[data-tab="' + tab + '"]');
+      goTab(tab, el);
+      return;
+    }
+  }
+  // ไม่มีสิทธิ์ดูหน้าไหนเลย — admin ตกมาที่ settings, นอกนั้นอยู่หน้าเดิม
+  if (_currentRole === 'admin') {
+    const el = document.querySelector('[data-tab="settings"]');
+    if (el) goTab('settings', el);
   }
 }
 
@@ -3431,7 +3459,7 @@ function applyPermissions() {
   // Translate new section-level arrays into legacy boolean keys for canDo()
   const raw = _savedRolePerms !== null
     ? (_savedRolePerms[_currentRole] || {})
-    : (DEFAULT_ROLE_PERMS[_currentRole] || DEFAULT_ROLE_PERMS.sale);
+    : (DEFAULT_ROLE_PERMS[_currentRole] || {});
   const has = (sec, lv) => {
     const v = raw[sec];
     if (Array.isArray(v)) return v.includes(lv);
@@ -4640,6 +4668,22 @@ function addToSpecStock(pileName, specStr, qty) {
   }
 }
 
+// หา "เดือน" ของ log เพื่อจัดกลุ่ม (อิงวันที่ที่แสดงจริงก่อน แล้วค่อย fallback)
+function _logMon(l) {
+  let mm, yy;
+  if (l && l.date && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(l.date)) {
+    const p = l.date.split('/'); mm = p[1].padStart(2,'0'); yy = p[2].slice(-2);
+  } else if (l && l.dateISO) {
+    const d = l.dateISO.split('-'); yy = (parseInt(d[0])+543).toString().slice(-2); mm = d[1];
+  } else {
+    const ts = l && (l.finishedAt || l.startedAt || l.timestamp);
+    if (ts) { const d = new Date(ts); yy = (d.getFullYear()+543).toString().slice(-2); mm = String(d.getMonth()+1).padStart(2,'0'); }
+  }
+  if (!mm) return { key:'', label:'ไม่ระบุเดือน' };
+  const TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return { key: yy+'-'+mm, label: TH[parseInt(mm)-1]+' '+yy };
+}
+
 // ── Render Production Log History ──────────────────────────────
 function renderProdLogHistory() {
   const tbody = document.getElementById('prodLogBody');
@@ -4665,12 +4709,32 @@ function renderProdLogHistory() {
           || (l.dateISO || '').includes(q);
     });
   }
-  if (countEl) countEl.textContent = q ? logs.length + ' รายการที่พบ' : logs.length + ' รายการ';
+  // ── ตัวกรอง: เดือน + ประเภท (ตาม Order / เข้าสต็อก) ──
+  const _allLogs = getProdLog();
+  const _monthSel = document.getElementById('prodLogMonth');
+  if (_monthSel) {
+    const _seen = new Set(); const _opts = [];
+    _allLogs.forEach(l => { const mn = _logMon(l); if (mn.key && !_seen.has(mn.key)) { _seen.add(mn.key); _opts.push(mn); } });
+    const _cur = _monthSel.value;
+    _monthSel.innerHTML = '<option value="">📅 ทุกเดือน</option>' + _opts.map(o => '<option value="'+o.key+'">📅 '+o.label+'</option>').join('');
+    if (_cur && _seen.has(_cur)) _monthSel.value = _cur;
+  }
+  const _mf = (document.getElementById('prodLogMonth')||{}).value || '';
+  const _tf = (document.getElementById('prodLogType')||{}).value || '';
+  if (_mf) logs = logs.filter(l => _logMon(l).key === _mf);
+  if (_tf) logs = logs.filter(l => { const isS = l.isStockProd || l.orderNum === 'STOCK'; return _tf === 'stock' ? isS : !isS; });
+
+  if (countEl) countEl.textContent = (q || _mf || _tf) ? logs.length + ' รายการที่พบ' : logs.length + ' รายการ';
   if (!logs.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="11">ไม่พบประวัติที่ค้นหา</td></tr>';
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="11">ไม่พบประวัติตามเงื่อนไข</td></tr>';
+    const _mp = document.getElementById('prodLogMobile'); if (_mp) _mp.innerHTML = '<div style="text-align:center;padding:30px 20px;color:#94A3B8;">ไม่พบประวัติตามเงื่อนไข</div>';
     return;
   }
+  let _curMonthD = null;
   tbody.innerHTML = logs.map(l => {
+    const _mn = _logMon(l);
+    let _divD = '';
+    if (_mn.key !== _curMonthD) { _curMonthD = _mn.key; _divD = '<tr><td colspan="11" style="background:#F1F5F9;font-weight:800;color:#1E293B;padding:8px 14px;font-size:13px;border-top:2px solid #E2E8F0;">📅 '+_mn.label+'</td></tr>'; }
     // backward compat: old demo data uses qty/defect/finishDate instead of qtyProduced/qtyDefect/date
     const produced = l.qtyProduced !== undefined ? l.qtyProduced : (l.qty || 0);
     const net      = l.qtyNet      !== undefined ? l.qtyNet      : produced;
@@ -4733,7 +4797,7 @@ function renderProdLogHistory() {
     const delBtn = _currentRole==='admin'
       ? '<button onclick="adminDeleteLog(\'prodLog\',\''+l._fbKey+'\')" style="padding:3px 8px;font-size:10px;border-radius:5px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;" title="ลบรายการนี้">🗑</button>'
       : '';
-    return '<tr>'
+    return _divD + '<tr>'
       + '<td>'+dateStr+'</td>'
       + '<td>'+orderCell+'</td>'
       + '<td style="font-weight:600;">'+l.pileType+'</td>'
@@ -4754,7 +4818,11 @@ function renderProdLogHistory() {
     if (!logs.length) {
       _mobProd.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;">ยังไม่มีประวัติการผลิต</div>';
     } else {
+      let _curMonthM = null;
       _mobProd.innerHTML = logs.map(l => {
+        const _mnM = _logMon(l);
+        let _divM = '';
+        if (_mnM.key !== _curMonthM) { _curMonthM = _mnM.key; _divM = '<div style="margin:14px 4px 8px;font-weight:800;color:#1E293B;font-size:14px;border-bottom:2px solid #E2E8F0;padding-bottom:4px;">📅 '+_mnM.label+'</div>'; }
         const produced = l.qtyProduced !== undefined ? l.qtyProduced : (l.qty || 0);
         const net    = l.qtyNet    !== undefined ? l.qtyNet    : produced;
         const defect = l.qtyDefect !== undefined ? l.qtyDefect : (l.defect || 0);
@@ -4767,7 +4835,7 @@ function renderProdLogHistory() {
           ? `<div style="margin-top:6px;font-size:11px;background:#FEF9C3;color:#854D0E;padding:3px 8px;border-radius:6px;text-align:center;font-weight:700;">⚠️ เกิน ${l.qtyExcess} ต้น</div>` : '';
         const stockLine = (l.addedToStock || isStock)
           ? `<div style="margin-top:6px;font-size:11px;background:#DCFCE7;color:#166534;padding:3px 8px;border-radius:6px;text-align:center;font-weight:700;">✅ เพิ่มสต็อกแล้ว</div>` : '';
-        return `<div class="mob-pc">
+        return _divM + `<div class="mob-pc">
           <div class="mob-pc-top"><span class="mob-pc-order">${orderDisp}${custLine}</span><span class="mob-pc-date">${dateStr}</span></div>
           <div class="mob-pc-pile">${l.pileType}</div>
           <div class="mob-pc-stats">
@@ -6110,6 +6178,7 @@ function loadRolePerms(cb) {
     db.ref('/config/rolePerms').once('value'),
     db.ref('/config/customRoles').once('value'),
   ]).then(([permSnap, rolesSnap]) => {
+    if (_savedRolePerms === null) _savedRolePerms = {};
     if (permSnap.exists()) {
       const raw = permSnap.val();
       // Normalise: Firebase stores arrays as objects {0:x,1:y} — convert back
