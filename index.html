@@ -557,16 +557,16 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   .mob-pc-stat{background:#F8FAFC;border-radius:8px;padding:8px;text-align:center;}
   .mob-pc-val{font-size:20px;font-weight:900;}
   .mob-pc-lbl{font-size:10px;color:#64748B;font-weight:600;}
-  .mob-pc-clk{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .12s,box-shadow .12s;}
-  .mob-pc-clk:active{background:#F1F5F9;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+  .mob-pc-clk,.mob-lc-clk{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .12s,box-shadow .12s;}
+  .mob-pc-clk:active,.mob-lc-clk:active{background:#F1F5F9;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
   .mob-pc-clk .mob-pc-pile{margin-bottom:0;display:flex;align-items:center;justify-content:space-between;}
   .mob-pc-chev{color:#CBD5E1;font-size:22px;font-weight:700;line-height:1;}
-  /* รายละเอียดใน popup ผลิต */
+  /* รายละเอียดใน popup */
   .pld-sec{margin-top:14px;}
   .pld-sec-h{font-size:12px;font-weight:800;color:#475569;margin-bottom:6px;}
   .pld-chips{display:flex;flex-wrap:wrap;gap:5px;}
-  .pld-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid #F1F5F9;}
-  .pld-row span:first-child{color:#64748B;}
+  .pld-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:6px 0;border-bottom:1px solid #F1F5F9;}
+  .pld-row span:first-child{color:#64748B;flex-shrink:0;}
   .pld-row span:last-child{font-weight:700;color:#1E293B;text-align:right;}
   .pld-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;}
   .pld-stat{background:#F8FAFC;border-radius:8px;padding:10px;text-align:center;}
@@ -4873,15 +4873,12 @@ function editProdLogFromDetail(fbKey) {
 function openProdLogDetail(idx) {
   const l = (window._prodLogList || [])[idx];
   if (!l) return;
-
   const produced = l.qtyProduced !== undefined ? l.qtyProduced : (l.qty || 0);
   const defect   = l.qtyDefect   !== undefined ? l.qtyDefect   : (l.defect || 0);
   const dateStr  = l.date || l.finishDate || l.startDate || '—';
   const isStock  = l.isStockProd || l.orderNum === 'STOCK';
   const orderDisp = isStock ? '📦 ผลิตเพิ่มสต็อก' : l.orderNum;
   const custFull  = isStock ? '' : (getOrders().find(o=>o.orderNum===l.orderNum)?.customer || '');
-
-  // สเปคเสา
   const specParts = [
     l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">📐 '+l.length+'</span>' : null,
     l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:2px 8px;border-radius:5px;font-size:11px;">🔗 '+l.weld  +'</span>' : null,
@@ -4890,8 +4887,6 @@ function openProdLogDetail(idx) {
     l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">🔷 '+l.ba   +'</span>' : null,
     l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;">📝 '+l.extra +'</span>' : null,
   ].filter(Boolean);
-
-  // รายละเอียดการผลิต
   const standRowsData = l.standRows && l.standRows.length ? l.standRows : (l.standQty > 0 ? [{qty:l.standQty,size:l.standSize}] : []);
   const standParts = standRowsData.filter(r=>r.qty>0||r.size).map(r=>'<span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;">🪝 ลูกตั้ง '+r.qty+(r.size?' '+r.size:'')+'</span>');
   const prodParts = [
@@ -4899,8 +4894,6 @@ function openProdLogDetail(idx) {
     l.tong && l.tong!=='' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:2px 8px;border-radius:5px;font-size:11px;">⬜ ท้อง '+l.tong+'</span>' : null,
     ...standParts,
   ].filter(Boolean);
-
-  // ระยะเวลาผลิต
   const _fmtDT = ts => new Date(ts).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' น.';
   const startStr = l.startedAt  ? _fmtDT(l.startedAt)  : '—';
   const endStr   = l.finishedAt ? _fmtDT(l.finishedAt) : '—';
@@ -4910,21 +4903,14 @@ function openProdLogDetail(idx) {
     const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000);
     durStr = (d > 0 ? d+' วัน ' : '') + (h > 0 ? h+' ชม. ' : '') + m+' นาที';
   }
-
-  const specSec = specParts.length
-    ? `<div class="pld-sec"><div class="pld-sec-h">📋 สเปคเสา</div><div class="pld-chips">${specParts.join('')}</div></div>` : '';
-  const prodSec = prodParts.length
-    ? `<div class="pld-sec"><div class="pld-sec-h">🏭 รายละเอียดการผลิต</div><div class="pld-chips">${prodParts.join('')}</div></div>` : '';
-  const durSec = (l.startedAt || l.finishedAt)
-    ? `<div class="pld-sec"><div class="pld-sec-h">⏱ ระยะเวลาผลิต</div>
+  const specSec = specParts.length ? `<div class="pld-sec"><div class="pld-sec-h">📋 สเปคเสา</div><div class="pld-chips">${specParts.join('')}</div></div>` : '';
+  const prodSec = prodParts.length ? `<div class="pld-sec"><div class="pld-sec-h">🏭 รายละเอียดการผลิต</div><div class="pld-chips">${prodParts.join('')}</div></div>` : '';
+  const durSec = (l.startedAt || l.finishedAt) ? `<div class="pld-sec"><div class="pld-sec-h">⏱ ระยะเวลาผลิต</div>
         <div class="pld-row"><span>🟢 เริ่ม</span><span>${startStr}</span></div>
         <div class="pld-row"><span>🔴 เสร็จ</span><span>${endStr}</span></div>
         <div class="pld-row"><span>⏱ รวม</span><span style="color:#92400E;">${durStr}</span></div></div>` : '';
-  const stockLine = (l.addedToStock || isStock)
-    ? `<div style="margin-top:12px;font-size:12px;background:#DCFCE7;color:#166534;padding:6px 10px;border-radius:8px;text-align:center;font-weight:700;">✅ เพิ่มสต็อกแล้ว</div>` : '';
-  const editBtn = (l._fbKey && (typeof _currentRole === 'undefined' || _currentRole === 'admin'))
-    ? `<button onclick="editProdLogFromDetail('${l._fbKey}')" style="margin-top:16px;width:100%;padding:11px;border-radius:10px;border:1.5px solid #93C5FD;background:#EFF6FF;color:#1D4ED8;font-size:14px;font-weight:800;cursor:pointer;">✏️ แก้ไขรายการนี้</button>` : '';
-
+  const stockLine = (l.addedToStock || isStock) ? `<div style="margin-top:12px;font-size:12px;background:#DCFCE7;color:#166534;padding:6px 10px;border-radius:8px;text-align:center;font-weight:700;">✅ เพิ่มสต็อกแล้ว</div>` : '';
+  const editBtn = (l._fbKey && (typeof _currentRole === 'undefined' || _currentRole === 'admin')) ? `<button onclick="editProdLogFromDetail('${l._fbKey}')" style="margin-top:16px;width:100%;padding:11px;border-radius:10px;border:1.5px solid #93C5FD;background:#EFF6FF;color:#1D4ED8;font-size:14px;font-weight:800;cursor:pointer;">✏️ แก้ไขรายการนี้</button>` : '';
   closeProdLogDetail();
   const modal = document.createElement('div');
   modal.id = '_prodLogDetailModal';
@@ -4941,12 +4927,50 @@ function openProdLogDetail(idx) {
         <button onclick="closeProdLogDetail()" style="flex-shrink:0;background:#F1F5F9;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;color:#64748B;cursor:pointer;line-height:1;">✕</button>
       </div>
       <div style="font-size:11px;color:#94A3B8;margin-top:6px;">📅 ${dateStr}</div>
-
       <div class="pld-stats">
         <div class="pld-stat"><div class="pld-stat-v" style="color:#1E40AF;">${produced}</div><div class="pld-stat-l">ผลิตได้</div></div>
         <div class="pld-stat"><div class="pld-stat-v" style="color:${defect>0?'#DC2626':'#94A3B8'};">${defect}</div><div class="pld-stat-l">เสีย</div></div>
       </div>
       ${specSec}${prodSec}${durSec}${stockLine}${editBtn}
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+// ── Popup รายละเอียดการเคลื่อนไหวสต็อก (มือถือ) ──────────────────
+function closeStockLogDetail() {
+  const m = document.getElementById('_stockLogDetailModal');
+  if (m) m.remove();
+}
+function openStockLogDetail(idx) {
+  const e = (window._stockLogList || [])[idx];
+  if (!e) return;
+  const isIn = e.typeVal.includes('รับเข้า'), isOut = e.typeVal.includes('เบิกออก');
+  const qColor = isIn ? '#166534' : isOut ? '#991B1B' : '#6D28D9';
+  const tagBg  = isIn ? '#DCFCE7' : isOut ? '#FEE2E2' : '#F3E8FF';
+  const tagTx  = isIn ? '#166534' : isOut ? '#991B1B' : '#6D28D9';
+  const label  = e.typeVal.split('(')[0].trim();
+  const rows = [];
+  rows.push(`<div class="pld-row"><span>ประเภท</span><span><span style="background:${tagBg};color:${tagTx};padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;">${e.typeVal}</span></span></div>`);
+  if (e.ref && e.ref !== '-')   rows.push(`<div class="pld-row"><span>อ้างอิง</span><span>${e.ref}</span></div>`);
+  if (e.ts)                     rows.push(`<div class="pld-row"><span>วันที่ / เวลา</span><span>${e.ts}</span></div>`);
+  if (e.staff)                  rows.push(`<div class="pld-row"><span>ผู้ทำรายการ</span><span>👤 ${e.staff}</span></div>`);
+  if (e.note && e.note !== '-') rows.push(`<div class="pld-row" style="flex-direction:column;align-items:flex-start;gap:4px;"><span>หมายเหตุ</span><span style="text-align:left;font-weight:400;color:#475569;">${e.note}</span></div>`);
+  closeStockLogDetail();
+  const modal = document.createElement('div');
+  modal.id = '_stockLogDetailModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  modal.onclick = ev => { if (ev.target === modal) closeStockLogDetail(); };
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:18px 18px 0 0;padding:20px 20px calc(24px + env(safe-area-inset-bottom));width:100%;max-width:560px;max-height:86vh;overflow-y:auto;box-shadow:0 -4px 30px rgba(0,0,0,0.25);">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div style="font-size:18px;font-weight:900;color:#1E293B;">${e.name}</div>
+        <button onclick="closeStockLogDetail()" style="flex-shrink:0;background:#F1F5F9;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;color:#64748B;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <div class="pld-stats">
+        <div class="pld-stat"><div class="pld-stat-v" style="color:${qColor};">${e.qtyDisplay}</div><div class="pld-stat-l">${label}</div></div>
+        <div class="pld-stat"><div class="pld-stat-v" style="color:#1E293B;">${e.newStock}</div><div class="pld-stat-l">คงเหลือ</div></div>
+      </div>
+      <div class="pld-sec">${rows.join('')}</div>
     </div>`;
   document.body.appendChild(modal);
 }
@@ -5788,16 +5812,15 @@ function renderStockLog(resetPage) {
     if (!pageLog.length) {
       _mobStock.innerHTML = `<div style="text-align:center;padding:40px 20px;color:#94A3B8;">${total===0?'ยังไม่มีประวัติ':'ไม่พบผลลัพธ์ที่ค้นหา'}</div>`;
     } else {
+      window._stockLogList = pageLog;
       _mobStock.innerHTML = pageLog.map((e,i) => {
         const isIn=e.typeVal.includes('รับเข้า'), isOut=e.typeVal.includes('เบิกออก');
-        const tagCls = isIn ? 'mob-lc-in' : isOut ? 'mob-lc-out' : 'mob-lc-adj';
         const qColor = isIn ? '#166534' : isOut ? '#991B1B' : '#6D28D9';
-        const label  = e.typeVal.split('(')[0].trim();
-        const refPart = e.ref ? ` · ${e.ref}` : '';
-        return `<div class="mob-lc">
-          <span class="mob-lc-tag ${tagCls}">${label}</span>
-          <div class="mob-lc-info"><div class="mob-lc-pile">${e.name}</div><div class="mob-lc-date">${e.ts}${refPart}</div></div>
+        // มือถือ: แสดงเฉพาะ ชนิดเสา + จำนวน +/- + คงเหลือ — แตะเพื่อดูรายละเอียด
+        return `<div class="mob-lc mob-lc-clk" onclick="openStockLogDetail(${i})">
+          <div class="mob-lc-info"><div class="mob-lc-pile">${e.name}</div></div>
           <div class="mob-lc-right"><div class="mob-lc-qty" style="color:${qColor};">${e.qtyDisplay}</div><div class="mob-lc-after">คงเหลือ ${e.newStock}</div></div>
+          <span class="mob-pc-chev" style="margin-left:2px;">›</span>
         </div>`;
       }).join('');
     }
