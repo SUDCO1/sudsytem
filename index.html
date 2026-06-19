@@ -1575,14 +1575,19 @@ function tcConfirmFinalize(id) {
   if (!entry) return;
   if (entry._stocked) { showToast('✅ ตัดสต็อกไปแล้ว'); return; }
   const itemsDesc = (entry.selectedItems||[]).map(si => si.pileType+' '+si.qty+' ต้น').join(', ') || entry.piles || '-';
-  if (!confirm('ยืนยันส่งจบ?\n\nลูกค้า: '+(entry.cust||'-')+'\nOrder: '+(entry.order||'-')+'\nสินค้า: '+itemsDesc+'\n\n→ ระบบจะตัดสต็อกและอัปเดตสถานะ Order')) return;
+  if (!confirm('ยืนยันส่งจบ?\n\nลูกค้า: '+(entry.cust||'-')+'\nOrder: '+(entry.order||'-')+'\nสินค้า: '+itemsDesc+'\n\n→ ระบบจะตัดสต็อกและอัปเดตสถานะ Order\n→ รูปภาพแนบจะถูกลบเพื่อประหยัดพื้นที่ (ข้อมูลอื่นคงอยู่ครบ)')) return;
   const ok = tcFinalizeDelivery(entry);
   entry._stocked = ok || true;
-  // บันทึกกลับ localStorage
+  // ส่งจบแล้ว → ลบเฉพาะรูปภาพออกเพื่อประหยัดพื้นที่ Firebase (ข้อมูลอื่นคงไว้ทั้งหมด)
+  const _imgCount = (entry.images && entry.images.length) ? entry.images.length : 0;
+  entry.images = [];
+  // บันทึกกลับ localStorage + sync ขึ้น Firebase ให้รูปถูกลบออกจากฐานข้อมูลจริง
   const saved = arr.map(e => e._id === id ? entry : e);
   localStorage.setItem(TC_KEY, JSON.stringify(saved));
+  tcSaveEvents(saved);
   tcRender();
-  showToast(ok ? '📦 ส่งจบ — ตัดสต็อกและอัปเดต Order แล้ว' : '✅ บันทึกส่งจบแล้ว (ไม่มีสินค้าให้ตัดสต็อก)');
+  const _imgMsg = _imgCount ? ' · ลบรูป ' + _imgCount + ' รูป' : '';
+  showToast((ok ? '📦 ส่งจบ — ตัดสต็อกและอัปเดต Order แล้ว' : '✅ บันทึกส่งจบแล้ว') + _imgMsg);
 }
 function tcDeleteEvent(id) {
   if (!canDo('delete_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์ลบการขนส่ง'); return; }
