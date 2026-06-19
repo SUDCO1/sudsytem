@@ -15,6 +15,7 @@
 <style>
 /* ============================================================ BASE ============================================================ */
 *{box-sizing:border-box;margin:0;padding:0;}
+.unit-pick{font-family:inherit;font-size:11px;font-weight:700;color:#2563EB;background:transparent;border:1px solid #CBD5E1;border-radius:8px;padding:1px 5px;margin-left:4px;cursor:pointer;outline:none;vertical-align:middle;line-height:1.5;}.unit-pick:hover,.unit-pick:focus{background:#EFF6FF;border-color:#93C5FD;}
 html{overflow-x:hidden;}
 body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-height:100vh;font-size:14px;color:#1E293B;overflow-x:hidden;}
 
@@ -694,8 +695,8 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
                 <label class="field-label">ชนิดเสาเข็ม <span class="req">*</span></label>
                 <select id="f_type"><option value="">— เลือก —</option></select>
               </div>
-              <div class="field" style="min-width:90px;flex:1;">
-                <label class="field-label">จำนวน (ต้น) <span class="req">*</span></label>
+              <div class="field" style="min-width:118px;flex:1;">
+                <label class="field-label">จำนวน <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select> <span class="req">*</span></label>
                 <input type="number" id="f_qty" placeholder="60" min="1"/>
               </div>
               <div class="field" style="min-width:90px;flex:1;">
@@ -833,7 +834,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
             <input type="text" id="spf_lane" placeholder="เช่น 1, 2, A"/>
           </div>
           <div class="field">
-            <label class="field-label">จำนวนที่เทลงราง (ต้น) <span class="req">*</span></label>
+            <label class="field-label">จำนวนที่เทลงราง <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select> <span class="req">*</span></label>
             <input type="number" id="spf_qty" min="1" placeholder="เช่น 50"/>
           </div>
           <div class="field">
@@ -951,7 +952,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <div style="font-size:11px;font-weight:700;color:#92400E;letter-spacing:0.05em;margin-bottom:8px;">🏗️ รายละเอียดการผลิต</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div><label class="field-label" style="font-size:11px;">วันที่ผลิต</label><input type="date" id="eap_date" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
-          <div><label class="field-label" style="font-size:11px;">จำนวนในราง (ต้น)</label><input type="number" id="eap_qty" min="1" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:11px;">จำนวนในราง <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label><input type="number" id="eap_qty" min="1" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
           <div><label class="field-label" style="font-size:11px;">เลน</label><input type="text" id="eap_lane" placeholder="เช่น 1, 2, A" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
           <div><label class="field-label" style="font-size:11px;">ท้อง</label><input type="text" id="eap_tong" placeholder="เช่น มี, ไม่มี" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
           <div style="grid-column:1/-1;"><label class="field-label" style="font-size:11px;">หมายเหตุ</label><input type="text" id="eap_note" placeholder="หมายเหตุ" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
@@ -1005,7 +1006,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
               <input type="text" id="fprod_length" placeholder="เช่น 6m, 9m"/>
             </div>
             <div class="field">
-              <label class="field-label">จำนวนที่เทลงราง (ต้น) <span class="req">*</span></label>
+              <label class="field-label">จำนวนที่เทลงราง <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select> <span class="req">*</span></label>
               <input type="number" id="fprod_qty" min="1" placeholder="เช่น 50"/>
             </div>
             <div class="field">
@@ -1575,19 +1576,14 @@ function tcConfirmFinalize(id) {
   if (!entry) return;
   if (entry._stocked) { showToast('✅ ตัดสต็อกไปแล้ว'); return; }
   const itemsDesc = (entry.selectedItems||[]).map(si => si.pileType+' '+si.qty+' ต้น').join(', ') || entry.piles || '-';
-  if (!confirm('ยืนยันส่งจบ?\n\nลูกค้า: '+(entry.cust||'-')+'\nOrder: '+(entry.order||'-')+'\nสินค้า: '+itemsDesc+'\n\n→ ระบบจะตัดสต็อกและอัปเดตสถานะ Order\n→ รูปภาพแนบจะถูกลบเพื่อประหยัดพื้นที่ (ข้อมูลอื่นคงอยู่ครบ)')) return;
+  if (!confirm('ยืนยันส่งจบ?\n\nลูกค้า: '+(entry.cust||'-')+'\nOrder: '+(entry.order||'-')+'\nสินค้า: '+itemsDesc+'\n\n→ ระบบจะตัดสต็อกและอัปเดตสถานะ Order')) return;
   const ok = tcFinalizeDelivery(entry);
   entry._stocked = ok || true;
-  // ส่งจบแล้ว → ลบเฉพาะรูปภาพออกเพื่อประหยัดพื้นที่ Firebase (ข้อมูลอื่นคงไว้ทั้งหมด)
-  const _imgCount = (entry.images && entry.images.length) ? entry.images.length : 0;
-  entry.images = [];
-  // บันทึกกลับ localStorage + sync ขึ้น Firebase ให้รูปถูกลบออกจากฐานข้อมูลจริง
+  // บันทึกกลับ localStorage
   const saved = arr.map(e => e._id === id ? entry : e);
   localStorage.setItem(TC_KEY, JSON.stringify(saved));
-  tcSaveEvents(saved);
   tcRender();
-  const _imgMsg = _imgCount ? ' · ลบรูป ' + _imgCount + ' รูป' : '';
-  showToast((ok ? '📦 ส่งจบ — ตัดสต็อกและอัปเดต Order แล้ว' : '✅ บันทึกส่งจบแล้ว') + _imgMsg);
+  showToast(ok ? '📦 ส่งจบ — ตัดสต็อกและอัปเดต Order แล้ว' : '✅ บันทึกส่งจบแล้ว (ไม่มีสินค้าให้ตัดสต็อก)');
 }
 function tcDeleteEvent(id) {
   if (!canDo('delete_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์ลบการขนส่ง'); return; }
@@ -2418,6 +2414,19 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
 
+        <!-- Pole unit -->
+        <div class="settings-block" style="margin-bottom:16px;">
+          <div class="settings-block-title">📏 หน่วยนับเสา (ทั้งระบบ)</div>
+          <div class="form-grid">
+            <div class="field"><label class="field-label">เลือกหน่วยที่ใช้แสดงผลทั้งระบบ</label>
+              <select id="cfg_unit" onchange="setUnit(this.value)" style="width:100%;padding:8px 10px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;background:#fff;">
+                <option value="ต้น">ต้น</option>
+                <option value="ท่อน">ท่อน</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div class="settings-footer">
           <button class="btn btn-ghost" onclick="loadSettingsUI()">↺ ยกเลิก</button>
           <button class="btn btn-primary" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
@@ -2634,7 +2643,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <datalist id="sdSpecList"></datalist>
           </div>
           <div class="field">
-            <label class="field-label">จำนวน (ต้น) <span class="req">*</span></label>
+            <label class="field-label">จำนวน <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select> <span class="req">*</span></label>
             <input type="number" id="sd_logqty" min="1" placeholder="0" oninput="sdPreview()"/>
           </div>
           <div class="field">
@@ -2686,7 +2695,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="field"><label class="field-label">เลข Order <span class="req">*</span></label><input type="text" id="cp_order" placeholder="เช่น I18-183"/></div>
       <div class="field"><label class="field-label">ชนิดเสา <span class="req">*</span></label><select id="cp_pileType" class="filter-sel" style="width:100%;"><option value="">— เลือก —</option></select></div>
       <div class="field"><label class="field-label">รายละเอียด/สเปค</label><input type="text" id="cp_spec" placeholder="เช่น 8.00ม/ไม่เชื่อม"/></div>
-      <div class="field"><label class="field-label">จำนวน (ต้น) <span class="req">*</span></label><input type="number" id="cp_qty" min="1" placeholder="0"/></div>
+      <div class="field"><label class="field-label">จำนวน <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select> <span class="req">*</span></label><input type="number" id="cp_qty" min="1" placeholder="0"/></div>
       <div class="field"><label class="field-label">หมายเหตุ</label><input type="text" id="cp_note" placeholder="ไม่บังคับ"/></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
@@ -2748,7 +2757,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;">เพิ่มชนิดเสา</div>
             <div style="display:flex;flex-wrap:wrap;gap:8px;">
               <div class="field" style="min-width:150px;flex:2;"><label class="field-label">ชนิดเสา</label><select id="edit_f_type"><option value="">— เลือก —</option></select></div>
-              <div class="field" style="min-width:70px;flex:1;"><label class="field-label">จำนวน (ต้น)</label><input type="number" id="edit_f_qty" min="1" placeholder="0" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
+              <div class="field" style="min-width:104px;flex:1;"><label class="field-label">จำนวน <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label><input type="number" id="edit_f_qty" min="1" placeholder="0" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
               <div class="field" style="min-width:80px;flex:1;"><label class="field-label">ความยาว</label><input type="text" id="edit_f_len" placeholder="เช่น 6m, 9m" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
               <div class="field" style="min-width:80px;flex:1;"><label class="field-label">เชื่อม</label><input type="text" id="edit_f_weld" placeholder="เช่น มี, ไม่มี" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
               <div class="field" style="min-width:80px;flex:1;"><label class="field-label">เหล็กเสริม</label><input type="text" id="edit_f_steel" placeholder="เช่น DB12" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
@@ -3259,7 +3268,65 @@ const DEFAULT_CONFIG = {
   pilePrices:  {},
   stockLow:    15,
   stockWarn:   50,
+  unit:        'ต้น',
 };
+
+// ── หน่วยนับเสา (ต้น / ท่อน) — หน่วยกลางของทั้งระบบ ───────────────
+function PU(){ try { return (getConfig().unit) || 'ต้น'; } catch(e){ return 'ต้น'; } }
+const _UNIT_TEST = /(?<![ก-๙])(ต้น|ท่อน)(?![ก-๙])/;
+const _UNIT_RE   = /(?<![ก-๙])(ต้น|ท่อน)(?![ก-๙])/g;
+const _UNIT_SKIP = { SCRIPT:1, STYLE:1, OPTION:1, TEXTAREA:1, SELECT:1, INPUT:1 };
+function _swapUnitTextNode(node){
+  const u = PU();
+  const nv = node.nodeValue.replace(_UNIT_RE, u);
+  if (nv !== node.nodeValue) node.nodeValue = nv;
+}
+function _swapUnitInNode(root){
+  if (!root) return;
+  if (root.nodeType === 3){
+    const p = root.parentNode;
+    if (!(p && _UNIT_SKIP[p.nodeName])) _swapUnitTextNode(root);
+    return;
+  }
+  if (root.nodeType !== 1 || _UNIT_SKIP[root.nodeName]) return;
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(n){
+      const p = n.parentNode;
+      if (p && _UNIT_SKIP[p.nodeName]) return NodeFilter.FILTER_REJECT;
+      return _UNIT_TEST.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+    }
+  });
+  const hits = []; let n; while ((n = walk.nextNode())) hits.push(n);
+  hits.forEach(_swapUnitTextNode);
+}
+function syncUnitPickers(){
+  const u = PU();
+  document.querySelectorAll('select.unit-pick').forEach(s => { if (s.value !== u) s.value = u; });
+  const cs = document.getElementById('cfg_unit'); if (cs && cs.value !== u) cs.value = u;
+}
+function applyUnitLabels(){ if (document.body){ _swapUnitInNode(document.body); syncUnitPickers(); } }
+let _unitObserver = null;
+function startUnitObserver(){
+  if (_unitObserver || !document.body) return;
+  _unitObserver = new MutationObserver(muts => {
+    for (const m of muts){
+      if (!m.addedNodes) continue;
+      m.addedNodes.forEach(node => { if (node.nodeType === 1 || node.nodeType === 3) _swapUnitInNode(node); });
+    }
+  });
+  _unitObserver.observe(document.body, { childList:true, subtree:true });
+}
+function setUnit(val){
+  if (val !== 'ต้น' && val !== 'ท่อน') return;
+  if (_cache && _cache.config) _cache.config.unit = val;
+  try {
+    const cfg = JSON.parse(JSON.stringify(getConfig()));
+    cfg.unit = val;
+    if (typeof saveConfigData === 'function') saveConfigData(cfg);
+  } catch(e){}
+  applyUnitLabels();
+  if (typeof showToast === 'function') showToast('📏 เปลี่ยนหน่วยเป็น "' + val + '" ทั้งระบบแล้ว');
+}
 
 // (getConfig, getOrders, saveOrders etc. are defined in the Firebase layer above)
 const DEFAULT_STOCK_QTY = { 'เสาตัน 0.22m':140, 'เสาตัน 0.26m':85, 'เสากลม 0.30m':32, 'เสาสี่เหลี่ยม 0.35m':8 };
@@ -6358,6 +6425,7 @@ function loadSettingsUI() {
   document.getElementById('cfg_companyEmoji').value = cfg.companyEmoji;
   document.getElementById('cfg_stockLow').value     = cfg.stockLow;
   document.getElementById('cfg_stockWarn').value    = cfg.stockWarn;
+  const _unitSel = document.getElementById('cfg_unit'); if (_unitSel) _unitSel.value = cfg.unit || 'ต้น';
   Object.keys(TAG_MAP).forEach(type => renderTags(TAG_MAP[type].container, _cfg[TAG_MAP[type].key], type));
   renderPriceTable();
 }
@@ -6446,6 +6514,7 @@ function saveSettings() {
   _cfg.companyEmoji = document.getElementById('cfg_companyEmoji').value.trim() || '🏗️';
   _cfg.stockLow     = parseInt(document.getElementById('cfg_stockLow').value)  || 15;
   _cfg.stockWarn    = parseInt(document.getElementById('cfg_stockWarn').value) || 50;
+  _cfg.unit         = (document.getElementById('cfg_unit') && document.getElementById('cfg_unit').value) || 'ต้น';
   // Collect prices
   _cfg.pilePrices = {};
   (_cfg.pileTypes||[]).forEach(name => {
@@ -6465,6 +6534,8 @@ function applyBranding() {
   document.getElementById('hdrEmoji').textContent = cfg.companyEmoji;
   document.getElementById('hdrTitle').textContent = `${cfg.companyName}`;
   document.title = `${cfg.companyName}`;
+  applyUnitLabels();
+  startUnitObserver();
 }
 
 // ── Clear Demo ─────────────────────────────────────────────────
@@ -7662,11 +7733,11 @@ function openEditProdLog(fbKey) {
       <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">รายการที่ผลิต (Item)</label>
       <select id="_epli" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:12px;margin-bottom:14px;">${itemOptions}</select>
 
-      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">จำนวนผลิต (ต้น)</label>
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">จำนวนผลิต <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label>
       <input id="_eplq" type="number" min="0" value="${log.qtyProduced ?? log.qty ?? 0}"
         style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;margin-bottom:14px;box-sizing:border-box;" />
 
-      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">ของเสีย (ต้น)</label>
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">ของเสีย <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label>
       <input id="_epld" type="number" min="0" value="${log.qtyDefect ?? log.defect ?? 0}"
         style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;margin-bottom:14px;box-sizing:border-box;" />
 
@@ -7948,7 +8019,7 @@ function adminClearHistory(type) {
       <input type="hidden" id="epe_idx"/>
       <div class="form-grid">
         <div class="field">
-          <label class="field-label">จำนวนเสีย (ต้น)</label>
+          <label class="field-label">จำนวนเสีย <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label>
           <input type="number" id="epe_qty" min="0" placeholder="0"/>
         </div>
         <div class="field">
