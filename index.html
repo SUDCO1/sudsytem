@@ -568,7 +568,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   .pld-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid #F1F5F9;}
   .pld-row span:first-child{color:#64748B;}
   .pld-row span:last-child{font-weight:700;color:#1E293B;text-align:right;}
-  .pld-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;}
+  .pld-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;}
   .pld-stat{background:#F8FAFC;border-radius:8px;padding:10px;text-align:center;}
   .pld-stat-v{font-size:22px;font-weight:900;}
   .pld-stat-l{font-size:10px;color:#64748B;font-weight:600;}
@@ -1127,8 +1127,6 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
               <th>ระยะเวลาผลิต</th>
               <th>ผลิตได้</th>
               <th>เสีย</th>
-              <th>พร้อมส่ง</th>
-              <th>ผลิตเกิน</th>
               <th class="admin-only"></th>
             </tr>
           </thead>
@@ -4717,7 +4715,7 @@ function renderProdLogHistory() {
   const countEl = document.getElementById('prodLogCount');
   let logs = getProdLog();
   if (!logs.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="11">ยังไม่มีประวัติการผลิต</td></tr>';
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="9">ยังไม่มีประวัติการผลิต</td></tr>';
     if (countEl) countEl.textContent = '';
     return;
   }
@@ -4751,7 +4749,7 @@ function renderProdLogHistory() {
 
   if (countEl) countEl.textContent = (q || _mf || _tf) ? logs.length + ' รายการที่พบ' : logs.length + ' รายการ';
   if (!logs.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="11">ไม่พบประวัติตามเงื่อนไข</td></tr>';
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="9">ไม่พบประวัติตามเงื่อนไข</td></tr>';
     const _mp = document.getElementById('prodLogMobile'); if (_mp) _mp.innerHTML = '<div style="text-align:center;padding:30px 20px;color:#94A3B8;">ไม่พบประวัติตามเงื่อนไข</div>';
     return;
   }
@@ -4759,7 +4757,7 @@ function renderProdLogHistory() {
   tbody.innerHTML = logs.map(l => {
     const _mn = _logMon(l);
     let _divD = '';
-    if (_mn.key !== _curMonthD) { _curMonthD = _mn.key; _divD = '<tr><td colspan="11" style="background:#F1F5F9;font-weight:800;color:#1E293B;padding:8px 14px;font-size:13px;border-top:2px solid #E2E8F0;">📅 '+_mn.label+'</td></tr>'; }
+    if (_mn.key !== _curMonthD) { _curMonthD = _mn.key; _divD = '<tr><td colspan="9" style="background:#F1F5F9;font-weight:800;color:#1E293B;padding:8px 14px;font-size:13px;border-top:2px solid #E2E8F0;">📅 '+_mn.label+'</td></tr>'; }
     // backward compat: old demo data uses qty/defect/finishDate instead of qtyProduced/qtyDefect/date
     const produced = l.qtyProduced !== undefined ? l.qtyProduced : (l.qty || 0);
     const net      = l.qtyNet      !== undefined ? l.qtyNet      : produced;
@@ -4831,8 +4829,6 @@ function renderProdLogHistory() {
       + '<td style="white-space:nowrap;">'+durationCell+'</td>'
       + '<td><strong style="color:#1E40AF;">'+produced+' ต้น</strong></td>'
       + '<td>'+defectBadge+'</td>'
-      + '<td><strong style="color:#166534;">'+net+' ต้น</strong></td>'
-      + '<td>'+excessBadge+'</td>'
       + '<td>'+editBtn+delBtn+'</td>'
       + '</tr>';
   }).join('');
@@ -4870,12 +4866,15 @@ function closeProdLogDetail() {
   const m = document.getElementById('_prodLogDetailModal');
   if (m) m.remove();
 }
+function editProdLogFromDetail(fbKey) {
+  closeProdLogDetail();
+  if (typeof openEditProdLog === 'function') openEditProdLog(fbKey);
+}
 function openProdLogDetail(idx) {
   const l = (window._prodLogList || [])[idx];
   if (!l) return;
 
   const produced = l.qtyProduced !== undefined ? l.qtyProduced : (l.qty || 0);
-  const net      = l.qtyNet      !== undefined ? l.qtyNet      : produced;
   const defect   = l.qtyDefect   !== undefined ? l.qtyDefect   : (l.defect || 0);
   const dateStr  = l.date || l.finishDate || l.startDate || '—';
   const isStock  = l.isStockProd || l.orderNum === 'STOCK';
@@ -4921,10 +4920,10 @@ function openProdLogDetail(idx) {
         <div class="pld-row"><span>🟢 เริ่ม</span><span>${startStr}</span></div>
         <div class="pld-row"><span>🔴 เสร็จ</span><span>${endStr}</span></div>
         <div class="pld-row"><span>⏱ รวม</span><span style="color:#92400E;">${durStr}</span></div></div>` : '';
-  const excessLine = (l.qtyExcess||0) > 0
-    ? `<div style="margin-top:12px;font-size:12px;background:#FEF9C3;color:#854D0E;padding:6px 10px;border-radius:8px;text-align:center;font-weight:700;">⚠️ เกิน ${l.qtyExcess} ต้น</div>` : '';
   const stockLine = (l.addedToStock || isStock)
-    ? `<div style="margin-top:8px;font-size:12px;background:#DCFCE7;color:#166534;padding:6px 10px;border-radius:8px;text-align:center;font-weight:700;">✅ เพิ่มสต็อกแล้ว</div>` : '';
+    ? `<div style="margin-top:12px;font-size:12px;background:#DCFCE7;color:#166534;padding:6px 10px;border-radius:8px;text-align:center;font-weight:700;">✅ เพิ่มสต็อกแล้ว</div>` : '';
+  const editBtn = (l._fbKey && (typeof _currentRole === 'undefined' || _currentRole === 'admin'))
+    ? `<button onclick="editProdLogFromDetail('${l._fbKey}')" style="margin-top:16px;width:100%;padding:11px;border-radius:10px;border:1.5px solid #93C5FD;background:#EFF6FF;color:#1D4ED8;font-size:14px;font-weight:800;cursor:pointer;">✏️ แก้ไขรายการนี้</button>` : '';
 
   closeProdLogDetail();
   const modal = document.createElement('div');
@@ -4946,9 +4945,8 @@ function openProdLogDetail(idx) {
       <div class="pld-stats">
         <div class="pld-stat"><div class="pld-stat-v" style="color:#1E40AF;">${produced}</div><div class="pld-stat-l">ผลิตได้</div></div>
         <div class="pld-stat"><div class="pld-stat-v" style="color:${defect>0?'#DC2626':'#94A3B8'};">${defect}</div><div class="pld-stat-l">เสีย</div></div>
-        <div class="pld-stat"><div class="pld-stat-v" style="color:#166534;">${net}</div><div class="pld-stat-l">พร้อมส่ง</div></div>
       </div>
-      ${specSec}${prodSec}${durSec}${excessLine}${stockLine}
+      ${specSec}${prodSec}${durSec}${stockLine}${editBtn}
     </div>`;
   document.body.appendChild(modal);
 }
