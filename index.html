@@ -557,6 +557,21 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   .mob-pc-stat{background:#F8FAFC;border-radius:8px;padding:8px;text-align:center;}
   .mob-pc-val{font-size:20px;font-weight:900;}
   .mob-pc-lbl{font-size:10px;color:#64748B;font-weight:600;}
+  .mob-pc-clk{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .12s,box-shadow .12s;}
+  .mob-pc-clk:active{background:#F1F5F9;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+  .mob-pc-clk .mob-pc-pile{margin-bottom:0;display:flex;align-items:center;justify-content:space-between;}
+  .mob-pc-chev{color:#CBD5E1;font-size:22px;font-weight:700;line-height:1;}
+  /* รายละเอียดใน popup ผลิต */
+  .pld-sec{margin-top:14px;}
+  .pld-sec-h{font-size:12px;font-weight:800;color:#475569;margin-bottom:6px;}
+  .pld-chips{display:flex;flex-wrap:wrap;gap:5px;}
+  .pld-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid #F1F5F9;}
+  .pld-row span:first-child{color:#64748B;}
+  .pld-row span:last-child{font-weight:700;color:#1E293B;text-align:right;}
+  .pld-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;}
+  .pld-stat{background:#F8FAFC;border-radius:8px;padding:10px;text-align:center;}
+  .pld-stat-v{font-size:22px;font-weight:900;}
+  .pld-stat-l{font-size:10px;color:#64748B;font-weight:600;}
   /* Stock Log Cards */
   .mob-lc{background:#fff;border-radius:10px;border:1px solid #E2E8F0;margin-bottom:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;}
   .mob-lc-tag{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0;white-space:nowrap;}
@@ -4828,36 +4843,114 @@ function renderProdLogHistory() {
     if (!logs.length) {
       _mobProd.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;">ยังไม่มีประวัติการผลิต</div>';
     } else {
+      window._prodLogList = logs;
       let _curMonthM = null;
-      _mobProd.innerHTML = logs.map(l => {
+      _mobProd.innerHTML = logs.map((l, idx) => {
         const _mnM = _logMon(l);
         let _divM = '';
         if (_mnM.key !== _curMonthM) { _curMonthM = _mnM.key; _divM = '<div style="margin:14px 4px 8px;font-weight:800;color:#1E293B;font-size:14px;border-bottom:2px solid #E2E8F0;padding-bottom:4px;">📅 '+_mnM.label+'</div>'; }
-        const produced = l.qtyProduced !== undefined ? l.qtyProduced : (l.qty || 0);
-        const net    = l.qtyNet    !== undefined ? l.qtyNet    : produced;
-        const defect = l.qtyDefect !== undefined ? l.qtyDefect : (l.defect || 0);
         const dateStr = l.date || l.finishDate || l.startDate || '—';
         const isStock = l.isStockProd || l.orderNum === 'STOCK';
         const orderDisp = isStock ? '📦 ผลิตเพิ่มสต็อก' : l.orderNum;
         const custFull = isStock ? '' : (getOrders().find(o=>o.orderNum===l.orderNum)?.customer||'');
         const custLine = custFull ? ` <span style="font-size:11px;color:#64748B;font-weight:400;">· ${custFull}</span>` : '';
-        const excessLine = (l.qtyExcess||0) > 0
-          ? `<div style="margin-top:6px;font-size:11px;background:#FEF9C3;color:#854D0E;padding:3px 8px;border-radius:6px;text-align:center;font-weight:700;">⚠️ เกิน ${l.qtyExcess} ต้น</div>` : '';
-        const stockLine = (l.addedToStock || isStock)
-          ? `<div style="margin-top:6px;font-size:11px;background:#DCFCE7;color:#166534;padding:3px 8px;border-radius:6px;text-align:center;font-weight:700;">✅ เพิ่มสต็อกแล้ว</div>` : '';
-        return _divM + `<div class="mob-pc">
+        // มือถือ: แสดงเฉพาะ เลขออเดอร์ + ชื่อบริษัท + ชนิดเสา — แตะเพื่อดูรายละเอียดทั้งหมด
+        return _divM + `<div class="mob-pc mob-pc-clk" onclick="openProdLogDetail(${idx})">
           <div class="mob-pc-top"><span class="mob-pc-order">${orderDisp}${custLine}</span><span class="mob-pc-date">${dateStr}</span></div>
-          <div class="mob-pc-pile">${l.pileType}</div>
-          <div class="mob-pc-stats">
-            <div class="mob-pc-stat"><div class="mob-pc-val" style="color:#1E40AF;">${produced}</div><div class="mob-pc-lbl">ผลิตได้</div></div>
-            <div class="mob-pc-stat"><div class="mob-pc-val" style="color:${defect>0?'#DC2626':'#94A3B8'};">${defect}</div><div class="mob-pc-lbl">เสีย</div></div>
-            <div class="mob-pc-stat"><div class="mob-pc-val" style="color:#166534;">${net}</div><div class="mob-pc-lbl">พร้อมส่ง</div></div>
-          </div>${excessLine}${stockLine}
+          <div class="mob-pc-pile"><span>${l.pileType}</span><span class="mob-pc-chev">›</span></div>
         </div>`;
       }).join('');
     }
   }
 
+}
+
+// ── Popup รายละเอียดการผลิต (มือถือ) ─────────────────────────────
+function closeProdLogDetail() {
+  const m = document.getElementById('_prodLogDetailModal');
+  if (m) m.remove();
+}
+function openProdLogDetail(idx) {
+  const l = (window._prodLogList || [])[idx];
+  if (!l) return;
+
+  const produced = l.qtyProduced !== undefined ? l.qtyProduced : (l.qty || 0);
+  const net      = l.qtyNet      !== undefined ? l.qtyNet      : produced;
+  const defect   = l.qtyDefect   !== undefined ? l.qtyDefect   : (l.defect || 0);
+  const dateStr  = l.date || l.finishDate || l.startDate || '—';
+  const isStock  = l.isStockProd || l.orderNum === 'STOCK';
+  const orderDisp = isStock ? '📦 ผลิตเพิ่มสต็อก' : l.orderNum;
+  const custFull  = isStock ? '' : (getOrders().find(o=>o.orderNum===l.orderNum)?.customer || '');
+
+  // สเปคเสา
+  const specParts = [
+    l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">📐 '+l.length+'</span>' : null,
+    l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:2px 8px;border-radius:5px;font-size:11px;">🔗 '+l.weld  +'</span>' : null,
+    l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:2px 8px;border-radius:5px;font-size:11px;">🔩 '+l.steel +'</span>' : null,
+    l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;">〰 '+l.wire  +'</span>' : null,
+    l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">🔷 '+l.ba   +'</span>' : null,
+    l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;">📝 '+l.extra +'</span>' : null,
+  ].filter(Boolean);
+
+  // รายละเอียดการผลิต
+  const standRowsData = l.standRows && l.standRows.length ? l.standRows : (l.standQty > 0 ? [{qty:l.standQty,size:l.standSize}] : []);
+  const standParts = standRowsData.filter(r=>r.qty>0||r.size).map(r=>'<span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;">🪝 ลูกตั้ง '+r.qty+(r.size?' '+r.size:'')+'</span>');
+  const prodParts = [
+    l.lane && l.lane!=='' ? '<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:5px;font-size:11px;">🏗️ เลน '+l.lane+'</span>' : null,
+    l.tong && l.tong!=='' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:2px 8px;border-radius:5px;font-size:11px;">⬜ ท้อง '+l.tong+'</span>' : null,
+    ...standParts,
+  ].filter(Boolean);
+
+  // ระยะเวลาผลิต
+  const _fmtDT = ts => new Date(ts).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' น.';
+  const startStr = l.startedAt  ? _fmtDT(l.startedAt)  : '—';
+  const endStr   = l.finishedAt ? _fmtDT(l.finishedAt) : '—';
+  let durStr = '—';
+  if (l.startedAt && l.finishedAt) {
+    const diff = Math.max(0, l.finishedAt - l.startedAt);
+    const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000);
+    durStr = (d > 0 ? d+' วัน ' : '') + (h > 0 ? h+' ชม. ' : '') + m+' นาที';
+  }
+
+  const specSec = specParts.length
+    ? `<div class="pld-sec"><div class="pld-sec-h">📋 สเปคเสา</div><div class="pld-chips">${specParts.join('')}</div></div>` : '';
+  const prodSec = prodParts.length
+    ? `<div class="pld-sec"><div class="pld-sec-h">🏭 รายละเอียดการผลิต</div><div class="pld-chips">${prodParts.join('')}</div></div>` : '';
+  const durSec = (l.startedAt || l.finishedAt)
+    ? `<div class="pld-sec"><div class="pld-sec-h">⏱ ระยะเวลาผลิต</div>
+        <div class="pld-row"><span>🟢 เริ่ม</span><span>${startStr}</span></div>
+        <div class="pld-row"><span>🔴 เสร็จ</span><span>${endStr}</span></div>
+        <div class="pld-row"><span>⏱ รวม</span><span style="color:#92400E;">${durStr}</span></div></div>` : '';
+  const excessLine = (l.qtyExcess||0) > 0
+    ? `<div style="margin-top:12px;font-size:12px;background:#FEF9C3;color:#854D0E;padding:6px 10px;border-radius:8px;text-align:center;font-weight:700;">⚠️ เกิน ${l.qtyExcess} ต้น</div>` : '';
+  const stockLine = (l.addedToStock || isStock)
+    ? `<div style="margin-top:8px;font-size:12px;background:#DCFCE7;color:#166534;padding:6px 10px;border-radius:8px;text-align:center;font-weight:700;">✅ เพิ่มสต็อกแล้ว</div>` : '';
+
+  closeProdLogDetail();
+  const modal = document.createElement('div');
+  modal.id = '_prodLogDetailModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  modal.onclick = e => { if (e.target === modal) closeProdLogDetail(); };
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:18px 18px 0 0;padding:20px 20px calc(24px + env(safe-area-inset-bottom));width:100%;max-width:560px;max-height:86vh;overflow-y:auto;box-shadow:0 -4px 30px rgba(0,0,0,0.25);">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div>
+          <div style="font-size:16px;font-weight:900;color:#1E40AF;">${orderDisp}</div>
+          ${custFull ? `<div style="font-size:12px;color:#64748B;margin-top:2px;">${custFull}</div>` : ''}
+          <div style="font-size:13px;font-weight:700;color:#1E293B;margin-top:6px;">${l.pileType}</div>
+        </div>
+        <button onclick="closeProdLogDetail()" style="flex-shrink:0;background:#F1F5F9;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;color:#64748B;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <div style="font-size:11px;color:#94A3B8;margin-top:6px;">📅 ${dateStr}</div>
+
+      <div class="pld-stats">
+        <div class="pld-stat"><div class="pld-stat-v" style="color:#1E40AF;">${produced}</div><div class="pld-stat-l">ผลิตได้</div></div>
+        <div class="pld-stat"><div class="pld-stat-v" style="color:${defect>0?'#DC2626':'#94A3B8'};">${defect}</div><div class="pld-stat-l">เสีย</div></div>
+        <div class="pld-stat"><div class="pld-stat-v" style="color:#166534;">${net}</div><div class="pld-stat-l">พร้อมส่ง</div></div>
+      </div>
+      ${specSec}${prodSec}${durSec}${excessLine}${stockLine}
+    </div>`;
+  document.body.appendChild(modal);
 }
 
 // ── Render Error Tables ────────────────────────────────────────
