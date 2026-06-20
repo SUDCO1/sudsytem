@@ -653,6 +653,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   <div class="nav-tab" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ฝ่ายสต็อก</div>
   <div class="nav-tab" id="nav-customers" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
   <div class="nav-tab" id="nav-dashboard" data-tab="dashboard" onclick="goTab('dashboard',this)" style="display:none !important;">📈 Dashboard</div>
+  <div class="nav-tab admin-only" id="nav-audit" data-tab="audit" onclick="goTab('audit',this)">📜 บันทึกการใช้งาน</div>
   <div class="nav-tab admin-only" id="nav-settings" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
 </div>
 
@@ -686,6 +687,9 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         </div>
         <div class="home-card" id="home-customers" onclick="homeGo('customers','view_customers')">
           <div class="home-card-ic">👥</div><div class="home-card-title">ลูกค้า</div><div class="home-card-desc">ข้อมูลลูกค้า</div>
+        </div>
+        <div class="home-card" id="home-audit" onclick="homeGo('audit','view_audit')">
+          <div class="home-card-ic">📜</div><div class="home-card-title">บันทึกการใช้งาน</div><div class="home-card-desc">สำหรับผู้ดูแลระบบ</div>
         </div>
         <div class="home-card" id="home-settings" onclick="homeGo('settings','view_settings')">
           <div class="home-card-ic">⚙️</div><div class="home-card-title">ตั้งค่า</div><div class="home-card-desc">สำหรับผู้ดูแลระบบ</div>
@@ -1635,12 +1639,15 @@ function tcConfirmFinalize(id) {
   const saved = arr.map(e => e._id === id ? entry : e);
   localStorage.setItem(TC_KEY, JSON.stringify(saved));
   tcRender();
+  logAudit('ส่งจบ (ขนส่ง)', entry.order || entry.cust || '-', (entry.cust||'') + ' · ' + itemsDesc);
   showToast(ok ? '📦 ส่งจบ — ตัดสต็อกและอัปเดต Order แล้ว' : '✅ บันทึกส่งจบแล้ว (ไม่มีสินค้าให้ตัดสต็อก)');
 }
 function tcDeleteEvent(id) {
   if (!canDo('delete_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์ลบการขนส่ง'); return; }
   if (!confirm('ลบรายการนี้?')) return;
+  const _tcDel = tcGetEvents().find(e=>e._id===id);
   tcSaveEvents(tcGetEvents().filter(e=>e._id!==id));
+  logAudit('ลบนัดส่ง/จองรถ', _tcDel ? (_tcDel.order||_tcDel.cust||'-') : '-', _tcDel ? ((_tcDel.cust||'') + ' · ' + (_tcDel.date||'')) : '');
   tcRender();
   if (_tcSelectedDate) tcShowDay(_tcSelectedDate);
 }
@@ -2170,6 +2177,7 @@ function submitTransport() {
     arr.push(newEntry);
   }
   tcSaveEvents(arr);
+  logAudit(_tcEditId ? 'แก้ไขนัดส่ง/จองรถ' : 'จองรถ/นัดส่ง', oNum || cust || date, (cust||'') + ' · ' + date + (driver?' · '+driver:'') + (piles?' · '+piles:''));
   closeTransportModal();
   _tcSelectedDate = date;
   const [y,m] = date.split('-'); _tcYear=+y; _tcMonth=+m-1;
@@ -2368,7 +2376,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <!-- Add new customer -->
-    <div class="card">
+    <div class="card" id="custAddCard">
       <div class="card-header">
         <div>
           <div class="card-title">➕ เพิ่มลูกค้าใหม่</div>
@@ -2385,6 +2393,91 @@ document.addEventListener('DOMContentLoaded', () => {
           <button class="btn btn-primary" onclick="submitCustomer()">💾 บันทึกลูกค้า</button>
           <button class="btn btn-ghost" onclick="clearCustomerForm()">🗑 ล้าง</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ SECTION: บันทึกการใช้งาน (Audit Log) ================================================================ -->
+<div id="sec-audit" class="section">
+  <div class="app-content">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📜 บันทึกการใช้งาน (Audit Log)</div>
+          <div class="card-sub">ใครทำอะไร เมื่อไหร่ — เก็บประวัติการสร้าง/แก้ไข/ลบ ออเดอร์ ลูกค้า ผู้ใช้ การผลิต สต็อก ฯลฯ</div>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <!-- ตั้งค่าลบอัตโนมัติ -->
+        <div class="settings-block" style="margin-bottom:16px;">
+          <div class="settings-block-title">⏱ ลบอัตโนมัติ (ตั้งเวลาเอง)</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+            <div class="field" style="max-width:220px;">
+              <label class="field-label">ลบ log ที่เก่ากว่า (วัน)</label>
+              <input type="number" id="cfgAuditDays" min="0" placeholder="0 = ไม่ลบอัตโนมัติ"/>
+            </div>
+            <button class="btn btn-primary" onclick="saveAuditPurgeDays()" style="margin-bottom:2px;">💾 บันทึกการตั้งค่า</button>
+          </div>
+          <div class="card-sub" style="margin-top:6px;">ตั้ง 0 เพื่อปิดการลบอัตโนมัติ · เช่น 30 = เก็บ log ย้อนหลัง 30 วัน ที่เก่ากว่านั้นจะถูกลบให้เองตอนเปิดเว็บ</div>
+        </div>
+
+        <!-- ลบเอง -->
+        <div class="settings-block" style="margin-bottom:16px;">
+          <div class="settings-block-title">🗑 ลบเอง</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+            <button class="btn btn-ghost" onclick="auditDeleteToday()">ลบของวันนี้</button>
+            <button class="btn btn-ghost" onclick="auditDeleteThisWeek()">ลบเฉพาะสัปดาห์นี้</button>
+            <div class="field" style="max-width:160px;">
+              <label class="field-label">จากวันที่</label>
+              <input type="date" id="auditDelFrom"/>
+            </div>
+            <div class="field" style="max-width:160px;">
+              <label class="field-label">ถึงวันที่</label>
+              <input type="date" id="auditDelTo"/>
+            </div>
+            <button class="btn btn-ghost" onclick="auditDeleteCustom()" style="margin-bottom:2px;">ลบตามช่วงวันที่</button>
+            <button class="btn btn-danger" onclick="auditDeleteAll()" style="margin-bottom:2px;">ลบทั้งหมด</button>
+          </div>
+        </div>
+
+        <!-- ตัวกรอง -->
+        <div class="settings-block" style="margin-bottom:16px;">
+          <div class="settings-block-title">🔍 ตัวกรอง</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+            <div class="field" style="max-width:160px;">
+              <label class="field-label">จากวันที่</label>
+              <input type="date" id="auditFltFrom" onchange="renderAudit()"/>
+            </div>
+            <div class="field" style="max-width:160px;">
+              <label class="field-label">ถึงวันที่</label>
+              <input type="date" id="auditFltTo" onchange="renderAudit()"/>
+            </div>
+            <div class="field" style="max-width:200px;">
+              <label class="field-label">ประเภทการกระทำ</label>
+              <select id="auditFltAction" onchange="renderAudit()"><option value="">— ทั้งหมด —</option></select>
+            </div>
+            <div class="field" style="flex:1;min-width:180px;">
+              <label class="field-label">ค้นหา (ผู้ใช้ / รายการ / รายละเอียด)</label>
+              <input type="text" id="auditFltSearch" placeholder="พิมพ์คำค้น..." oninput="renderAudit()"/>
+            </div>
+            <button class="btn btn-ghost" onclick="auditClearFilter()" style="margin-bottom:2px;">ล้างตัวกรอง</button>
+          </div>
+        </div>
+
+        <div id="auditCount" class="card-sub" style="margin-bottom:8px;"></div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="auditTable">
+            <thead>
+              <tr>
+                <th>เวลา</th><th>ผู้ใช้</th><th>สิทธิ์</th><th>การกระทำ</th><th>รายการ</th><th>รายละเอียด</th>
+              </tr>
+            </thead>
+            <tbody id="auditTbody"></tbody>
+          </table>
+        </div>
+
       </div>
     </div>
   </div>
@@ -3016,6 +3109,7 @@ function doLogin() {
   btn.disabled = true; btn.textContent = '⏳ กำลังเข้าสู่ระบบ...';
   err.classList.remove('show');
   auth.signInWithEmailAndPassword(email, pass)
+    .then(() => { try { logAudit('เข้าสู่ระบบ', email, ''); } catch(e){} })
     .catch(e => {
       btn.disabled = false; btn.textContent = '🔑 เข้าสู่ระบบ';
       err.textContent = '❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง';
@@ -3025,6 +3119,7 @@ function doLogin() {
 
 function doLogout() {
   if (!confirm('ออกจากระบบใช่ไหมครับ?')) return;
+  try { logAudit('ออกจากระบบ', (_currentUser && _currentUser.email) || '-', ''); } catch(e){}
   // Sign out secondary app too (ถ้ามี)
   try { firebase.app('secondary').auth().signOut(); } catch(e) {}
   auth.signOut();
@@ -3097,12 +3192,14 @@ const K_CUST_POLES = 'sud/customerPoles';
 const K_PROD_LOG    = 'sud/prodLog';
 const PROD_LOG_FETCH_LIMIT = 1000; // โหลดเฉพาะ log ผลิตล่าสุด N รายการ (ลด bandwidth) — record เก่ากว่านี้ยังอยู่ใน DB ไม่ถูกลบ
 const K_PROD_ACTIVE = 'sud/prodActive';
+const K_AUDIT       = 'sud/auditLog';
+const AUDIT_FETCH_LIMIT = 300; // โหลดเฉพาะ log ล่าสุด N รายการ (ลด bandwidth)
 
 // ── In-Memory Cache (sync'd from Firebase realtime) ──────────
 const _cache = {
   orders:[], prodErrors:[], shipErrors:[], orderCounter:0,
   stock:{}, stockLog:[], config:null, customers:[], orderHistory:[],
-  stockVariants:{}, prodLog:[], prodActive:[], custPoles:[]
+  stockVariants:{}, prodLog:[], prodActive:[], custPoles:[], auditLog:[]
 };
 let _fbReady = false;
 const _fbReadyCallbacks = [];
@@ -3150,13 +3247,13 @@ function startFirebaseListeners() {
   db.ref(K_PROD_ERR).on('value', snap => {
     const v = snap.val();
     _cache.prodErrors = v ? Object.values(v).sort((a,b) => (b._idx||0)-(a._idx||0)) : [];
-    if (_fbReady) { renderProdFull(); renderProdSection(); renderProdErrHistory(); }
+    if (_fbReady) { renderProdSection(); renderProdErrHistory(); }
     else checkDone();
   });
   db.ref(K_SHIP_ERR).on('value', snap => {
     const v = snap.val();
     _cache.shipErrors = v ? Object.values(v).sort((a,b) => (b._idx||0)-(a._idx||0)) : [];
-    if (_fbReady) renderShipFull();
+    if (_fbReady) renderSummary();
     else checkDone();
   });
   db.ref(K_CTR).once('value', snap => { _cache.orderCounter = snap.val() || 0; checkDone(); });
@@ -3214,6 +3311,9 @@ function startFirebaseListeners() {
     _cache.custPoles = v ? Object.values(v) : [];
     if (_fbReady) renderSdCustPoles();
   });
+  // ── Audit Log (โหลดเฉพาะล่าสุด N รายการ) ──
+  // หมายเหตุ: audit log ไม่ใช้ listener แบบ global เพื่อประหยัด bandwidth
+  // จะ attach เฉพาะตอน admin เปิดหน้า "บันทึกการใช้งาน" เท่านั้น (ดู auditAttachListener)
 }
 
 // ── Helper: array → Firebase object (keyed by _fbKey or index) ─
@@ -3294,6 +3394,175 @@ function saveStockLog(arr)  {
   db.ref(K_STOCK_LOG).set(obj);
 }
 
+// ══════════════════════════════════════════════════════════════
+// ── AUDIT LOG — บันทึกว่าใครทำอะไรเมื่อไหร่ ────────────────────
+// ══════════════════════════════════════════════════════════════
+const getAuditLog = () => _cache.auditLog;
+// ── attach/detach listener แบบ on-demand (เฉพาะตอนเปิดหน้า log) ──
+// ทำแบบนี้เพื่อไม่ให้ทุก browser ดาวน์โหลด log ตลอดเวลา → ประหยัด bandwidth Firebase มาก
+let _auditRef = null;
+function auditAttachListener() {
+  if (_auditRef) return; // attach แล้ว
+  _auditRef = db.ref(K_AUDIT).orderByChild('ts').limitToLast(AUDIT_FETCH_LIMIT);
+  _auditRef.on('value', snap => {
+    const v = snap.val();
+    _cache.auditLog = v
+      ? Object.keys(v).map(k => ({ ...v[k], _key:k })).sort((a,b) => (b.ts||0)-(a.ts||0))
+      : [];
+    try { auditAutoPurge(); } catch(e){}
+    if (typeof renderAudit==='function' && document.getElementById('sec-audit')?.classList.contains('active')) {
+      auditPopulateActions(); renderAudit();
+    }
+  });
+}
+function auditDetachListener() {
+  if (_auditRef) { try { _auditRef.off(); } catch(e){} _auditRef = null; }
+}
+// เขียน log 1 บรรทัด (เบามาก ~250 bytes/บรรทัด)
+function logAudit(action, target, detail) {
+  try {
+    const u = (typeof _currentUser !== 'undefined') ? _currentUser : null;
+    const entry = {
+      ts:     Date.now(),
+      email:  (u && u.email) ? u.email : '-',
+      role:   (typeof _currentRole !== 'undefined' && _currentRole) ? _currentRole : '-',
+      action: action || '-',
+      target: (target != null && target !== '') ? String(target) : '-',
+      detail: detail ? String(detail) : ''
+    };
+    const key = db.ref().push().key;
+    db.ref(K_AUDIT + '/' + key).set(entry);
+  } catch(e) { /* ไม่ให้ audit ทำให้งานหลักล้ม */ }
+}
+// ลบ log ที่เก่ากว่า N วันอัตโนมัติ (ตั้งค่าในหน้าตั้งค่า) — รันตอนโหลด/อัปเดต ครั้งละไม่เกิน 1 รอบ/นาที
+let _auditPurgeLastRun = 0;
+function auditAutoPurge() {
+  const days = parseInt((getConfig() || {}).auditAutoPurgeDays) || 0;
+  if (days <= 0) return;
+  const now = Date.now();
+  if (now - _auditPurgeLastRun < 60000) return; // กันรันถี่เกิน
+  _auditPurgeLastRun = now;
+  const cutoff = now - days * 86400000;
+  const olds = getAuditLog().filter(e => (e.ts || 0) < cutoff);
+  if (olds.length === 0) return;
+  const updates = {};
+  olds.forEach(e => { if (e._key) updates[e._key] = null; });
+  db.ref(K_AUDIT).update(updates).catch(()=>{});
+}
+// ลบ log ตามช่วงเวลา [fromTs, toTs] (inclusive)
+function auditDeleteRange(fromTs, toTs) {
+  const hits = getAuditLog().filter(e => (e.ts||0) >= fromTs && (e.ts||0) <= toTs);
+  if (hits.length === 0) { showToast('ℹ️ ไม่มี log ในช่วงที่เลือก'); return; }
+  const updates = {};
+  hits.forEach(e => { if (e._key) updates[e._key] = null; });
+  db.ref(K_AUDIT).update(updates)
+    .then(() => showToast('🗑 ลบ log ' + hits.length + ' รายการแล้ว'))
+    .catch(() => showToast('⚠️ ลบไม่สำเร็จ ลองใหม่'));
+}
+function _startOfToday() { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+function auditDeleteToday() {
+  if (!confirm('ลบ log ของ "วันนี้" ทั้งหมด?')) return;
+  auditDeleteRange(_startOfToday(), Date.now());
+}
+function auditDeleteThisWeek() {
+  if (!confirm('ลบ log ของ "สัปดาห์นี้" (จันทร์–วันนี้) ทั้งหมด?')) return;
+  const d = new Date(); d.setHours(0,0,0,0);
+  const dow = (d.getDay() + 6) % 7; // จันทร์=0
+  d.setDate(d.getDate() - dow);
+  auditDeleteRange(d.getTime(), Date.now());
+}
+function auditDeleteCustom() {
+  const fromV = document.getElementById('auditDelFrom')?.value;
+  const toV   = document.getElementById('auditDelTo')?.value;
+  if (!fromV || !toV) { showToast('⚠️ เลือกวันที่เริ่มและวันที่สิ้นสุดก่อน'); return; }
+  const from = new Date(fromV); from.setHours(0,0,0,0);
+  const to   = new Date(toV);   to.setHours(23,59,59,999);
+  if (from.getTime() > to.getTime()) { showToast('⚠️ วันที่เริ่มต้องไม่เกินวันสิ้นสุด'); return; }
+  if (!confirm('ลบ log ตั้งแต่ ' + fromV + ' ถึง ' + toV + ' ?')) return;
+  auditDeleteRange(from.getTime(), to.getTime());
+}
+function auditDeleteAll() {
+  if (!confirm('⚠️ ลบ log ทั้งหมดถาวร? กู้คืนไม่ได้นะครับ')) return;
+  db.ref(K_AUDIT).set({})
+    .then(() => showToast('🗑 ลบ log ทั้งหมดแล้ว'))
+    .catch(() => showToast('⚠️ ลบไม่สำเร็จ ลองใหม่'));
+}
+// บันทึกจำนวนวันเก็บ log อัตโนมัติ (จากหน้าตั้งค่า)
+function saveAuditPurgeDays() {
+  const v = parseInt(document.getElementById('cfgAuditDays')?.value);
+  const days = (isNaN(v) || v < 0) ? 0 : v;
+  const cfg = getConfig();
+  cfg.auditAutoPurgeDays = days;
+  saveConfigData(cfg);
+  _auditPurgeLastRun = 0; // ให้รันรอบใหม่ได้ทันที
+  showToast(days > 0 ? ('✅ ตั้งให้เก็บ log ' + days + ' วัน') : '✅ ปิดการลบอัตโนมัติแล้ว');
+  setTimeout(() => { try { auditAutoPurge(); } catch(e){} }, 600);
+}
+
+// ── Audit UI: ตาราง + ตัวกรอง ─────────────────────────────────
+function _auditFmtTime(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts);
+  const p = n => String(n).padStart(2,'0');
+  const m = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return p(d.getDate()) + ' ' + m[d.getMonth()] + ' ' + (d.getFullYear()+543).toString().slice(-2) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function _esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// เติม dropdown ประเภทการกระทำจาก log ที่มีจริง
+function auditPopulateActions() {
+  // เติมค่าจำนวนวันเก็บ log อัตโนมัติลงช่องตั้งค่า
+  const daysEl = document.getElementById('cfgAuditDays');
+  if (daysEl) daysEl.value = (parseInt((getConfig()||{}).auditAutoPurgeDays) || 0) || '';
+  const sel = document.getElementById('auditFltAction');
+  if (!sel) return;
+  const cur = sel.value;
+  const actions = [...new Set(getAuditLog().map(e => e.action).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">— ทั้งหมด —</option>' + actions.map(a => '<option value="'+_esc(a)+'">'+_esc(a)+'</option>').join('');
+  if (actions.includes(cur)) sel.value = cur;
+}
+function auditClearFilter() {
+  ['auditFltFrom','auditFltTo','auditFltSearch'].forEach(id => { const el = document.getElementById(id); if (el) el.value=''; });
+  const a = document.getElementById('auditFltAction'); if (a) a.value='';
+  renderAudit();
+}
+function renderAudit() {
+  const tbody = document.getElementById('auditTbody');
+  if (!tbody) return;
+  const fromV   = document.getElementById('auditFltFrom')?.value;
+  const toV     = document.getElementById('auditFltTo')?.value;
+  const actV    = document.getElementById('auditFltAction')?.value || '';
+  const q       = (document.getElementById('auditFltSearch')?.value || '').trim().toLowerCase();
+  let fromTs = -Infinity, toTs = Infinity;
+  if (fromV) { const d=new Date(fromV); d.setHours(0,0,0,0); fromTs=d.getTime(); }
+  if (toV)   { const d=new Date(toV);   d.setHours(23,59,59,999); toTs=d.getTime(); }
+  const rows = getAuditLog().filter(e => {
+    const ts = e.ts || 0;
+    if (ts < fromTs || ts > toTs) return false;
+    if (actV && e.action !== actV) return false;
+    if (q) {
+      const hay = ((e.email||'')+' '+(e.action||'')+' '+(e.target||'')+' '+(e.detail||'')+' '+(e.role||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const cnt = document.getElementById('auditCount');
+  if (cnt) cnt.textContent = 'พบ ' + rows.length + ' รายการ' + (getAuditLog().length>=AUDIT_FETCH_LIMIT ? ' (แสดงล่าสุด '+AUDIT_FETCH_LIMIT+' รายการ)' : '');
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94A3B8;padding:24px;">— ไม่มีบันทึก —</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(e =>
+    '<tr><td style="white-space:nowrap;">'+_auditFmtTime(e.ts)+'</td>'+
+    '<td>'+_esc(e.email)+'</td>'+
+    '<td>'+_esc(e.role)+'</td>'+
+    '<td style="font-weight:700;">'+_esc(e.action)+'</td>'+
+    '<td>'+_esc(e.target)+'</td>'+
+    '<td style="color:#475569;">'+_esc(e.detail)+'</td></tr>'
+  ).join('');
+}
+
 // ── Counter: use Firebase transaction for safety ──────────────
 function incCtr() {
   // Sync increment using cached value (good enough for single-team use)
@@ -3327,6 +3596,7 @@ const DEFAULT_CONFIG = {
   stockLow:    15,
   stockWarn:   50,
   unit:        'ต้น',
+  auditAutoPurgeDays: 0, // 0 = ไม่ลบอัตโนมัติ, >0 = ลบ log ที่เก่ากว่าจำนวนวันนี้
 };
 
 // ── หน่วยนับเสา (ต้น / ท่อน) — หน่วยกลางของทั้งระบบ ───────────────
@@ -3642,6 +3912,7 @@ function applyPermissions() {
     delete_customers:     has('customer','delete'),
     // ตั้งค่า — admin only (ไม่มี section สำหรับนี้ในตัวเลือก)
     view_settings:        false,
+    view_audit:           false,
     view_dashboard:       has('overview','view') || has('overview','edit'),
   };
   _applyNav();
@@ -3655,7 +3926,7 @@ function _applyNav() {
   showNav('nav-transport', canDo('view_shipping'));
   const _adb = document.getElementById('addDeliveryBtn');
   if (_adb) _adb.style.display = canDo('log_shipping') ? '' : 'none';
-  const _fpb = document.getElementById('freeProdBtn');
+  const _fpb = document.getElementById('freeProdFormCard');
   if (_fpb) _fpb.style.display = canDo('log_production') ? '' : 'none';
   const _custForm = document.getElementById('custAddCard');
   if (_custForm) _custForm.style.display = canDo('edit_customers') ? '' : 'none';
@@ -3666,6 +3937,7 @@ function _applyNav() {
   showNav('nav-summary',   canDo('view_summary'));
   showNav('nav-stock',     canDo('view_stock'));
   showNav('nav-customers', canDo('view_customers'));
+  showNav('nav-audit',     _currentRole === 'admin');
   showNav('nav-settings',  _currentRole === 'admin');
   if (typeof renderHome === 'function') renderHome();
 }
@@ -3690,6 +3962,9 @@ function goTab(name, el) {
   if (name === 'stock')     { renderStockCards(); populateLogPileFilter(); renderStockLog(true); populateStockRefDropdown(); }
   if (name === 'customers') { renderCustomers(); }
   if (name === 'settings')  { loadSettingsUI(); if (_currentRole === 'admin') { umRefresh(); loadRolePerms(renderPermUI); } }
+  // audit log: attach listener เฉพาะตอนเปิดหน้านี้, detach เมื่อออกจากหน้า (ประหยัด bandwidth)
+  if (name === 'audit') { auditAttachListener(); auditPopulateActions(); renderAudit(); }
+  else { auditDetachListener(); }
   updateHeaderCount();
 }
 
@@ -3706,6 +3981,7 @@ const HOME_CARD_PERM = {
   'home-stock':     'view_stock',
   'home-customers': 'view_customers',
   'home-settings':  'view_settings',
+  'home-audit':     'view_audit',
 };
 function renderHome() {
   Object.keys(HOME_CARD_PERM).forEach(id => {
@@ -3881,6 +4157,7 @@ function submitOrder() {
   const orders = getOrders();
   orders.unshift(order);
   saveOrders(orders);
+  logAudit('สร้างออเดอร์', finalOrderNum, customer + ' · ' + pileLabel + ' รวม ' + totalQty + ' ต้น');
 
   autoSaveCustomer(customer, tel, g('f_cust_addr').trim());
 
@@ -4192,6 +4469,7 @@ function setSumStatus(orderNum, selectEl) {
     selectEl.style.color = s.color;
     selectEl.style.borderColor = s.border;
   }
+  logAudit('เปลี่ยนสถานะ (สรุป)', orderNum, (o.customer||'') + ' → ' + selectEl.value);
   showToast(`📋 ${orderNum}: ${selectEl.value}`);
 }
 
@@ -4204,6 +4482,7 @@ function updateOrderStatus(orderNum, selectEl) {
   saveOrders(orders);
   // Update select styling
   selectEl.className = 'status-sel ' + statusClass(newStatus);
+  logAudit('เปลี่ยนสถานะออเดอร์', orderNum, (o.customer||'') + ' → ' + newStatus);
   showToast(`📋 ${orderNum}: ${newStatus}`);
 }
 
@@ -4277,6 +4556,7 @@ function editDelivered(orderNum) {
   }
   renderOrders();
   renderSummary();
+  logAudit('อัปเดตจำนวนส่ง', orderNum, (o.customer||'') + ' · ส่งแล้ว ' + o.delivered + '/' + tq + ' ต้น');
   showToast('✅ อัปเดต ' + orderNum + ': ส่งแล้ว ' + o.delivered + '/' + tq + ' ต้น');
 }
 
@@ -4289,6 +4569,7 @@ function acceptOrder(orderNum) {
   saveOrders(orders);
   renderOrders();
   renderSummary();
+  logAudit('ฝ่ายผลิตรับออเดอร์', orderNum, o.customer||'');
   showToast('🏭 ฝ่ายผลิตรับ Order ' + orderNum + ' แล้ว!');
 }
 
@@ -4664,6 +4945,7 @@ function submitStartProd() {
   const o = orders.find(x => x.orderNum === orderNum);
   if (o && ['รับออเดอร์','ยืนยัน Order'].includes(o.status||'')) { o.status = 'กำลังผลิต'; saveOrders(orders); }
   closeStartProdForm();
+  logAudit('เริ่มผลิต (เทลงราง)', orderNum, pileType + ' · ' + qtyCasting + ' ต้น');
   showToast('🏭 เริ่มเทแล้ว — ' + orderNum + ' · ' + qtyCasting + ' ต้นอยู่ในราง');
   renderActiveProd(); renderProdSection();
 }
@@ -4759,6 +5041,7 @@ function submitFinishProd() {
     lane: a.lane||'', tong: a.tong||'', standRows: a.standRows||[], ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}) };
   getProdLog().unshift(_newLog);                    // อัปเดต cache ทันที (UI ไม่ต้องรอ round-trip)
   const _prodLogKey = saveSingleProdLog(_newLog);   // เขียนเฉพาะ record ใหม่ 1 รายการ (ไม่ rewrite ทั้งกอง)
+  logAudit('บันทึกผลิต', a.isStockProd ? 'STOCK' : a.orderNum, a.pileType + ' ผลิต ' + qty + ' ต้น' + (defect>0 ? ' · เสีย ' + defect : ''));
 
   // อัปเดตสถานะออเดอร์
   const orders = getOrders();
@@ -4791,7 +5074,6 @@ function submitFinishProd() {
       staff: (_currentUser && _currentUser.email) || '-'
     });
     saveProdErrs(errs);
-    renderProdFull();
     renderProdErrHistory();
   }
 
@@ -5140,15 +5422,6 @@ function openStockLogDetail(idx) {
 }
 
 // ── Render Error Tables ────────────────────────────────────────
-function renderProdFull() {
-  const errs = getProdErrs(), tbody = document.getElementById('prodErrBody');
-  if (!tbody) return;
-  if (!errs.length) { tbody.innerHTML = `<tr class="table-empty"><td colspan="7">ยังไม่มี Error ผลิต</td></tr>`; return; }
-  tbody.innerHTML = errs.map(e => {
-    const qd = e.qty > 0 ? `<span style="color:#991B1B;font-weight:700;">${e.qty}</span>` : `<span style="color:#94A3B8;">-</span>`;
-    return `<tr><td>${e.date}</td><td><span class="order-id">${e.order}</span></td><td><span class="chip ch-prod">${e.errorType}</span></td><td>${qd}</td><td>${e.cause}</td><td style="color:${e.fix!=='-'?'#166534':'#854D0E'};">${e.fix}</td><td>${e.staff}</td></tr>`;
-  }).join('');
-}
 function renderProdErrHistory() {
   const errs = getProdErrs(), tbody = document.getElementById('prodErrHistBody');
   if (!tbody) return;
@@ -5166,7 +5439,8 @@ function submitProdErr() {
   if (!date||!order||!type||!cause||!staff) { alert('กรุณากรอกข้อมูลที่มี * ให้ครบก่อนนะครับ'); return; }
   const errs = getProdErrs();
   errs.unshift({ timestamp:nowTs(), date:isoToThai(date), order, errorType:type, qty:+qty||0, cause, fix:fix||'-', staff });
-  saveProdErrs(errs); renderProdFull(); renderProdErrHistory(); renderOrders(); renderSummary(); clearProd();
+  saveProdErrs(errs); renderProdErrHistory(); renderOrders(); renderSummary(); clearProd();
+  logAudit('บันทึก Error ผลิต', order, type + ' · ' + cause);
   showToast(`🏭 บันทึก Error ผลิตแล้ว — ${order}`);
 }
 function submitShipErr() {
@@ -5177,6 +5451,7 @@ function submitShipErr() {
   const errs = getShipErrs();
   errs.unshift({ timestamp:nowTs(), date:isoToThai(date), order, errorType:type, qty:+qty||0, cause, fix:fix||'-', staff });
   saveShipErrs(errs); renderShipFull(); renderSummary(); clearShip();
+  logAudit('บันทึก Error ขนส่ง', order, type + ' · ' + cause);
   showToast(`🚛 บันทึก Error ขนส่งแล้ว — ${order}`);
 }
 function clearProd() {
@@ -5907,6 +6182,7 @@ function submitStock() {
   const prev=document.getElementById('stockPreview');
   prev.textContent=`✅ บันทึกแล้ว! ${name} — สต็อกใหม่: ${newStock} ต้น`; prev.style.cssText='background:#F0FDF4;color:#166534;';
   clearStockForm(true); showToast(`📦 อัปเดตสต็อก: ${name} เหลือ ${newStock} ต้น`);
+  logAudit('ปรับสต็อก', name, typeVal + ' ' + qtyDisplay + ' · คงเหลือ ' + newStock);
 }
 
 let _logPage = 0;
@@ -6141,13 +6417,15 @@ function submitCustomer() {
   const custs = getCustomers();
   if (custs.some(c=>c.name===name&&c.tel===tel)) { showToast('ℹ️ ลูกค้านี้มีในระบบแล้ว'); return; }
   custs.push({name,tel,addr:addr||''}); saveCustomers(custs);
+  logAudit('เพิ่มลูกค้า', name, tel);
   renderCustomers(); populateCustLookup(); clearCustomerForm();
   showToast(`👥 บันทึกลูกค้า: ${name}`);
 }
 function deleteCustomer(idx) {
   if (!canDo('delete_customers')) { showToast('⛔ คุณไม่มีสิทธิ์ลบข้อมูลลูกค้า'); return; }
   if (!confirm('ลบลูกค้านี้ออกจากฐานข้อมูล?')) return;
-  const custs = getCustomers(); custs.splice(idx,1); saveCustomers(custs);
+  const custs = getCustomers(); const _delCust = custs[idx]; custs.splice(idx,1); saveCustomers(custs);
+  logAudit('ลบลูกค้า', _delCust ? _delCust.name : '-', _delCust ? (_delCust.tel||'') : '');
   renderCustomers(); populateCustLookup();
 }
 function clearCustomerForm() {
@@ -6393,6 +6671,7 @@ function permAddRole() {
   document.getElementById('permAddForm').classList.remove('show');
   _renderPermRoles();
   _renderPermTable();
+  logAudit('เพิ่มตำแหน่ง (role)', name, 'id: ' + id);
   showToast(`✅ เพิ่มตำแหน่ง "${name}" แล้ว`);
 }
 
@@ -6403,6 +6682,7 @@ function permDeleteRole(id) {
   if (_savedRolePerms) delete _savedRolePerms[id];
   _renderPermRoles();
   _renderPermTable();
+  logAudit('ลบตำแหน่ง (role)', r ? (r.label||id) : id, '');
   showToast('ลบตำแหน่งแล้ว');
 }
 
@@ -6462,7 +6742,7 @@ function saveRolePerms(auto) {
     if (_currentRole !== 'admin') applyPermissions();
     const statusEl = document.getElementById('permSaveStatus');
     if (statusEl) { statusEl.textContent = '✅ บันทึกแล้ว'; statusEl.style.color = '#16A34A'; setTimeout(()=>{ if(statusEl) statusEl.textContent=''; }, 2500); }
-    if (!auto) showToast('✅ บันทึกสิทธิ์เรียบร้อย!');
+    if (!auto) { logAudit('บันทึกสิทธิ์ (role)', editableRoles.map(r=>r.label||r.id).join(', '), 'จำนวน role: ' + editableRoles.length); showToast('✅ บันทึกสิทธิ์เรียบร้อย!'); }
   }).catch(err => {
     console.error('saveRolePerms error:', err);
     const statusEl = document.getElementById('permSaveStatus');
@@ -6583,14 +6863,16 @@ function addTag(type) {
   if (!val) return;
   if (!_cfg) _cfg = JSON.parse(JSON.stringify(getConfig()));
   const key = TAG_MAP[type].key;
-  if (!_cfg[key].includes(val)) { _cfg[key].push(val); renderTags(TAG_MAP[type].container, _cfg[key], type); autoSaveSettings(); }
+  if (!_cfg[key].includes(val)) { _cfg[key].push(val); renderTags(TAG_MAP[type].container, _cfg[key], type); autoSaveSettings(); logAudit('เพิ่มตัวเลือกตั้งค่า', type, val); }
   inp.value = '';
 }
 function removeTag(type, idx) {
   if (!_cfg) return;
+  const _rmVal = _cfg[TAG_MAP[type].key][idx];
   _cfg[TAG_MAP[type].key].splice(idx, 1);
   renderTags(TAG_MAP[type].container, _cfg[TAG_MAP[type].key], type);
   autoSaveSettings();
+  logAudit('ลบตัวเลือกตั้งค่า', type, _rmVal != null ? String(_rmVal) : '');
 }
 function autoSaveSettings() {
   if (_currentRole !== 'admin') return;
@@ -6617,6 +6899,7 @@ function saveSettings() {
   saveConfigData(_cfg);
   populateAllDropdowns();
   applyBranding();
+  logAudit('บันทึกการตั้งค่า', _cfg.companyName || '-', 'แจ้งเตือนสต็อก ต่ำ<' + _cfg.stockLow + ' เตือน<' + _cfg.stockWarn);
   showToast('💾 บันทึกการตั้งค่าเรียบร้อย!');
 }
 
@@ -6638,6 +6921,7 @@ function clearDemo() {
   paths.forEach(p => db.ref(p).remove());
   _cache.orderCounter = 0; _cache.prodLog = []; _cache.prodActive = [];
   resetForm(); updateHeaderCount();
+  logAudit('ล้างข้อมูลทดสอบ', 'ALL', 'Orders/Errors/สต็อก/ลูกค้า/ประวัติ');
   showToast('🗑 ล้างข้อมูลทดสอบเรียบร้อย');
 }
 
@@ -6693,8 +6977,9 @@ function umChangeRole(uid) {
   const sel = document.getElementById('rolesel_' + uid);
   if (!sel) return;
   const newRole = sel.value;
+  const _umEmail = (sel.getAttribute('data-email')) || uid;
   db.ref(K_USER_ROLES + '/' + uid + '/role').set(newRole)
-    .then(() => { showToast('✅ เปลี่ยนสิทธิ์เรียบร้อย'); umRefresh(); })
+    .then(() => { logAudit('เปลี่ยนสิทธิ์ผู้ใช้', _umEmail, 'สิทธิ์ใหม่: ' + newRole); showToast('✅ เปลี่ยนสิทธิ์เรียบร้อย'); umRefresh(); })
     .catch(() => showToast('⚠️ เปลี่ยนสิทธิ์ไม่ได้ ลองใหม่'));
 }
 
@@ -6702,7 +6987,7 @@ function umDeleteUser(uid, email) {
   if (_currentRole !== 'admin') return;
   if (!confirm(`ลบผู้ใช้ "${email}" ออกจากระบบใช่ไหม?\n\nหมายเหตุ: บัญชี Firebase จะยังอยู่ แต่จะเข้าระบบไม่ได้ (role ถูกลบแล้ว)`)) return;
   db.ref(K_USER_ROLES + '/' + uid).remove()
-    .then(() => { showToast('🗑 ลบผู้ใช้เรียบร้อย'); umRefresh(); })
+    .then(() => { logAudit('ลบผู้ใช้', email, ''); showToast('🗑 ลบผู้ใช้เรียบร้อย'); umRefresh(); })
     .catch(() => showToast('⚠️ ลบไม่ได้ ลองใหม่'));
 }
 
@@ -6731,6 +7016,7 @@ function umAddUser() {
       }).then(() => secAuth.signOut());
     })
     .then(() => {
+      logAudit('เพิ่มผู้ใช้', email, 'สิทธิ์: ' + role);
       btn.disabled = false; btn.textContent = '➕ เพิ่ม';
       document.getElementById('um_email').value = '';
       document.getElementById('um_pass').value  = '';
@@ -6803,6 +7089,7 @@ function renderSpecGrid() {
   const specs = getSpecs(name);
   const grid  = document.getElementById('sdSpecGrid');
   const count = document.getElementById('sdSpecCount');
+  if (!grid) return;
   if (count) count.textContent = specs.length ? specs.length + ' สเปค · รวม ' + specs.reduce((s,v)=>s+(v.qty||0),0) + ' ต้น' : '';
 
   if (!specs.length) {
@@ -7362,6 +7649,7 @@ function submitEditOrder() {
 
   saveOrders(orders);
   autoSaveCustomer(customer, tel, custAddr);
+  logAudit('แก้ไขออเดอร์', _editOrderNum, customer + ' · รวม ' + o.qty + ' ต้น');
   closeEditOrder();
   renderOrders();
   renderSummary();
@@ -7400,6 +7688,7 @@ function deleteOrder(orderNum) {
   if (!confirmed) return;
   const newOrders = orders.filter(x => x.orderNum !== orderNum);
   saveOrders(newOrders);
+  logAudit('ลบออเดอร์', orderNum, (o.customer||'') + ' · ' + itemsStr);
   renderOrders();
   renderSummary();
   updateHeaderCount();
@@ -7695,6 +7984,7 @@ const _mobMoreConfig = {
   'nav-shiperr':   { icon:'⚠️', label:'Error ขนส่ง',       tab:'shiperr' },
   'nav-summary':   { icon:'📊', label:'สรุปภาพรวม',        tab:'summary' },
   'nav-customers': { icon:'👥', label:'ลูกค้า',            tab:'customers' },
+  'nav-audit':     { icon:'📜', label:'บันทึกการใช้งาน',    tab:'audit' },
   'nav-settings':  { icon:'⚙️', label:'ตั้งค่า',           tab:'settings' },
 };
 function openMobMore() {
@@ -7782,7 +8072,8 @@ function saveEditProdErr() {
   if (dateISO) errs[idx].date = isoToThai(dateISO);
   saveProdErrs(errs);
   closeEditProdErr();
-  renderProdFull(); renderProdErrHistory();
+  renderProdErrHistory();
+  logAudit('แก้ไข Error ผลิต', errs[idx].order || '-', (errs[idx].errorType||'') + ' · ' + cause);
   showToast('✅ แก้ไข Error ผลิตแล้ว');
 }
 // ════════════════════════════════════════════════════════════════
@@ -7976,6 +8267,7 @@ function saveEditProdLog(fbKey) {
 
   db.ref(K_PROD_LOG + '/' + fbKey).update(update).then(() => {
     document.getElementById('_editProdLogModal')?.remove();
+    logAudit('แก้ไขประวัติผลิต', log.orderNum || log.pileType || '-', (log.pileType||'') + (diff!==0 ? ' · สต็อก '+(diff>0?'+':'')+diff+' ต้น' : ''));
     showToast('✅ แก้ไขแล้ว' + (log.addedToStock && diff !== 0 ? ' | สต็อก ' + (diff > 0 ? '+' : '') + diff + ' ต้น' : ''));
     renderProdLogHistory();
     renderSummary();
@@ -7987,6 +8279,22 @@ function saveEditProdLog(fbKey) {
 // ════════════════════════════════════════════════════════════════
 function adminDeleteLog(type, fbKey) {
   if (!confirm('ลบรายการนี้?')) return;
+
+  // เก็บรายละเอียดรายการก่อนลบ เพื่อบันทึกลง audit ให้อ่านรู้เรื่อง
+  let _adDesc = '', _adLabel = { prodLog:'ลบประวัติผลิต', stockLog:'ลบประวัติสต็อก', prodErr:'ลบ Error ผลิต' }[type] || 'ลบประวัติ';
+  let _adTarget = type;
+  try {
+    if (type === 'stockLog') {
+      const e = (getStockLog()||[]).find(x => x._fbKey === fbKey);
+      if (e) { _adTarget = e.name || type; _adDesc = (e.typeVal||'') + ' ' + (e.qtyDisplay||e.qty||'') + (e.ref&&e.ref!=='-'?' · '+e.ref:''); }
+    } else if (type === 'prodLog') {
+      const e = getProdLog().find(x => x._fbKey === fbKey);
+      if (e) { _adTarget = e.orderNum || e.pileType || type; _adDesc = (e.pileType||'') + ' ' + ((e.qtyProduced||e.qty||0)) + ' ต้น'; }
+    } else if (type === 'prodErr') {
+      const e = (getProdErrs()||[]).find(x => x._fbKey === fbKey);
+      if (e) { _adTarget = e.order || type; _adDesc = (e.errorType||'') + ' · ' + (e.cause||''); }
+    }
+  } catch(err) {}
 
   if (type === 'prodLog') {
     const log = getProdLog().find(l => l._fbKey === fbKey);
@@ -8037,6 +8345,7 @@ function adminDeleteLog(type, fbKey) {
     db.ref(K_PROD_ERR  + '/' + fbKey).remove();
   }
 
+  logAudit(_adLabel, _adTarget, _adDesc);
   showToast('🗑 ลบรายการแล้ว');
 }
 
@@ -8086,6 +8395,7 @@ function adminClearHistory(type) {
     saveOrders(orders);
   }
 
+  logAudit('ล้างประวัติทั้งหมด', type, label);
   showToast('🗑 ลบ ' + label + ' เรียบร้อยแล้ว');
 
   // re-render ที่เกี่ยวข้อง
