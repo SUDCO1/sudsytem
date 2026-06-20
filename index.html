@@ -466,7 +466,11 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
 .home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
 .home-card{background:#fff;border:1px solid #ECF1EE;border-radius:14px;padding:16px 16px;cursor:pointer;box-shadow:0 1px 3px rgba(16,24,40,0.05);transition:transform .15s,box-shadow .15s,border-color .15s;}
 .home-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(16,24,40,0.10);border-color:#BBF7D0;}
-.home-card.locked{opacity:0.72;}
+.home-card.locked{background:#FEE2E2;border-color:#F87171;}
+.home-card.locked:hover{border-color:#EF4444;box-shadow:0 6px 16px rgba(239,68,68,0.18);}
+.home-card.locked .home-card-ic{background:#FCA5A5;font-size:0;}
+.home-card.locked .home-card-ic::after{content:"\01F512";font-size:23px;line-height:1;color:#7F1D1D;}
+@media (max-width:640px){.home-card.locked .home-card-ic::after{font-size:20px;}}
 .home-card-ic{width:48px;height:48px;border-radius:50%;background:#EAF3EA;display:flex;align-items:center;justify-content:center;font-size:23px;margin-bottom:11px;}
 .home-card-title{font-size:16px;font-weight:800;color:#1E293B;margin-bottom:3px;}
 .home-card-desc{font-size:12.5px;color:#94A3B8;}
