@@ -459,6 +459,18 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
 .mob-nav-icon{font-size:20px;line-height:1.1;}
 .mob-nav-badge{position:absolute;top:6px;right:calc(50% - 14px);width:8px;height:8px;background:#EF4444;border-radius:50%;display:none;}
 .mob-nav-badge.show{display:block;}
+/* ── หน้าแรก (Home) ── */
+.home-wrap{padding:4px 2px 32px;}
+.home-welcome{font-size:24px;font-weight:800;color:#166534;margin:12px 0 4px;}
+.home-sub{font-size:14px;color:#64748B;margin:0 0 20px;}
+.home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+.home-card{background:#fff;border:1px solid #ECF1EE;border-radius:14px;padding:16px 16px;cursor:pointer;box-shadow:0 1px 3px rgba(16,24,40,0.05);transition:transform .15s,box-shadow .15s,border-color .15s;}
+.home-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(16,24,40,0.10);border-color:#BBF7D0;}
+.home-card.locked{opacity:0.72;}
+.home-card-ic{width:48px;height:48px;border-radius:50%;background:#EAF3EA;display:flex;align-items:center;justify-content:center;font-size:23px;margin-bottom:11px;}
+.home-card-title{font-size:16px;font-weight:800;color:#1E293B;margin-bottom:3px;}
+.home-card-desc{font-size:12.5px;color:#94A3B8;}
+@media (max-width:640px){.home-welcome{font-size:21px;}.home-grid{grid-template-columns:repeat(2,1fr);gap:10px;}.home-card{padding:13px 13px;border-radius:12px;}.home-card-ic{width:42px;height:42px;font-size:20px;margin-bottom:8px;}.home-card-title{font-size:14px;}.home-card-desc{font-size:11.5px;}}
 .mob-more-overlay{display:flex;align-items:flex-end;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;opacity:0;pointer-events:none;transition:opacity 0.2s;}
 .mob-more-overlay.open{opacity:1;pointer-events:all;}
 .mob-more-sheet{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform 0.3s cubic-bezier(.32,.72,0,1);padding-bottom:env(safe-area-inset-bottom,0px);}
@@ -631,8 +643,9 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
 
 <!-- NAV -->
 <div class="app-nav">
+  <div class="nav-tab active" id="nav-home" data-tab="home" onclick="goTab('home',this)">🏠 หน้าแรก</div>
   <div class="nav-tab" id="nav-summary" data-tab="summary" onclick="goTab('summary',this)">📊 สรุปภาพรวม</div>
-  <div class="nav-tab sale-only active" id="nav-form" data-tab="form" onclick="goTab('form',this)">📱 ฝ่ายขาย</div>
+  <div class="nav-tab sale-only" id="nav-form" data-tab="form" onclick="goTab('form',this)">📱 ฝ่ายขาย</div>
   <div class="nav-tab" id="nav-status" data-tab="status" onclick="goTab('status',this)">📋 สถานะ Order <span class="nav-dot"></span></div>
   <div class="nav-tab sale-only" id="nav-proderr" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ฝ่ายผลิต</div>
   <div class="nav-tab sale-only" id="nav-shiperr" data-tab="shiperr" onclick="goTab('shiperr',this)">⚠️ Error ขนส่ง</div>
@@ -643,8 +656,47 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   <div class="nav-tab admin-only" id="nav-settings" data-tab="settings" onclick="goTab('settings',this)">⚙️ ตั้งค่า</div>
 </div>
 
+<!-- ================================================================ SECTION: หน้าแรก ================================================================ -->
+<div id="sec-home" class="section active">
+  <div class="app-content">
+    <div class="home-wrap">
+      <h1 class="home-welcome">ยินดีต้อนรับ <span style="font-weight:400;">👋</span></h1>
+      <p class="home-sub">แตะเมนูด้านล่างเพื่อเริ่มใช้งาน</p>
+      <div class="home-grid" id="homeGrid">
+        <div class="home-card" id="home-form"      onclick="homeGo('form','create_order')">
+          <div class="home-card-ic">📱</div><div class="home-card-title">ฝ่ายขาย</div><div class="home-card-desc">สร้างออเดอร์ใหม่</div>
+        </div>
+        <div class="home-card" id="home-status"    onclick="homeGo('status','view_orders')">
+          <div class="home-card-ic">📋</div><div class="home-card-title">สถานะออเดอร์</div><div class="home-card-desc" id="homeStatusDesc">ดูสถานะออเดอร์</div>
+        </div>
+        <div class="home-card" id="home-summary"   onclick="homeGo('summary','view_summary')">
+          <div class="home-card-ic">📊</div><div class="home-card-title">สรุปภาพรวม</div><div class="home-card-desc">ดูภาพรวมทั้งหมด</div>
+        </div>
+        <div class="home-card" id="home-proderr"   onclick="homeGo('proderr','view_production')">
+          <div class="home-card-ic">🏭</div><div class="home-card-title">ฝ่ายผลิต</div><div class="home-card-desc">งานผลิต</div>
+        </div>
+        <div class="home-card" id="home-transport" onclick="homeGo('transport','view_shipping')">
+          <div class="home-card-ic">🚛</div><div class="home-card-title">ฝ่ายขนส่ง</div><div class="home-card-desc">งานจัดส่ง</div>
+        </div>
+        <div class="home-card" id="home-shiperr"   onclick="homeGo('shiperr','view_shipping')">
+          <div class="home-card-ic">⚠️</div><div class="home-card-title">Error ขนส่ง</div><div class="home-card-desc">ปัญหาการขนส่ง</div>
+        </div>
+        <div class="home-card" id="home-stock"     onclick="homeGo('stock','view_stock')">
+          <div class="home-card-ic">📦</div><div class="home-card-title">ฝ่ายสต็อก</div><div class="home-card-desc">คลังสินค้า</div>
+        </div>
+        <div class="home-card" id="home-customers" onclick="homeGo('customers','view_customers')">
+          <div class="home-card-ic">👥</div><div class="home-card-title">ลูกค้า</div><div class="home-card-desc">ข้อมูลลูกค้า</div>
+        </div>
+        <div class="home-card" id="home-settings" onclick="homeGo('settings','view_settings')">
+          <div class="home-card-ic">⚙️</div><div class="home-card-title">ตั้งค่า</div><div class="home-card-desc">สำหรับผู้ดูแลระบบ</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ================================================================ SECTION: ส่ง Order ================================================================ -->
-<div id="sec-form" class="section active">
+<div id="sec-form" class="section">
   <div class="app-content">
     <div class="card">
       <div class="card-header">
@@ -2792,7 +2844,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- ================================================================ MOBILE BOTTOM NAV ================================================================ -->
 <div class="mob-nav">
-  <div class="mob-nav-item sale-only active" id="mnav-form" onclick="goTab('form',document.getElementById('nav-form'))">
+  <div class="mob-nav-item active" id="mnav-home" onclick="goTab('home',document.getElementById('nav-home'))">
+    <span class="mob-nav-icon">🏠</span><span>หน้าแรก</span>
+  </div>
+  <div class="mob-nav-item sale-only" id="mnav-form" onclick="goTab('form',document.getElementById('nav-form'))">
     <span class="mob-nav-icon">📱</span><span>ฝ่ายขาย</span>
   </div>
   <div class="mob-nav-item" id="mnav-status" onclick="goTab('status',document.getElementById('nav-status'))">
@@ -2892,7 +2947,10 @@ function applyRole(role) {
 }
 
 // ไปยังแท็บแรกที่ role ปัจจุบันมีสิทธิ์เข้าดู (เรียงตามลำดับความสำคัญ)
+// ทุก role เริ่มต้นที่ "หน้าแรก" เสมอ
 function goToFirstAllowedTab() {
+  const homeEl = document.querySelector('[data-tab="home"]');
+  if (homeEl) { goTab('home', homeEl); return; }
   const order = [
     ['summary',   'view_summary'],
     ['status',    'view_orders'],
@@ -3609,6 +3667,7 @@ function _applyNav() {
   showNav('nav-stock',     canDo('view_stock'));
   showNav('nav-customers', canDo('view_customers'));
   showNav('nav-settings',  _currentRole === 'admin');
+  if (typeof renderHome === 'function') renderHome();
 }
 
 function goTab(name, el) {
@@ -3622,6 +3681,7 @@ function goTab(name, el) {
   if (mnavEl) mnavEl.classList.add('active');
   else { const mm = document.getElementById('mnav-more'); if (mm) mm.classList.add('active'); }
   // Render dashboard on switch
+  if (name === 'home')      { renderHome(); }
   if (name === 'dashboard') { renderDashboard(); }
   if (name === 'status')    { document.getElementById('nav-status')?.classList.remove('has-new'); renderOrders(); }
   if (name === 'proderr')   { renderActiveProd(); renderProdSection(); renderProdLogHistory(); }
@@ -3631,6 +3691,38 @@ function goTab(name, el) {
   if (name === 'customers') { renderCustomers(); }
   if (name === 'settings')  { loadSettingsUI(); if (_currentRole === 'admin') { umRefresh(); loadRolePerms(renderPermUI); } }
   updateHeaderCount();
+}
+
+// ── หน้าแรก (Home) ──────────────────────────────────────────────
+// การ์ดทุกใบ "แสดงเสมอ" ทุก role — แต่ถ้าไม่มีสิทธิ์จะถูกทำเป็นสีจาง (locked)
+// และเมื่อกดเข้าไปจะขึ้นข้อความว่าไม่มีสิทธิ์ (ดู homeGo)
+const HOME_CARD_PERM = {
+  'home-form':      'create_order',
+  'home-status':    'view_orders',
+  'home-summary':   'view_summary',
+  'home-proderr':   'view_production',
+  'home-transport': 'view_shipping',
+  'home-shiperr':   'view_shipping',
+  'home-stock':     'view_stock',
+  'home-customers': 'view_customers',
+  'home-settings':  'view_settings',
+};
+function renderHome() {
+  Object.keys(HOME_CARD_PERM).forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('locked', !canDo(HOME_CARD_PERM[id])); // สีจางถ้าไม่มีสิทธิ์
+  });
+  const sd = document.getElementById('homeStatusDesc');
+  try { if (sd) sd.textContent = 'มี ' + getOrders().length + ' รายการ'; } catch(e){}
+}
+// กดการ์ดบนหน้าแรก — ตรวจสิทธิ์ก่อน ถ้าไม่มีให้แจ้งเตือน
+function homeGo(tab, perm) {
+  if (perm && !canDo(perm)) {
+    showToast('⛔ คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+    return;
+  }
+  goTab(tab, document.getElementById('nav-' + tab));
 }
 
 // ── Multi-Item Draft ───────────────────────────────────────────
