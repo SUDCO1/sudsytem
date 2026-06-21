@@ -1436,6 +1436,7 @@ function tcRender() {
 }
 
 function tcToggleDay(ds) {
+  if (_tcSelectedDate === ds) { _tcSelectedDate = null; tcRender(); return; }
   _tcSelectedDate = ds; tcRender();
   setTimeout(() => {
     const el = document.getElementById('tcday-' + ds);
@@ -1611,21 +1612,18 @@ function tcCloseEntryDetail() {
 function tcRenderAllDays() {
   const panel = document.getElementById('tcAllDaysPanel');
   if (!panel) return;
+  if (!_tcSelectedDate) {
+    panel.innerHTML = `<div style="text-align:center;padding:36px 20px;color:#94A3B8;font-size:13.5px;"><div style="font-size:32px;margin-bottom:10px;">👆</div>แตะวันที่บนปฏิทินเพื่อดูรายการขนส่ง</div>`;
+    return;
+  }
   const evs = tcGetEvents();
-  const byDate = {};
-  evs.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
-  if (_tcSelectedDate && !byDate[_tcSelectedDate]) byDate[_tcSelectedDate] = [];
-  const dates = Object.keys(byDate).sort();
-  if (!dates.length) { panel.innerHTML = ''; return; }
-  panel.innerHTML = dates.map(ds => {
-    const p = ds.split('-');
-    const label = `📅 ${+p[2]} ${TC_MONTHS[+p[1]-1]} ${+p[0]+543}`;
-    const list = byDate[ds];
-    const isSel = ds === _tcSelectedDate;
-    const hBg = isSel ? 'linear-gradient(135deg,#DBEAFE,#EFF6FF)' : 'linear-gradient(135deg,#EFF6FF,#F0F7FF)';
-    const body = list.length ? list.map(e => tcEntryHTML(e)).join('') : `<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ยังไม่มีนัดส่งวันนี้</div>`;
-    return `<div id="tcday-${ds}" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;transition:box-shadow 0.3s;"><div class="card-header" style="background:${hBg};border-radius:12px 12px 0 0;"><div style="flex:1;"><div class="card-title" style="color:#1E40AF;">${label}</div><div class="card-sub">${list.length ? list.length+' รายการขนส่ง':'ยังไม่มีรายการ'}</div></div>${canDo('log_shipping') ? `<button onclick="openTransportModal('${ds}')" style="padding:7px 16px;background:#1E40AF;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">＋ เพิ่ม</button>` : ''}</div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">${body}</div></div>`;
-  }).join('');
+  const ds = _tcSelectedDate;
+  const list = evs.filter(e => e.date === ds);
+  const p = ds.split('-');
+  const label = `📅 ${+p[2]} ${TC_MONTHS[+p[1]-1]} ${+p[0]+543}`;
+  const hBg = 'linear-gradient(135deg,#DBEAFE,#EFF6FF)';
+  const body = list.length ? list.map(e => tcEntryHTML(e)).join('') : `<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px;"><div style="font-size:28px;margin-bottom:8px;">📭</div>ยังไม่มีนัดส่งวันนี้</div>`;
+  panel.innerHTML = `<div id="tcday-${ds}" class="card" style="box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;transition:box-shadow 0.3s;"><div class="card-header" style="background:${hBg};border-radius:12px 12px 0 0;"><div style="flex:1;"><div class="card-title" style="color:#1E40AF;">${label}</div><div class="card-sub">${list.length ? list.length+' รายการขนส่ง':'ยังไม่มีรายการ'}</div></div>${canDo('log_shipping') ? `<button onclick="openTransportModal('${ds}')" style="padding:7px 16px;background:#1E40AF;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">＋ เพิ่ม</button>` : ''}</div><div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;">${body}</div></div>`;
 }
 
 function tcShowDay(ds) { }
