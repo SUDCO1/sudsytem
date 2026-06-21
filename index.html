@@ -1391,6 +1391,9 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
 <script>
 // ── Transport Calendar ────────────────────────────────────────
 const TC_KEY = 'tc_events';
+// เก็บกวาดข้อมูลขนส่งเก่าที่เคยค้างในเครื่อง (ชื่อ/เบอร์/ที่อยู่ลูกค้า) ทิ้งตอนเปิดเว็บ
+// ข้อมูลจริงอยู่บน Firebase อยู่แล้ว สำเนาในเครื่องนี้ไม่มีการอ่านใช้ จึงลบได้ปลอดภัย
+try { localStorage.removeItem(TC_KEY); } catch(e) {}
 let _tcYear, _tcMonth, _tcSelectedDate = null;
 
 const K_TC_EVENTS = 'sud/tcEvents';
@@ -1634,15 +1637,19 @@ function tcConfirmFinalize(id) {
   if (!entry) return;
   if (entry._stocked) { showToast('✅ ตัดสต็อกไปแล้ว'); return; }
   const itemsDesc = (entry.selectedItems||[]).map(si => si.pileType+' '+si.qty+' ต้น').join(', ') || entry.piles || '-';
-  if (!confirm('ยืนยันส่งจบ?\n\nลูกค้า: '+(entry.cust||'-')+'\nOrder: '+(entry.order||'-')+'\nสินค้า: '+itemsDesc+'\n\n→ ระบบจะตัดสต็อกและอัปเดตสถานะ Order')) return;
+  const imgCount = (entry.images && entry.images.length) || 0;
+  const imgNote = imgCount ? '\n\n📸 รูปภาพ '+imgCount+' รูปจะถูกลบอัตโนมัติเพื่อประหยัดพื้นที่' : '';
+  if (!confirm('ยืนยันส่งจบ?\n\nลูกค้า: '+(entry.cust||'-')+'\nOrder: '+(entry.order||'-')+'\nสินค้า: '+itemsDesc+'\n\n→ ระบบจะตัดสต็อกและอัปเดตสถานะ Order'+imgNote)) return;
   const ok = tcFinalizeDelivery(entry);
   entry._stocked = ok || true;
-  // บันทึกกลับ localStorage
+  // ลบรูปออกตอนส่งจบ — รูปหมดหน้าที่แล้ว ช่วยประหยัดพื้นที่เก็บข้อมูล
+  if (imgCount) entry.images = [];
+  // บันทึกกลับเข้า Firebase (แหล่งข้อมูลจริง) — ไม่เก็บสำเนาลง localStorage แล้ว
   const saved = arr.map(e => e._id === id ? entry : e);
-  localStorage.setItem(TC_KEY, JSON.stringify(saved));
+  tcSaveEvents(saved);
   tcRender();
-  logAudit('ส่งจบ (ขนส่ง)', entry.order || entry.cust || '-', (entry.cust||'') + ' · ' + itemsDesc);
-  showToast(ok ? '📦 ส่งจบ — ตัดสต็อกและอัปเดต Order แล้ว' : '✅ บันทึกส่งจบแล้ว (ไม่มีสินค้าให้ตัดสต็อก)');
+  logAudit('ส่งจบ (ขนส่ง)', entry.order || entry.cust || '-', (entry.cust||'') + ' · ' + itemsDesc + (imgCount ? ' · ลบรูป '+imgCount+' รูป' : ''));
+  showToast((ok ? '📦 ส่งจบ — ตัดสต็อกและอัปเดต Order แล้ว' : '✅ บันทึกส่งจบแล้ว (ไม่มีสินค้าให้ตัดสต็อก)') + (imgCount ? ' · ลบรูป '+imgCount+' รูป' : ''));
 }
 function tcDeleteEvent(id) {
   if (!canDo('delete_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์ลบการขนส่ง'); return; }
@@ -7708,21 +7715,33 @@ function deleteOrder(orderNum) {
   if (!o) return;
   const items    = getOrderItems(o);
   const itemsStr = items.map(it => it.pileType + ' ' + it.qty + ' ต้น').join(', ');
+  // ── หาข้อมูลที่ผูกกับ Order นี้ (จะกลายเป็น "ข้อมูลกำพร้า" ถ้าไม่เก็บกวาด) ──
+  const cpRows = getCustPoles().filter(cp => cp.orderNum === orderNum);   // เสาลูกค้าที่จองไว้
+  const paRows = getProdActive().filter(a => a.orderNum === orderNum);    // งานผลิตที่ค้างอยู่
+  let extra = '';
+  if (cpRows.length) extra += '\n📦 เสาที่จองไว้ ' + cpRows.length + ' รายการ → คืนเป็นเสาค้างสต็อก';
+  if (paRows.length) extra += '\n🏭 งานผลิตค้าง ' + paRows.length + ' รายการ → ยกเลิก';
   const confirmed = confirm(
     '🗑 ยืนยันลบ Order — ' + orderNum + '\n\n' +
     'ลูกค้า: ' + o.customer + '\n' +
     'รายการ: ' + itemsStr + '\n' +
-    'สถานะ: ' + (o.status || 'รับ Order แล้ว') + '\n\n' +
+    'สถานะ: ' + (o.status || 'รับ Order แล้ว') + extra + '\n\n' +
     '⚠️ Order นี้จะถูกลบออกจากระบบถาวร ไม่สามารถกู้คืนได้\nตกลง = ลบ | ยกเลิก = ไม่ลบ'
   );
   if (!confirmed) return;
   const newOrders = orders.filter(x => x.orderNum !== orderNum);
   saveOrders(newOrders);
-  logAudit('ลบออเดอร์', orderNum, (o.customer||'') + ' · ' + itemsStr);
+  // ── เก็บกวาดข้อมูลที่ผูกกับ Order นี้ ไม่ให้เหลือข้อมูลกำพร้าชี้ไปหา Order ที่ลบแล้ว ──
+  // 1) เสาลูกค้าที่จองไว้ → คืนกลับเป็นเสาค้างสต็อก (ไม่ลบของจริง แค่ปลด Order ออก)
+  cpRows.forEach(cp => { cp.online = false; cp.orderNum = ''; saveSingleCustPole(cp); });
+  // 2) งานผลิตที่ค้างของ Order นี้ → เอาออก (Order ไม่มีแล้ว ผลิตค้างไว้ก็ไม่มีปลายทาง)
+  if (paRows.length) saveProdActive(getProdActive().filter(a => a.orderNum !== orderNum));
+  const cleanStr = (cpRows.length ? ' · คืนเสา ' + cpRows.length : '') + (paRows.length ? ' · ยกเลิกผลิต ' + paRows.length : '');
+  logAudit('ลบออเดอร์', orderNum, (o.customer||'') + ' · ' + itemsStr + cleanStr);
   renderOrders();
   renderSummary();
   updateHeaderCount();
-  showToast('🗑 ลบ Order ' + orderNum + ' เรียบร้อยแล้ว');
+  showToast('🗑 ลบ Order ' + orderNum + ' เรียบร้อยแล้ว' + cleanStr);
 }
 
 // ══════════════════════════════════════════════════════════════
