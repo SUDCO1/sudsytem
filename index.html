@@ -4267,7 +4267,7 @@ function submitOrder() {
   document.getElementById('successDetail').innerHTML =
     '<strong>' + customer + '</strong> · ' + tel + '<br>'
     + pileLabel + ' · รวม ' + totalQty + ' ต้น' + valPart
-    + '<br>📍 ' + site + '<br>📅 วันส่ง: ' + order.deliveryDate;
+    + '<br>📍 ' + order.site + '<br>📅 วันส่ง: ' + order.deliveryDate;
 
   const navStatus = document.getElementById('nav-status'); if (navStatus) navStatus.classList.add('has-new');
   updateHeaderCount();
@@ -5587,9 +5587,10 @@ function getMonthlyData(orders, months=6) {
         const od = new Date(o.timestamp);
         return od.getMonth() === mIdx && od.getFullYear() === yFull;
       }
-      // 2) dateAdded เป็น ISO string "2026-04-10"
-      if (o.dateAdded) {
-        const p = o.dateAdded.split('-');
+      // 2) orderDateISO / dateAdded เป็น ISO string "2026-04-10"
+      const iso = o.orderDateISO || o.dateAdded;
+      if (iso) {
+        const p = iso.split('-');
         if (p.length === 3) return parseInt(p[1])-1 === mIdx && parseInt(p[0]) === yFull;
       }
       return false;
@@ -6250,29 +6251,12 @@ function renderStockCards() {
     const tsHtml   = ts ? `<span class="stock-ts">อัปเดต: ${ts}</span>` : `<span class="stock-ts">ยังไม่มีประวัติ</span>`;
     const quickBtn = canDo('edit_stock') ? `<button class="stock-quick-btn" onclick="quickFillStock('${name.replace(/'/g,"\'")}')">+ รับเข้า</button>` : '';
     const statusChip = `<span class="chip ${avail < cfg.stockLow ? 'ch-err' : avail < cfg.stockWarn ? 'ch-delay' : 'ch-in'}">${avail < cfg.stockLow ? '🚨 ต่ำมาก' : avail < cfg.stockWarn ? '⚠ ใกล้หมด' : '✓ ปกติ'}</span>`;
-    // แถบสถานะการจัดส่ง: ต้องส่ง / ส่งแล้ว
-    const toShip  = toShipMap[name]  || 0;
-    const shipped = shippedMap[name] || 0;
-    let shipHtml = '';
-    if (toShip > 0 || shipped > 0) {
-      const totalOrder = toShip + shipped;
-      const pct = totalOrder > 0 ? Math.round(shipped / totalOrder * 100) : 0;
-      shipHtml = `<div style="margin:8px 0 4px;padding:6px 8px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;">
-        <div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;margin-bottom:4px;">
-          <span style="color:#B45309;">🚚 ต้องส่ง ${toShip}</span>
-          <span style="color:#166534;">✅ ส่งแล้ว ${shipped}</span>
-        </div>
-        <div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
-          <div style="height:100%;width:${pct}%;background:#22C55E;"></div>
-        </div>
-      </div>`;
-    }
+    // แถบสถานะการจัดส่ง: ปิดการแสดงผลตามคำขอ (ไม่ต้องโชว์ ต้องส่ง/ส่งแล้ว)
     return `<div class="stock-card ${cls}" onclick="openStockDetail('${name.replace(/'/g,'\\'+'\'')}')">
       <div class="stock-name">${name}</div>
       <div class="stock-qty">${displayQty}</div>
       <div class="stock-unit">ต้นทั้งหมด</div>
       ${cpHtml}${valHtml}
-      ${shipHtml}
       ${statusChip}
       <div class="stock-card-footer">${tsHtml}${quickBtn}</div>
     </div>`;
@@ -8880,12 +8864,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   injectCal('status','oc','📋 ปฏิทิน Order','กำหนดส่งของแต่ละ Order · คลิกวันเพื่อดูรายละเอียด', true);
   injectCal('proderr','pc','🏭 ปฏิทินผลิต','บันทึกการผลิตตามวันที่ · คลิกวันเพื่อดูรายละเอียด', true);
-  injectCal('stock','sc','📦 ปฏิทินสต็อก','การเคลื่อนไหวสต็อกตามวันที่ · คลิกวันเพื่อดูรายละเอียด', true);
+  // ปฏิทินสต็อก: ปิดการใช้งานตามคำขอ (ไม่ได้ใช้)
   // ── Init calendars immediately after injection (don't wait for goTab) ──
   setTimeout(()=>{
     try{ocInit();}catch(e){}
     try{pcInit();}catch(e){}
-    try{scInit();}catch(e){}
   }, 200);
 
   // ── Wrap goTab for re-render on tab switch ──
@@ -8894,7 +8877,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     _g&&_g(name,el);
     if(name==='status')   setTimeout(ocRender,50);
     if(name==='proderr')  setTimeout(pcRender,50);
-    if(name==='stock')    setTimeout(scRender,50);
   };
 
   // ── Re-render calendars when Firebase data refreshes ──
@@ -8905,8 +8887,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
   }
   _wrapFn('renderOrders',    ()=>{ocRender();});
-  _wrapFn('renderStockCards',()=>scRender());
-  _wrapFn('renderStockLog',  ()=>scRender());
   _wrapFn('renderProdLogHistory', ()=>pcRender());
 });
 </script>
