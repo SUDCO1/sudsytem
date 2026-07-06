@@ -1868,17 +1868,41 @@ function _tcCpGroupCount(orderNum) {
 function _tcCpRowsHtml(orderNum, savedItems) {
   const cpRows = getCustPoles().filter(cp => cp.orderNum === orderNum && cp.online !== false);
   if (!cpRows.length) return null;
-  // หา remaining per pileType จาก order items
+  // หา "ต้องส่ง" / "ส่งแล้ว" per order item — จับคู่แบบ token (กัน spec string ไม่ตรงเป๊ะ)
   const o = (getOrders()||[]).find(x => x.orderNum === orderNum);
-  const remainMap = {};
+  const itemPool = [];
   if (o) {
     getOrderItems(o).forEach(it => {
-      const rem = Math.max(0, (it.qty||0) - (it.delivered||0));
-      const specParts = [it.length, it.weld, it.steel, it.wire, it.ba, it.extra].filter(x => x && x !== '-');
-      const spec = specParts.join('/') || '';
-      const key = (it.pileType||'') + '|' + spec;
-      remainMap[key] = (remainMap[key]||0) + rem;
+      const cpStyle   = [it.length, it.weld, it.steel, it.wire, it.ba].filter(x => x && x !== '-').join('/');
+      const fullStyle = [it.length, it.weld, it.steel, it.wire, it.ba, it.extra].filter(x => x && x !== '-').join('/');
+      itemPool.push({
+        pileType: it.pileType || '',
+        cpStyle, fullStyle,
+        specTokens: fullStyle.split('/').filter(Boolean),
+        remain:  Math.max(0, (it.qty||0) - (it.delivered||0)),
+        shipped: it.delivered || 0,
+        used: false
+      });
     });
+  }
+  function _tcMatchItem(pileType, spec) {
+    const sp = String(spec||'');
+    // 1) ตรงเป๊ะแบบ cp-style (ตัด extra) 2) ตรงเป๊ะกับ full spec
+    let best = itemPool.find(it => !it.used && it.pileType === pileType && it.cpStyle === sp)
+           || itemPool.find(it => !it.used && it.pileType === pileType && it.fullStyle === sp);
+    if (!best) {
+      // 3) fallback: token overlap มากสุด (เลือกตัวจำเพาะสุดเมื่อคะแนนเท่ากัน)
+      const gTokens = sp.split('/').filter(Boolean);
+      let bestScore = -1;
+      itemPool.forEach(it => {
+        if (it.used || it.pileType !== pileType) return;
+        let score = 0;
+        gTokens.forEach(t => { if (it.specTokens.includes(t)) score++; });
+        if (score > bestScore || (score === bestScore && best && it.specTokens.length < best.specTokens.length)) { bestScore = score; best = it; }
+      });
+    }
+    if (best) { best.used = true; return best; }
+    return null;
   }
   // group: production batches merged by pileType+spec; fromStock entries separate
   const groups = [];
@@ -1903,7 +1927,11 @@ function _tcCpRowsHtml(orderNum, savedItems) {
       || (savedItems||[]).find(s => s.pileType === g.pileType && s.spec === g.spec);
     // ถ้ามี savedItems (mode แก้ไข) → ติ๊กเฉพาะที่เคยเลือกไว้ / ถ้าเพิ่มใหม่ → ติ๊กทุกตัว
     const isChecked = savedItems && savedItems.length > 0 ? !!saved : true;
-    const defQty = saved ? saved.qty : g.qty;
+    // จับคู่ order item เพื่อหา ต้องส่ง / ส่งแล้ว
+    const _mi = g.isStock ? null : _tcMatchItem(g.pileType, g.spec);
+    const toShip  = _mi ? _mi.remain  : null;
+    const shipped = _mi ? _mi.shipped : null;
+    const defQty = saved ? saved.qty : (toShip && toShip > 0 ? Math.min(toShip, g.qty) : g.qty);
     const borderColor = g.qty <= 0 ? '#FCA5A5' : (g.isStock ? '#FCD34D' : '#BFDBFE');
     const bg = g.isStock ? '#FFFBEB' : (isChecked ? '#F0FDF4' : '#F8FAFC');
     const textColor = g.isStock ? '#92400E' : '#166534';
@@ -1915,12 +1943,13 @@ function _tcCpRowsHtml(orderNum, savedItems) {
       <input type="hidden" id="tc_cp_stk_${i}" value="${g.isStock?'1':'0'}">
       <div style="flex:1;min-width:0;">
         <div style="font-size:12px;font-weight:700;color:${textColor};">${g.pileType}${specLabel}${stockTag}</div>
-        <div style="font-size:10px;color:#64748B;margin-top:1px;">🪵 มี <span style="color:${textColor};font-weight:700;">${g.qty} ต้น</span>${remainMap[g.pileType+'|'+g.spec]!==undefined?` · ต้องส่ง <span style="color:#DC2626;font-weight:700;">${remainMap[g.pileType+'|'+g.spec]} ต้น</span>`:''}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:1px;">🪵 มี <span style="color:${textColor};font-weight:700;">${g.qty} ต้น</span>${toShip!==null?` · 🚚 ต้องส่ง <span style="color:#DC2626;font-weight:700;">${toShip} ต้น</span>`:''}${shipped!==null&&shipped>0?` · ✅ ส่งแล้ว <span style="color:#166534;font-weight:700;">${shipped} ต้น</span>`:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
         <input type="number" id="tc_cp_qty_${i}" value="${Math.min(defQty,g.qty)}" min="0" max="${g.qty}"
           ${isChecked?'':'disabled'}
-          style="width:60px;padding:5px 8px;border:1.5px solid ${borderColor};border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#fff;color:${textColor};opacity:${isChecked?'1':'0.4'};" oninput="tcClampStock(this,${g.qty})">
+          data-toship="${toShip===null?-1:toShip}"
+          style="width:60px;padding:5px 8px;border:1.5px solid ${borderColor};border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#fff;color:${textColor};opacity:${isChecked?'1':'0.4'};" oninput="tcClampStock(this,${g.qty})" onchange="tcConfirmOverOrder(this,${g.qty})">
         <span style="font-size:11px;color:#64748B;">ต้น</span>
       </div>
     </div>`;
@@ -1984,6 +2013,7 @@ function tcFinalizeDelivery(entry) {
   const orders = getOrders();
   const o = orders && orders.find(x => x.orderNum === entry.order);
   let anyDeducted = false;
+  const _usedItems = new Set();   // กันไม่ให้ shipment หลายล็อตยัดเข้า item เดียวกันซ้ำ
 
   siList.forEach(si => {
     const sendQty = si.qty;
@@ -2049,20 +2079,34 @@ function tcFinalizeDelivery(entry) {
 
     // ── 3. อัปเดต delivered + stockDelivered ในออเดอร์ ──
     if (o && o.items) {
-      // หา item ที่ตรงทั้ง pileType และ spec (exact ก่อน ถ้าไม่ได้ใช้ subset match)
-      const _siParts = si.spec ? new Set(si.spec.split('/').filter(Boolean)) : null;
-      const matchBySpec = _siParts && _siParts.size > 0
-        ? o.items.find(x => {
-            if (x.pileType !== si.pileType) return false;
-            const itemFields = new Set([x.length, x.weld, x.steel, x.wire, x.ba, x.extra].filter(v => v && v !== '-'));
-            const fullSpec = [...itemFields].join('/');
-            // exact match ก่อน ถ้าไม่ได้ใช้ subset (ทุก part ของ si.spec ต้องอยู่ใน item fields)
-            return fullSpec === si.spec || [..._siParts].every(p => itemFields.has(p));
-          })
-        : null;
-      const it = matchBySpec || o.items.find(x => x.pileType === si.pileType);
+      // spec ของเสาที่ผลิต = length/weld/steel/wire/ba (ไม่รวม extra) → คำนวณของ order item แบบเดียวกันเพื่อจับคู่ตรงเป๊ะ
+      const _cpStyle = x => [x.length, x.weld, x.steel, x.wire, x.ba].filter(v => v && v !== '-').join('/');
+      const _fullStyle = x => [x.length, x.weld, x.steel, x.wire, x.ba, x.extra].filter(v => v && v !== '-').join('/');
+      const _idxOf = it => o.items.indexOf(it);
+      let it = null;
+      if (si.spec) {
+        // 1) ตรงเป๊ะแบบ cp-style (ตัด extra) และยังไม่ถูกใช้
+        it = o.items.find(x => x.pileType === si.pileType && !_usedItems.has(_idxOf(x)) && _cpStyle(x) === si.spec);
+        // 2) ตรงเป๊ะกับ full spec (รวม extra)
+        if (!it) it = o.items.find(x => x.pileType === si.pileType && !_usedItems.has(_idxOf(x)) && _fullStyle(x) === si.spec);
+        // 3) fallback: subset (ทุก part ของ si.spec อยู่ใน item) — เลือกตัวที่ field น้อยที่สุด (จำเพาะสุด) และยังไม่ถูกใช้
+        if (!it) {
+          const _siParts = si.spec.split('/').filter(Boolean);
+          const cands = o.items.filter(x => {
+            if (x.pileType !== si.pileType || _usedItems.has(_idxOf(x))) return false;
+            const f = new Set([x.length, x.weld, x.steel, x.wire, x.ba, x.extra].filter(v => v && v !== '-'));
+            return _siParts.every(p => f.has(p));
+          });
+          cands.sort((a,b) => _fullStyle(a).split('/').length - _fullStyle(b).split('/').length);
+          it = cands[0] || null;
+        }
+      }
+      // 4) fallback สุดท้าย: pileType เดียวกันที่ยังไม่ถูกใช้ ถ้าไม่มีค่อยใช้ตัวแรก
+      if (!it) it = o.items.find(x => x.pileType === si.pileType && !_usedItems.has(_idxOf(x))) || o.items.find(x => x.pileType === si.pileType);
       if (it) {
-        it.delivered = Math.min((it.delivered||0) + sendQty, it.qty);
+        _usedItems.add(_idxOf(it));
+        // อนุญาตให้ส่งเกินที่สั่งได้ (บันทึกจริงเพื่อโชว์เป็น 6(+3))
+        it.delivered = (it.delivered||0) + sendQty;
         if (fromStockSent > 0) {
           it.stockDelivered = (it.stockDelivered||0) + fromStockSent;
         }
@@ -2098,6 +2142,22 @@ function tcClampStock(inp, maxVal) {
   const v = parseInt(inp.value)||0;
   if (v > maxVal) { inp.value = maxVal; showToast('⚠️ จำกัดตามสต็อกที่มี: '+maxVal+' ต้น'); }
   inp.style.borderColor = v > maxVal ? '#EF4444' : (maxVal <= 0 ? '#FCA5A5' : '#BFDBFE');
+}
+// เตือนเมื่อคีย์จำนวนส่ง "เกินกว่าที่สั่ง" — ต้องกดยืนยันก่อนถึงจะส่งเกินได้
+function tcConfirmOverOrder(inp, stockMax) {
+  const toShip = parseInt(inp.dataset.toship);
+  let v = parseInt(inp.value)||0;
+  if (v > stockMax) v = stockMax;                 // ห้ามเกินสต็อกที่มีจริง
+  if (!isNaN(toShip) && toShip >= 0 && v > toShip) {
+    if (inp.dataset.overOk !== String(v)) {
+      const ok = confirm('⚠️ จำนวนที่จะส่ง (' + v + ' ต้น) มากกว่าที่สั่งไว้ (' + toShip + ' ต้น)\n\nต้องการส่งเกินกว่าที่สั่งใช่หรือไม่?');
+      if (!ok) { v = toShip; inp.dataset.overOk = ''; }
+      else { inp.dataset.overOk = String(v); inp.style.borderColor = '#F59E0B'; }
+    }
+  } else {
+    inp.dataset.overOk = '';
+  }
+  inp.value = v;
 }
 
 function submitTransport() {
@@ -4059,6 +4119,7 @@ function renderOrderItemsDraft() {
     const steelDisp = it.steel && it.steel !== '-' ? it.steel : '—';
     const wireDisp  = it.wire  && it.wire  !== '-' ? it.wire  : '—';
     const baDisp    = it.ba    && it.ba    !== '-' ? it.ba    : '—';
+    const extraDisp = it.extra && it.extra !== '-' ? it.extra : '—';
     return '<tr><td style="font-weight:600;">' + it.pileType + '</td>'
       + '<td style="font-weight:700;color:#1E293B;">' + it.qty + ' ต้น</td>'
       + '<td style="color:#64748B;">' + lenDisp + '</td>'
@@ -4066,11 +4127,12 @@ function renderOrderItemsDraft() {
       + '<td style="color:#64748B;">' + steelDisp + '</td>'
       + '<td style="color:#64748B;">' + wireDisp + '</td>'
       + '<td style="color:#64748B;">' + baDisp + '</td>'
+      + '<td style="color:#64748B;">' + extraDisp + '</td>'
       + '<td style="color:#166534;">' + valDisp + '</td>'
       + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
   }).join('');
   listEl.innerHTML = '<table class="items-draft-table"><thead><tr>'
-    + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>บ่า</th><th></th>'
+    + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>บ่า</th><th>เพิ่มเติม</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>';
   if (box) {
     box.className = 'order-value-box has-value';
@@ -4252,10 +4314,11 @@ function editItemDelivered(orderNum, itemIdx) {
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o || !o.items || !o.items[itemIdx]) return;
   const item = o.items[itemIdx];
-  const newVal = prompt('ส่งแล้ว — ' + item.pileType + '\nสูงสุด: ' + item.qty + ' ต้น', item.delivered || 0);
+  const newVal = prompt('ส่งแล้ว — ' + item.pileType + '\nสั่งไว้: ' + item.qty + ' ต้น (ใส่มากกว่านี้ได้ถ้าส่งเกิน)', item.delivered || 0);
   if (newVal === null) return;
   const prevDel = item.delivered || 0;
-  item.delivered = Math.min(Math.max(parseInt(newVal)||0, 0), item.qty);
+  item.delivered = Math.max(parseInt(newVal)||0, 0);
+  if (item.delivered > item.qty && !confirm('⚠️ จำนวนที่ส่ง (' + item.delivered + ') มากกว่าที่สั่ง (' + item.qty + ')\nต้องการบันทึกส่งเกินใช่หรือไม่?')) { item.delivered = prevDel; return; }
   const delta = item.delivered - prevDel;
   o.delivered = o.items.reduce((s,it) => s+(it.delivered||0), 0);
   if (o.delivered >= getOrderTotalQty(o)) o.status = 'ส่งครบ';
@@ -4391,7 +4454,10 @@ function renderOrders() {
         entries.forEach(({o, it, idx}) => {
           const del   = (o.items && o.items.length > 1) ? (it.delivered || 0) : (it.delivered !== undefined ? it.delivered : (o.delivered||0));
           const rem   = it.qty - del;
+          const over  = del > it.qty ? del - it.qty : 0;   // ส่งเกินที่สั่ง
+          const delDisp = over > 0 ? `${it.qty}<span style="color:#DC2626;font-weight:800;">(+${over})</span>` : `${del}`;
           const iPct  = it.qty>0 ? Math.round(del/it.qty*100) : 0;
+          const iPctBar = Math.min(iPct, 100);
           const iBarC = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
           const iPctC = iPct>=100?'#166534':iPct>=50?'#92400E':'#991B1B';
           const relErr  = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
@@ -4419,8 +4485,8 @@ function renderOrders() {
             <td><strong>${o.customer}</strong>${o.tel?`<br><span style="font-size:11px;color:#64748B;">${o.tel}</span>`:''}</td>
             <td style="font-size:12px;">${lenDisp}</td>
             <td><strong>${it.qty}</strong></td>
-            <td><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''}>${del} / ${it.qty}</span><br><span style="font-size:11px;color:${rem>0?'#854D0E':'#166534'};">เหลือ ${rem}</span></td>
-            <td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${iPct}%;background:${iBarC};"></div></div><span class="prog-pct" style="color:${iPctC};">${iPct}%</span></div></td>
+            <td><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''}>${delDisp} / ${it.qty}</span><br><span style="font-size:11px;color:${over>0?'#DC2626':rem>0?'#854D0E':'#166534'};">${over>0?'ส่งเกิน '+over:'เหลือ '+rem}</span></td>
+            <td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div><span class="prog-pct" style="color:${iPctC};">${iPctBar}%</span></div></td>
             <td style="font-size:12px;">${o.deliveryDate}${dlBadge}</td>
             
             
@@ -4452,6 +4518,9 @@ function renderOrders() {
     const tq       = getOrderTotalQty(o);
     const totalDel = getOrderDelivered(o);
     const pct      = tq > 0 ? Math.round(totalDel/tq*100) : 0;
+    const pctBar   = Math.min(pct, 100);
+    const overTot  = totalDel > tq ? totalDel - tq : 0;
+    const delLbl   = overTot > 0 ? `${tq}(+${overTot})` : `${totalDel}`;
     const barC     = pct>=100?'#22C55E':pct>=50?'#F59E0B':'#EF4444';
     const relErr   = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
     const hasErr   = relErr.length > 0;
@@ -4476,8 +4545,8 @@ function renderOrders() {
       <div class="mob-oc-mid">
         <div class="mob-oc-pile"><div class="mob-oc-pile-type">${pileDisp}</div><div class="mob-oc-pile-qty">${tq} ต้น</div></div>
         <div class="mob-oc-info">
-          <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt">ส่งแล้ว ${totalDel}/${tq} ต้น</span><span style="font-size:12px;font-weight:700;">${pct}%</span></div>
-          <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${pct}%;background:${barC};"></div></div>
+          <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt">ส่งแล้ว ${delLbl}/${tq} ต้น</span><span style="font-size:12px;font-weight:700;">${pctBar}%</span></div>
+          <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${pctBar}%;background:${barC};"></div></div>
           <div class="mob-oc-meta"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
         </div>
       </div>
@@ -4528,10 +4597,11 @@ function editDelivered(orderNum) {
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
   const tq = getOrderTotalQty(o);
-  const newVal = prompt('จำนวนที่ส่งแล้ว (ต้น) — ' + orderNum + '\nสูงสุด: ' + tq + ' ต้น', o.delivered || 0);
+  const newVal = prompt('จำนวนที่ส่งแล้ว (ต้น) — ' + orderNum + '\nสั่งไว้: ' + tq + ' ต้น (ใส่มากกว่านี้ได้ถ้าส่งเกิน)', o.delivered || 0);
   if (newVal === null) return;
   const prevDelivered = o.delivered || 0;
-  const newDelivered  = Math.min(Math.max(parseInt(newVal)||0, 0), tq);
+  const newDelivered  = Math.max(parseInt(newVal)||0, 0);
+  if (newDelivered > tq && !confirm('⚠️ จำนวนที่ส่ง (' + newDelivered + ') มากกว่าที่สั่ง (' + tq + ')\nต้องการบันทึกส่งเกินใช่หรือไม่?')) return;
   const delta = newDelivered - prevDelivered;
   o.delivered = newDelivered;
   if (o.delivered >= tq) o.status = 'ส่งครบ';
@@ -4663,7 +4733,9 @@ function renderProdSection() {
       const pct = it.qty > 0 ? Math.min(100, Math.round((totalProduced + stockDelivered) / it.qty * 100)) : 0;
       const remaining = Math.max(0, it.qty - totalProduced - stockDelivered);
       const excess    = Math.max(0, totalProduced - it.qty);
-      const inProd = getProdActive().find(a => a.orderNum === o.orderNum && a.pileType === pileType && (a.itemIdx === undefined || a.itemIdx === itemIdx));
+      const _actList = getProdActive().filter(a => a.orderNum === o.orderNum && a.pileType === pileType && (a.itemIdx === undefined || a.itemIdx === itemIdx));
+      const inProd = _actList[0];
+      const inProgQty = _actList.reduce((s,a) => s + (a.qtyCasting||0), 0);
       const itLen  = (it.length||o.length||'-').replace(/'/g,"\\'");
       // spec tags
       const tags = [
@@ -4676,10 +4748,10 @@ function renderProdSection() {
       ].filter(Boolean).join(' ');
       const btn = !canDo('log_production') ? '' : inProd
         ? `<div style="margin-top:8px;">
-            <div style="background:#FEF3C7;color:#92400E;border:1.5px solid #FDE68A;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;text-align:center;margin-bottom:4px;">🏭 กำลังผลิตอยู่...</div>
-            <button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${it.qty},'${itLen}',${itemIdx})" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;padding:6px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">➕ เริ่มเทเพิ่ม</button>
+            <div style="background:#FEF3C7;color:#92400E;border:1.5px solid #FDE68A;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;text-align:center;margin-bottom:4px;">🏭 กำลังผลิตอยู่ ${inProgQty} ต้น (ในราง)</div>
+            <button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${remaining},'${itLen}',${itemIdx})" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;padding:6px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">➕ เริ่มเทเพิ่ม</button>
            </div>`
-        : `<button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${it.qty},'${itLen}',${itemIdx})" style="width:100%;margin-top:8px;background:#D1FAE5;color:#065F46;border:1.5px solid #6EE7B7;padding:7px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">🏭 เริ่มเท</button>`;
+        : `<button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${remaining},'${itLen}',${itemIdx})" style="width:100%;margin-top:8px;background:#D1FAE5;color:#065F46;border:1.5px solid #6EE7B7;padding:7px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">🏭 เริ่มเท</button>`;
       return `<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
           <span style="font-size:15px;font-weight:800;color:#1E293B;">${pileType}</span>
@@ -6135,6 +6207,17 @@ function renderStockCards() {
     if (p.online !== false) cpOnline[p.pileType]  = (cpOnline[p.pileType]  || 0) + (p.qty||0);
     else                    cpOffline[p.pileType] = (cpOffline[p.pileType] || 0) + (p.qty||0);
   });
+  // คำนวณ "ต้องส่ง" / "ส่งแล้ว" ต่อชนิดเสา จากออเดอร์ทั้งหมด
+  const toShipMap = {}, shippedMap = {};
+  getOrders().forEach(o => {
+    getOrderItems(o).forEach(item => {
+      if (!item.pileType || item.pileType === '-') return;
+      const q = item.qty || 0, d = item.delivered || 0;
+      const rem = Math.max(0, q - d);
+      if (rem > 0) toShipMap[item.pileType]  = (toShipMap[item.pileType]  || 0) + rem;
+      if (d   > 0) shippedMap[item.pileType] = (shippedMap[item.pileType] || 0) + d;
+    });
+  });
   let totalValue = 0;
   const grid = document.getElementById('stockCardsGrid');
   const cards = cfg.pileTypes.map(name => {
@@ -6167,11 +6250,29 @@ function renderStockCards() {
     const tsHtml   = ts ? `<span class="stock-ts">อัปเดต: ${ts}</span>` : `<span class="stock-ts">ยังไม่มีประวัติ</span>`;
     const quickBtn = canDo('edit_stock') ? `<button class="stock-quick-btn" onclick="quickFillStock('${name.replace(/'/g,"\'")}')">+ รับเข้า</button>` : '';
     const statusChip = `<span class="chip ${avail < cfg.stockLow ? 'ch-err' : avail < cfg.stockWarn ? 'ch-delay' : 'ch-in'}">${avail < cfg.stockLow ? '🚨 ต่ำมาก' : avail < cfg.stockWarn ? '⚠ ใกล้หมด' : '✓ ปกติ'}</span>`;
+    // แถบสถานะการจัดส่ง: ต้องส่ง / ส่งแล้ว
+    const toShip  = toShipMap[name]  || 0;
+    const shipped = shippedMap[name] || 0;
+    let shipHtml = '';
+    if (toShip > 0 || shipped > 0) {
+      const totalOrder = toShip + shipped;
+      const pct = totalOrder > 0 ? Math.round(shipped / totalOrder * 100) : 0;
+      shipHtml = `<div style="margin:8px 0 4px;padding:6px 8px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;margin-bottom:4px;">
+          <span style="color:#B45309;">🚚 ต้องส่ง ${toShip}</span>
+          <span style="color:#166534;">✅ ส่งแล้ว ${shipped}</span>
+        </div>
+        <div style="height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:#22C55E;"></div>
+        </div>
+      </div>`;
+    }
     return `<div class="stock-card ${cls}" onclick="openStockDetail('${name.replace(/'/g,'\\'+'\'')}')">
       <div class="stock-name">${name}</div>
       <div class="stock-qty">${displayQty}</div>
       <div class="stock-unit">ต้นทั้งหมด</div>
       ${cpHtml}${valHtml}
+      ${shipHtml}
       ${statusChip}
       <div class="stock-card-footer">${tsHtml}${quickBtn}</div>
     </div>`;
