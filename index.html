@@ -4650,7 +4650,7 @@ function renderOrders() {
           <div class="table-wrap"><table class="data-table">
             <thead><tr>
               <th>เลข Order</th><th>ลูกค้า</th><th>สเปค</th>
-              <th>สั่ง</th><th>ส่งแล้ว ✎</th><th>คืบหน้า</th>
+              <th>สั่ง</th><th>ส่งแล้ว ✎</th><th>ผลิต / ส่ง</th>
               <th>กำหนดส่ง</th><th>Sale / หมายเหตุ</th>
             </tr></thead><tbody>`;
 
@@ -4663,6 +4663,11 @@ function renderOrders() {
           const iPctBar = Math.min(iPct, 100);
           const iBarC = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
           const iPctC = iPct>=100?'#166534':iPct>=50?'#92400E':'#991B1B';
+          const produced   = getTotalProduced(o.orderNum, pile, idx);
+          const prodPct    = it.qty>0 ? Math.round(produced/it.qty*100) : 0;
+          const prodPctBar = Math.min(prodPct, 100);
+          const prodBarC   = prodPct>=100?'#22C55E':prodPct>=50?'#F59E0B':'#F97316';
+          const prodPctC   = prodPct>=100?'#166534':prodPct>=50?'#92400E':'#9A3412';
           const relErr  = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
           const errNote = relErr.length > 0
             ? '⚠️ ' + relErr[relErr.length-1].errorType
@@ -4713,7 +4718,10 @@ function renderOrders() {
             <td style="font-size:12px;">${lenDisp}</td>
             <td><strong>${it.qty}</strong></td>
             <td><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''}>${delDisp} / ${it.qty}</span><br><span style="font-size:11px;color:${over>0?'#DC2626':rem>0?'#854D0E':'#166534'};">${over>0?'ส่งเกิน '+over:'เหลือ '+rem}</span></td>
-            <td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div><span class="prog-pct" style="color:${iPctC};">${iPctBar}%</span></div></td>
+            <td style="min-width:140px;"><div style="display:flex;flex-direction:column;gap:6px;">
+              <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span style="color:#9A3412;">🏭 ผลิต ${produced}/${it.qty}</span><span style="color:${prodPctC};">${prodPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span style="color:#1D4ED8;">🚚 ส่ง ${del}/${it.qty}</span><span style="color:${iPctC};">${iPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div></div>
+            </div></td>
             <td style="font-size:12px;">${o.deliveryDate}${dlBadge}</td>
             
             
@@ -4749,6 +4757,10 @@ function renderOrders() {
     const overTot  = totalDel > tq ? totalDel - tq : 0;
     const delLbl   = overTot > 0 ? `${tq}(+${overTot})` : `${totalDel}`;
     const barC     = pct>=100?'#22C55E':pct>=50?'#F59E0B':'#EF4444';
+    const totalProd = items.reduce((s, it, ii) => s + getTotalProduced(o.orderNum, (it.pileType||o.pileType||'-'), ii), 0);
+    const prodPctM    = tq>0 ? Math.round(totalProd/tq*100) : 0;
+    const prodPctBarM = Math.min(prodPctM, 100);
+    const prodBarCM   = prodPctM>=100?'#22C55E':prodPctM>=50?'#F59E0B':'#F97316';
     const relErr   = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
     const hasErr   = relErr.length > 0;
     const noteText = hasErr
@@ -4778,7 +4790,9 @@ function renderOrders() {
       <div class="mob-oc-mid">
         <div class="mob-oc-pile"><div class="mob-oc-pile-type">${pileDisp}</div><div class="mob-oc-pile-qty">${tq} ${uMob}</div></div>
         <div class="mob-oc-info">
-          <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt">ส่งแล้ว ${delLbl}/${tq} ${uMob}</span><span style="font-size:12px;font-weight:700;">${pctBar}%</span></div>
+          <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt" style="color:#9A3412;">🏭 ผลิต ${totalProd}/${tq} ${uMob}</span><span style="font-size:12px;font-weight:700;color:${prodPctM>=100?'#166534':'#9A3412'};">${prodPctBarM}%</span></div>
+          <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${prodPctBarM}%;background:${prodBarCM};"></div></div>
+          <div class="mob-oc-prog-lbl" style="margin-top:6px;"><span class="mob-oc-prog-txt" style="color:#1D4ED8;">🚚 ส่ง ${delLbl}/${tq} ${uMob}</span><span style="font-size:12px;font-weight:700;">${pctBar}%</span></div>
           <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${pctBar}%;background:${barC};"></div></div>
           <div class="mob-oc-meta"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
         </div>
