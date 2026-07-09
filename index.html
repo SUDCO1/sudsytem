@@ -1274,9 +1274,12 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
           <div class="card-title">🏭 ออเดอร์สำหรับฝ่ายผลิต</div>
           <div class="card-sub">ออเดอร์ที่ฝ่ายผลิตรับแล้ว — กด "🏭 เริ่มเท" เมื่อเทลงราง → กด "✅ ผลิตเสร็จ" เมื่อยกออกจากราง</div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-sm" onclick="openFreeProdForm('pile')" style="flex:1;min-width:150px;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #93C5FD;white-space:nowrap;">📦 ผลิตเพิ่มสต็อก (เสาเข็ม)</button>
-          <button class="btn btn-sm" onclick="openFreeProdForm('girder')" style="flex:1;min-width:150px;background:#F3E8FF;color:#7C3AED;border:1.5px solid #C4B5FD;white-space:nowrap;">🌉 ผลิตเพิ่มสต็อก (Girder)</button>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;">➕ ผลิตเพิ่มสต็อก</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-sm" onclick="openFreeProdForm('pile')" style="flex:1;min-width:0;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #93C5FD;white-space:nowrap;">📦 เสาเข็ม</button>
+            <button class="btn btn-sm" onclick="openFreeProdForm('girder')" style="flex:1;min-width:0;background:#F3E8FF;color:#7C3AED;border:1.5px solid #C4B5FD;white-space:nowrap;">🌉 Girder</button>
+          </div>
         </div>
       </div>
       <div id="prodOrdersBody" style="padding:12px 16px;display:flex;flex-direction:column;gap:12px;"></div>
@@ -4670,8 +4673,8 @@ function renderOrders() {
           const editCall    = isMultiItem ? `editItemDelivered('${o.orderNum}',${idx})` : `editDelivered('${o.orderNum}')`;
           let lenDisp;
           if (isG) {
-            // Girder: จัดกลุ่มเป็นชิปอ่านง่าย
-            const _chip = (label, val, bg, tc) => `<span style="display:inline-flex;align-items:baseline;gap:4px;background:${bg};border-radius:6px;padding:2px 8px;font-size:11px;line-height:1.7;"><span style="color:#64748B;font-weight:600;">${label}</span><span style="color:${tc};font-weight:700;">${val}</span></span>`;
+            // Girder: แถวสเปคแบบ label ซ้าย / ค่าขวา อ่านง่าย ไม่ตัดคำกลางค่า
+            const _row = (label, val, tc) => `<div style="display:flex;align-items:baseline;gap:6px;white-space:nowrap;"><span style="color:#94A3B8;font-weight:600;font-size:10px;min-width:42px;">${label}</span><span style="color:${tc};font-weight:700;">${val}</span></div>`;
             const _dim = [
               it.height && it.height!=='-' ? it.height : null,
               it.width  && it.width!=='-'  ? it.width  : null,
@@ -4682,14 +4685,14 @@ function renderOrders() {
               it.wireMid && it.wireMid!=='-' ? 'กลาง '+it.wireMid : null,
               it.wireBottom && it.wireBottom!=='-' ? 'ล่าง '+it.wireBottom : null,
             ].filter(Boolean).join(' / ');
-            const chips = [
-              _dim ? _chip('📐 ขนาด', _dim, '#EFF6FF', '#1D4ED8') : '',
-              (it.rebar && it.rebar!=='-') ? _chip('🔩 เหล็ก', it.rebar, '#F3E8FF', '#6D28D9') : '',
-              _wire ? _chip('〰 ลวด', _wire, '#DCFCE7', '#166534') : '',
-              (it.pipe && it.pipe!=='-') ? _chip('🕳 ท่อ', it.pipe, '#FEF9C3', '#854D0E') : '',
-              (it.position && it.position!=='-') ? _chip('📍', it.position, '#F1F5F9', '#334155') : '',
-            ].filter(Boolean).join(' ');
-            lenDisp = chips ? `<div style="display:flex;flex-wrap:wrap;gap:5px;max-width:340px;">${chips}</div>` : '<span style="color:#CBD5E1;">—</span>';
+            const rows = [
+              _dim ? _row('📐 ขนาด', _dim, '#1D4ED8') : '',
+              (it.rebar && it.rebar!=='-') ? _row('🔩 เหล็ก', it.rebar, '#6D28D9') : '',
+              _wire ? _row('〰 ลวด', _wire, '#166534') : '',
+              (it.pipe && it.pipe!=='-') ? _row('🕳 ท่อ', it.pipe, '#854D0E') : '',
+              (it.position && it.position!=='-') ? _row('📍 ตำแหน่ง', it.position, '#334155') : '',
+            ].filter(Boolean).join('');
+            lenDisp = rows ? `<div style="display:flex;flex-direction:column;gap:3px;background:#F8FAFC;border:1px solid #EEF2F7;border-radius:8px;padding:6px 9px;">${rows}</div>` : '<span style="color:#CBD5E1;">—</span>';
           } else {
             const specParts = [
               it.length && it.length!=='-' ? it.length : null,
