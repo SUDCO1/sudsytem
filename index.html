@@ -1274,7 +1274,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
           <div class="card-title">🏭 ออเดอร์สำหรับฝ่ายผลิต</div>
           <div class="card-sub">ออเดอร์ที่ฝ่ายผลิตรับแล้ว — กด "🏭 เริ่มเท" เมื่อเทลงราง → กด "✅ ผลิตเสร็จ" เมื่อยกออกจากราง</div>
         </div>
-        <div>
+        <div id="freeProdBtns">
           <div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;">➕ ผลิตเพิ่มสต็อก</div>
           <div style="display:flex;gap:8px;">
             <button class="btn btn-sm" onclick="openFreeProdForm('pile')" style="flex:1;min-width:0;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #93C5FD;white-space:nowrap;">📦 เสาเข็ม</button>
@@ -4149,7 +4149,7 @@ function _applyNav() {
   showNav('nav-transport', canDo('view_shipping'));
   const _adb = document.getElementById('addDeliveryBtn');
   if (_adb) _adb.style.display = canDo('log_shipping') ? '' : 'none';
-  const _fpb = document.getElementById('freeProdFormCard');
+  const _fpb = document.getElementById('freeProdBtns');
   if (_fpb) _fpb.style.display = canDo('log_production') ? '' : 'none';
   const _custForm = document.getElementById('custAddCard');
   if (_custForm) _custForm.style.display = canDo('edit_customers') ? '' : 'none';
