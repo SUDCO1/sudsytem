@@ -713,6 +713,11 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
           <div class="card-sub">กรอกข้อมูลทุกครั้งที่ลูกค้าสั่งซื้อ · ระบบจะบันทึกลูกค้าใหม่อัตโนมัติ</div>
         </div>
       </div>
+      <style>
+        .order-type-toggle{display:inline-flex;gap:4px;background:#F1F5F9;border:1.5px solid #E2E8F0;border-radius:10px;padding:4px;margin:2px 0 14px;}
+        .order-type-toggle button{border:none;background:transparent;font-family:inherit;font-size:13.5px;font-weight:700;color:#64748B;padding:7px 18px;border-radius:7px;cursor:pointer;transition:all .15s ease;display:flex;align-items:center;gap:6px;}
+        .order-type-toggle button.active{background:#2563EB;color:#fff;box-shadow:0 2px 6px rgba(37,99,235,.25);}
+      </style>
       <div class="card-body" id="formView">
         <div class="form-grid">
           <div class="section-divider">📋 ข้อมูลลูกค้า</div>
@@ -749,6 +754,12 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
 
           <div class="section-divider">🏗️ รายการสั่งซื้อ <span style="font-weight:400;color:#9CA3AF;">(เพิ่มได้หลายรายการ)</span></div>
           <div class="full-col">
+            <div class="order-type-toggle" id="orderTypeToggle">
+              <button type="button" id="otBtnPile" class="active" onclick="setOrderProductType('pile')">เสาเข็ม</button>
+              <button type="button" id="otBtnGirder" onclick="setOrderProductType('girder')">Girder</button>
+            </div>
+            <!-- ===== รายการแบบเสาเข็ม ===== -->
+            <div id="pileOrderBlock">
             <div id="orderItemsList"></div>
             <div class="item-add-row">
               <div class="field" style="min-width:160px;flex:2;">
@@ -788,6 +799,58 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
               </div>
             </div>
             <div id="orderValueBox" class="order-value-box" style="margin-top:8px;">— ยังไม่มีรายการสั่งซื้อ</div>
+            </div><!-- /pileOrderBlock -->
+            <!-- ===== รายการแบบ Girder (placeholder – รายละเอียดจะเพิ่มภายหลัง) ===== -->
+            <div id="girderOrderBlock" style="display:none;">
+              <div id="girderItemsList"></div>
+              <div class="item-add-row" style="flex-wrap:wrap;">
+                <div class="field" style="min-width:120px;flex:1;">
+                  <label class="field-label">สูง <span class="req">*</span></label>
+                  <input type="text" id="g_height" placeholder="เช่น 0.30 ม."/>
+                </div>
+                <div class="field" style="min-width:120px;flex:1;">
+                  <label class="field-label">กว้าง <span style="font-weight:400;color:#9CA3AF;">(ฟิกซ์)</span></label>
+                  <input type="text" id="g_width" value="0.99 ม." readonly style="background:#F1F5F9;color:#64748B;cursor:not-allowed;"/>
+                </div>
+                <div class="field" style="min-width:120px;flex:1;">
+                  <label class="field-label">ยาว <span class="req">*</span></label>
+                  <input type="text" id="g_length" placeholder="เช่น 10m, 12m"/>
+                </div>
+                <div class="field" style="min-width:118px;flex:1;">
+                  <label class="field-label">จำนวน <span style="font-weight:400;color:#9CA3AF;">(ตัว)</span> <span class="req">*</span></label>
+                  <input type="number" id="g_qty" placeholder="เช่น 10" min="1"/>
+                </div>
+                <div class="field" style="min-width:120px;flex:1;">
+                  <label class="field-label">เหล็กเส้น</label>
+                  <input type="text" id="g_rebar" placeholder="เช่น DB12"/>
+                </div>
+              </div>
+              <!-- ลวด 3 แถว (บน / กลาง / ล่าง) -->
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
+                <div class="field"><label class="field-label">ลวดบน</label><input type="text" id="g_wire_top" placeholder="เช่น 4mm x 5 เส้น"/></div>
+                <div class="field"><label class="field-label">ลวดกลาง</label><input type="text" id="g_wire_mid" placeholder="เช่น 4mm x 3 เส้น"/></div>
+                <div class="field"><label class="field-label">ลวดล่าง</label><input type="text" id="g_wire_bot" placeholder="เช่น 4mm x 5 เส้น"/></div>
+              </div>
+              <div class="item-add-row" style="flex-wrap:wrap;margin-top:10px;">
+                <div class="field" style="min-width:160px;flex:1;">
+                  <label class="field-label">ท่อ</label>
+                  <input type="text" id="g_pipe" placeholder="เช่น มี, ไม่มี, ขนาด"/>
+                </div>
+              </div>
+              <div class="field" style="margin-top:10px;">
+                <label class="field-label">ตำแหน่ง</label>
+                <div style="display:flex;gap:18px;padding-top:6px;">
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:#334155;"><input type="radio" name="g_position" value="ตัวกลาง" checked/> ตัวกลาง</label>
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:#334155;"><input type="radio" name="g_position" value="ตัวริม"/> ตัวริม</label>
+                </div>
+              </div>
+              <div class="item-add-row" style="margin-top:12px;">
+                <div class="field" style="align-self:flex-end;">
+                  <button class="btn btn-ghost btn-sm" onclick="addGirderItem()" style="white-space:nowrap;">+ เพิ่มรายการ</button>
+                </div>
+              </div>
+              <div id="girderValueBox" class="order-value-box" style="margin-top:10px;">— ยังไม่มีรายการสั่งซื้อ</div>
+            </div>
           </div>
 
 
@@ -1037,7 +1100,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
     <div class="card" id="freeProdFormCard" style="display:none;border:2px solid #93C5FD;">
       <div class="card-header" style="justify-content:space-between;background:#EFF6FF;border-radius:10px 10px 0 0;">
         <div>
-          <div class="card-title" style="color:#1D4ED8;">📦 ผลิตเพิ่มสต็อก</div>
+          <div class="card-title" id="fprodTitle" style="color:#1D4ED8;">📦 ผลิตเพิ่มสต็อก</div>
           <div class="card-sub">ผลิตโดยไม่อิง Order — เพิ่มสต็อกทันทีเมื่อผลิตเสร็จ</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="closeFreeProdForm()">✕ ปิด</button>
@@ -1055,35 +1118,92 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
               <label class="field-label">เวลาเริ่มผลิต</label>
               <input type="time" id="fprod_time"/>
             </div>
-            <div class="field">
+            <div class="field" id="fprodPileTypeField">
               <label class="field-label">ชนิดเสา <span class="req">*</span></label>
-              <select id="fprod_pile" class="select-inp">
-                <option value="">— เลือกชนิดเสา —</option>
+              <select id="fprod_pile" class="select-inp" onchange="fprodTypeChange()">
+                <option value="">— เลือกชนิด —</option>
               </select>
             </div>
-            <div class="field">
+            <div class="field" id="fprodGirderBadgeField" style="display:none;">
+              <label class="field-label">ชนิดสินค้า</label>
+              <div style="padding:9px 12px;border-radius:8px;background:#F3E8FF;color:#7C3AED;font-weight:800;border:1.5px solid #DDD6FE;">🌉 Girder</div>
+            </div>
+            <div class="field fprod-pile-only">
               <label class="field-label">ความยาว</label>
               <input type="text" id="fprod_length" placeholder="เช่น 6m, 9m"/>
             </div>
             <div class="field">
-              <label class="field-label">จำนวนที่เทลงราง <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select> <span class="req">*</span></label>
+              <label class="field-label">จำนวนที่เทลงราง <span id="fprodUnitPile"><select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></span><span id="fprodUnitGirder" style="display:none;font-weight:700;color:#7C3AED;">ตัว</span> <span class="req">*</span></label>
               <input type="number" id="fprod_qty" min="1" placeholder="เช่น 50"/>
             </div>
-            <div class="field">
+            <!-- ── สเปคเสาเข็ม ── -->
+            <div class="field fprod-pile-only">
               <label class="field-label">เชื่อม</label>
               <input type="text" id="fprod_weld" placeholder="เช่น มี, ไม่มี"/>
             </div>
-            <div class="field">
+            <div class="field fprod-pile-only">
               <label class="field-label">เหล็กเสริม</label>
               <input type="text" id="fprod_steel" placeholder="เช่น DB12"/>
             </div>
-            <div class="field">
+            <div class="field fprod-pile-only">
               <label class="field-label">ลวด</label>
               <input type="text" id="fprod_wire" placeholder="เช่น 4mm"/>
             </div>
-            <div class="field">
+            <div class="field fprod-pile-only">
               <label class="field-label">บ่า</label>
               <input type="text" id="fprod_ba" placeholder="เช่น มี, ไม่มี"/>
+            </div>
+            <!-- ── สเปค Girder (จัดกลุ่มให้อ่านง่าย) ── -->
+            <div class="field full-col fprod-girder-only" style="display:none;">
+              <label class="field-label" style="color:#0F172A;font-weight:700;">📐 ขนาด</label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:120px;">
+                  <div style="font-size:11px;color:#0F172A;font-weight:600;margin-bottom:4px;">สูง</div>
+                  <input type="text" id="fprod_g_height" placeholder="เช่น 0.60 ม." style="width:100%;"/>
+                </div>
+                <div style="flex:1;min-width:120px;">
+                  <div style="font-size:11px;color:#0F172A;font-weight:600;margin-bottom:4px;">กว้าง</div>
+                  <input type="text" id="fprod_g_width" value="0.99 ม." readonly style="width:100%;background:#F1F5F9;color:#64748B;"/>
+                </div>
+                <div style="flex:1;min-width:120px;">
+                  <div style="font-size:11px;color:#0F172A;font-weight:600;margin-bottom:4px;">ยาว</div>
+                  <input type="text" id="fprod_g_length" placeholder="เช่น 6m, 9m" style="width:100%;"/>
+                </div>
+              </div>
+            </div>
+            <div class="field full-col fprod-girder-only" style="display:none;">
+              <label class="field-label" style="color:#0F172A;font-weight:700;">🔩 เหล็ก</label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:120px;">
+                  <div style="font-size:11px;color:#0F172A;font-weight:600;margin-bottom:4px;">เหล็กเส้น</div>
+                  <input type="text" id="fprod_g_rebar" placeholder="เช่น DB12" style="width:100%;"/>
+                </div>
+              </div>
+            </div>
+            <div class="field full-col fprod-girder-only" style="display:none;">
+              <label class="field-label" style="color:#0F172A;font-weight:700;">〰 ลวด</label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:120px;">
+                  <div style="font-size:11px;color:#0F172A;font-weight:600;margin-bottom:4px;">ลวดบน</div>
+                  <input type="text" id="fprod_g_wtop" placeholder="เช่น 4mm" style="width:100%;"/>
+                </div>
+                <div style="flex:1;min-width:120px;">
+                  <div style="font-size:11px;color:#0F172A;font-weight:600;margin-bottom:4px;">ลวดกลาง</div>
+                  <input type="text" id="fprod_g_wmid" placeholder="เช่น 4mm" style="width:100%;"/>
+                </div>
+                <div style="flex:1;min-width:120px;">
+                  <div style="font-size:11px;color:#0F172A;font-weight:600;margin-bottom:4px;">ลวดล่าง</div>
+                  <input type="text" id="fprod_g_wbot" placeholder="เช่น 4mm" style="width:100%;"/>
+                </div>
+              </div>
+            </div>
+            <div class="field fprod-girder-only" style="display:none;">
+              <label class="field-label" style="color:#0F172A;font-weight:700;">🕳 ท่อ</label>
+              <input type="text" id="fprod_g_pipe" placeholder="เช่น มี, ไม่มี"/>
+            </div>
+            <div class="field fprod-girder-only" style="display:none;">
+              <label class="field-label" style="color:#0F172A;font-weight:700;">📍 ตำแหน่ง</label>
+              <select id="fprod_g_pos" class="select-inp"><option value="ตัวกลาง">ตัวกลาง</option><option value="ตัวริม">ตัวริม</option></select>
             </div>
             <div class="field">
               <label class="field-label">เพิ่มเติม <span style="font-weight:400;color:#94A3B8;">(ไม่บังคับ)</span></label>
@@ -1154,7 +1274,10 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
           <div class="card-title">🏭 ออเดอร์สำหรับฝ่ายผลิต</div>
           <div class="card-sub">ออเดอร์ที่ฝ่ายผลิตรับแล้ว — กด "🏭 เริ่มเท" เมื่อเทลงราง → กด "✅ ผลิตเสร็จ" เมื่อยกออกจากราง</div>
         </div>
-        <button class="btn btn-sm" onclick="openFreeProdForm()" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #93C5FD;white-space:nowrap;">📦 ผลิตเพิ่มสต็อก</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm" onclick="openFreeProdForm('pile')" style="flex:1;min-width:150px;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #93C5FD;white-space:nowrap;">📦 ผลิตเพิ่มสต็อก (เสาเข็ม)</button>
+          <button class="btn btn-sm" onclick="openFreeProdForm('girder')" style="flex:1;min-width:150px;background:#F3E8FF;color:#7C3AED;border:1.5px solid #C4B5FD;white-space:nowrap;">🌉 ผลิตเพิ่มสต็อก (Girder)</button>
+        </div>
       </div>
       <div id="prodOrdersBody" style="padding:12px 16px;display:flex;flex-direction:column;gap:12px;"></div>
     </div>
@@ -3909,7 +4032,7 @@ function populateAllDropdowns() {
   populateSelect('f_type',   cfg.pileTypes);
   populateSelect('pe_staff', cfg.prodStaff);
   populateSelect('se_staff', cfg.shipStaff);
-  populateSelect('sf_stype', cfg.pileTypes, '— เลือกชนิด —');
+  populateSelect('sf_stype', [...cfg.pileTypes, 'Girder'], '— เลือกชนิด —');
   populateSelect('sf_staff', cfg.stockStaff);
   populateCustLookup();
 }
@@ -4050,6 +4173,7 @@ function goTab(name, el) {
   if (mnavEl) mnavEl.classList.add('active');
   else { const mm = document.getElementById('mnav-more'); if (mm) mm.classList.add('active'); }
   // Render dashboard on switch
+  if (name === 'form')      { setOrderProductType('pile'); }
   if (name === 'home')      { renderHome(); }
   if (name === 'dashboard') { renderDashboard(); }
   if (name === 'status')    { document.getElementById('nav-status')?.classList.remove('has-new'); renderOrders(); }
@@ -4102,46 +4226,105 @@ function homeGo(tab, perm) {
 let orderItemsDraft = [];
 
 function renderOrderItemsDraft() {
+  const d = v => (v && v !== '-') ? v : '—';
+  // ── รายการเสาเข็ม ──────────────────────────────────────────────
   const listEl = document.getElementById('orderItemsList');
   const box    = document.getElementById('orderValueBox');
-  if (!listEl) return;
-  if (orderItemsDraft.length === 0) {
-    listEl.innerHTML = '';
-    if (box) { box.className = 'order-value-box'; box.textContent = '— ยังไม่มีรายการสั่งซื้อ'; }
-    return;
-  }
-  const totalQty = orderItemsDraft.reduce((s,it) => s+(it.qty||0), 0);
-  const totalVal = orderItemsDraft.reduce((s,it) => s+(it.value||0), 0);
-  const rows = orderItemsDraft.map((it,i) => {
-    const valDisp = it.value > 0 ? it.value.toLocaleString('th-TH') + ' ฿' : '—';
-    const lenDisp   = it.length && it.length !== '-' ? it.length : '—';
-    const weldDisp  = it.weld  && it.weld  !== '-' ? it.weld  : '—';
-    const steelDisp = it.steel && it.steel !== '-' ? it.steel : '—';
-    const wireDisp  = it.wire  && it.wire  !== '-' ? it.wire  : '—';
-    const baDisp    = it.ba    && it.ba    !== '-' ? it.ba    : '—';
-    const extraDisp = it.extra && it.extra !== '-' ? it.extra : '—';
-    return '<tr><td style="font-weight:600;">' + it.pileType + '</td>'
-      + '<td style="font-weight:700;color:#1E293B;">' + it.qty + ' ต้น</td>'
-      + '<td style="color:#64748B;">' + lenDisp + '</td>'
-      + '<td style="color:#64748B;">' + weldDisp + '</td>'
-      + '<td style="color:#64748B;">' + steelDisp + '</td>'
-      + '<td style="color:#64748B;">' + wireDisp + '</td>'
-      + '<td style="color:#64748B;">' + baDisp + '</td>'
-      + '<td style="color:#64748B;">' + extraDisp + '</td>'
-      + '<td style="color:#166534;">' + valDisp + '</td>'
-      + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
-  }).join('');
-  listEl.innerHTML = '<table class="items-draft-table"><thead><tr>'
-    + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>บ่า</th><th>เพิ่มเติม</th><th></th>'
-    + '</tr></thead><tbody>' + rows + '</tbody></table>';
-  if (box) {
-    box.className = 'order-value-box has-value';
-    if (totalVal > 0) {
-      box.textContent = 'รวม ' + totalQty + ' ต้น · มูลค่า ' + totalVal.toLocaleString('th-TH') + ' บาท';
+  let pileRows = '', pileQty = 0, pileVal = 0, pileCount = 0;
+  // ── รายการ Girder ──────────────────────────────────────────────
+  const gListEl = document.getElementById('girderItemsList');
+  const gBox    = document.getElementById('girderValueBox');
+  let gRows = '', gQty = 0, gCount = 0;
+
+  orderItemsDraft.forEach((it, i) => {
+    if (it.productType === 'girder') {
+      gCount++; gQty += (it.qty || 0);
+      gRows += '<tr><td style="font-weight:600;">' + d(it.height) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.width) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.length) + '</td>'
+        + '<td style="font-weight:700;color:#1E293B;">' + it.qty + ' ตัว</td>'
+        + '<td style="color:#64748B;">' + d(it.rebar) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.wireTop) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.wireMid) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.wireBottom) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.pipe) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.position) + '</td>'
+        + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
     } else {
-      box.textContent = 'รวม ' + totalQty + ' ต้น · (ยังไม่ได้ตั้งราคา)';
+      pileCount++; pileQty += (it.qty || 0); pileVal += (it.value || 0);
+      const valDisp = it.value > 0 ? it.value.toLocaleString('th-TH') + ' ฿' : '—';
+      pileRows += '<tr><td style="font-weight:600;">' + it.pileType + '</td>'
+        + '<td style="font-weight:700;color:#1E293B;">' + it.qty + ' ต้น</td>'
+        + '<td style="color:#64748B;">' + d(it.length) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.weld) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.steel) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.wire) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.ba) + '</td>'
+        + '<td style="color:#64748B;">' + d(it.extra) + '</td>'
+        + '<td style="color:#166534;">' + valDisp + '</td>'
+        + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
+    }
+  });
+
+  if (listEl) {
+    listEl.innerHTML = pileCount === 0 ? '' :
+      '<table class="items-draft-table"><thead><tr>'
+      + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>บ่า</th><th>เพิ่มเติม</th><th>มูลค่า</th><th></th>'
+      + '</tr></thead><tbody>' + pileRows + '</tbody></table>';
+  }
+  if (box) {
+    if (pileCount === 0) { box.className = 'order-value-box'; box.textContent = '— ยังไม่มีรายการสั่งซื้อ'; }
+    else {
+      box.className = 'order-value-box has-value';
+      box.textContent = pileVal > 0
+        ? 'รวม ' + pileQty + ' ต้น · มูลค่า ' + pileVal.toLocaleString('th-TH') + ' บาท'
+        : 'รวม ' + pileQty + ' ต้น · (ยังไม่ได้ตั้งราคา)';
     }
   }
+
+  if (gListEl) {
+    gListEl.innerHTML = gCount === 0 ? '' :
+      '<table class="items-draft-table"><thead><tr>'
+      + '<th>สูง</th><th>กว้าง</th><th>ยาว</th><th>จำนวน</th><th>เหล็กเส้น</th><th>ลวดบน</th><th>ลวดกลาง</th><th>ลวดล่าง</th><th>ท่อ</th><th>ตำแหน่ง</th><th></th>'
+      + '</tr></thead><tbody>' + gRows + '</tbody></table>';
+  }
+  if (gBox) {
+    if (gCount === 0) { gBox.className = 'order-value-box'; gBox.textContent = '— ยังไม่มีรายการสั่งซื้อ'; }
+    else { gBox.className = 'order-value-box has-value'; gBox.textContent = 'รวม ' + gQty + ' ตัว · ' + gCount + ' รายการ'; }
+  }
+}
+
+function addGirderItem() {
+  const g = id => document.getElementById(id);
+  const height = (g('g_height').value || '').trim();
+  const length = (g('g_length').value || '').trim();
+  const qty    = parseInt(g('g_qty').value) || 0;
+  const rebar  = (g('g_rebar').value || '').trim();
+  const wireTop = (g('g_wire_top').value || '').trim();
+  const wireMid = (g('g_wire_mid').value || '').trim();
+  const wireBot = (g('g_wire_bot').value || '').trim();
+  const pipe    = (g('g_pipe').value || '').trim();
+  const posEl   = document.querySelector('input[name="g_position"]:checked');
+  const position = posEl ? posEl.value : 'ตัวกลาง';
+  if (!height) { showToast('⚠️ กรุณากรอกความสูงก่อน'); return; }
+  if (!length) { showToast('⚠️ กรุณากรอกความยาวก่อน'); return; }
+  if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (ตัว)'); return; }
+  orderItemsDraft.push({
+    productType: 'girder',
+    pileType:    'Girder',
+    qty,
+    height, width: '0.99 ม.', length,
+    rebar:      rebar   || '-',
+    wireTop:    wireTop || '-',
+    wireMid:    wireMid || '-',
+    wireBottom: wireBot || '-',
+    pipe:       pipe    || '-',
+    position,
+    value: 0,
+  });
+  ['g_height','g_length','g_qty','g_rebar','g_wire_top','g_wire_mid','g_wire_bot','g_pipe'].forEach(id => { const e = g(id); if (e) e.value = ''; });
+  const rb = document.querySelector('input[name="g_position"][value="ตัวกลาง"]'); if (rb) rb.checked = true;
+  renderOrderItemsDraft();
 }
 
 function addOrderItem() {
@@ -4156,7 +4339,7 @@ function addOrderItem() {
   if (!type) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
   if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (ต้น)'); return; }
   const value = calcOrderValue(type, qty);
-  orderItemsDraft.push({ pileType: type, qty, length: len || '-', weld: weld || '-', steel: steel || '-', wire: wire || '-', ba: ba || '-', extra: extra || '-', value });
+  orderItemsDraft.push({ productType: 'pile', pileType: type, qty, length: len || '-', weld: weld || '-', steel: steel || '-', wire: wire || '-', ba: ba || '-', extra: extra || '-', value });
   document.getElementById('f_type').selectedIndex = 0;
   document.getElementById('f_qty').value    = '';
   document.getElementById('f_length').value = '';
@@ -4238,6 +4421,7 @@ function submitOrder() {
   const _stockCfg  = getConfig();
   const _warnings = [];
   orderItemsDraft.forEach(it => {
+    if (it.productType === 'girder') return; // Girder ยังไม่ผูกกับสต็อกเสาเข็ม
     const avail = (_stockNow[it.pileType]||0) - (_stockRes[it.pileType]||0);
     if (avail < it.qty) {
       _warnings.push('⚠️ ' + it.pileType + ': ต้องการ ' + it.qty + ' ต้น แต่คงเหลือจริง ' + Math.max(0,avail) + ' ต้น');
@@ -4286,8 +4470,9 @@ function autoSaveCustomer(name, tel, addr) {
 }
 
 function resetFormOnly() {
-  ['f_customer','f_tel','f_qty','f_length','f_weld','f_steel','f_wire','f_cust_addr','f_order_num'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['f_customer','f_tel','f_qty','f_length','f_weld','f_steel','f_wire','f_cust_addr','f_order_num','g_height','g_length','g_qty','g_rebar','g_wire_top','g_wire_mid','g_wire_bot','g_pipe'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   ['f_sale','f_type','f_cust_lookup'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
+  var gPosDefault = document.querySelector('input[name="g_position"][value="ตัวกลาง"]'); if (gPosDefault) gPosDefault.checked = true;
   orderItemsDraft = [];
   renderOrderItemsDraft();
   var todayEl = document.getElementById('f_order_date');
@@ -4299,6 +4484,19 @@ function resetForm() {
   document.getElementById('formView').style.display    = 'block';
   document.getElementById('successView').style.display = 'none';
   resetFormOnly();
+  setOrderProductType('pile');
+}
+// ── เลือกประเภทรายการสั่งซื้อ (เสาเข็ม / Girder) ─────────────────
+function setOrderProductType(kind) {
+  var isGirder = (kind === 'girder');
+  var pileBlk   = document.getElementById('pileOrderBlock');
+  var girderBlk = document.getElementById('girderOrderBlock');
+  var btnPile   = document.getElementById('otBtnPile');
+  var btnGirder = document.getElementById('otBtnGirder');
+  if (pileBlk)   pileBlk.style.display   = isGirder ? 'none' : 'block';
+  if (girderBlk) girderBlk.style.display = isGirder ? 'block' : 'none';
+  if (btnPile)   btnPile.classList.toggle('active', !isGirder);
+  if (btnGirder) btnGirder.classList.toggle('active', isGirder);
 }
 function goToTracker() {
   resetForm();
@@ -4424,6 +4622,8 @@ function renderOrders() {
       let html = '';
       pileOrderArr.forEach((pile, pi) => {
         const pal    = PILE_PALETTE[pi % PILE_PALETTE.length];
+        const isG    = (pile === 'Girder');
+        const u      = isG ? 'ตัว' : 'ต้น';
         const entries = pileGroups[pile];
         const totalQty = entries.reduce((s,{it}) => s+(it.qty||0), 0);
         const totalDel = entries.reduce((s,{it}) => s+(it.delivered||0), 0);
@@ -4436,11 +4636,11 @@ function renderOrders() {
           <div class="card-header" style="background:${pal.bg};border-radius:10px 10px 0 0;">
             <div style="width:12px;height:12px;border-radius:50%;background:${pal.border};flex-shrink:0;"></div>
             <div>
-              <div class="card-title" style="color:${pal.text};">${pile}</div>
-              <div class="card-sub">${entries.length} รายการ · สั่งรวม <strong>${totalQty}</strong> ต้น · ส่งแล้ว <strong>${totalDel}</strong> ต้น</div>
+              <div class="card-title" style="color:${pal.text};display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${pile} <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;${isG?'background:#F3E8FF;color:#7C3AED;':'background:#E0F2FE;color:#0369A1;'}">${isG?'🌉 คานสะพาน (Girder)':'🏗️ เสาเข็ม'}</span></div>
+              <div class="card-sub">${entries.length} รายการ · สั่งรวม <strong>${totalQty}</strong> ${u} · ส่งแล้ว <strong>${totalDel}</strong> ${u}</div>
             </div>
             <div style="margin-left:auto;text-align:right;font-size:12px;flex-shrink:0;">
-              <div style="font-weight:700;color:${availColor};">คลังคงเหลือ: ${avail} ต้น</div>
+              <div style="font-weight:700;color:${availColor};">คลังคงเหลือ: ${avail} ${u}</div>
               <div style="font-size:10px;color:#94A3B8;">ทั้งหมด ${stockTotal} · จอง ${reserved}</div>
             </div>
           </div>
@@ -4468,15 +4668,39 @@ function renderOrders() {
           const dlBadge     = deadlineBadge(o.deliveryDateISO, iPct);
           const isMultiItem = o.items && o.items.length > 1;
           const editCall    = isMultiItem ? `editItemDelivered('${o.orderNum}',${idx})` : `editDelivered('${o.orderNum}')`;
-          const specParts   = [
-            it.length && it.length!=='-' ? it.length : null,
-            it.weld   && it.weld!=='-'   ? '🔗 '+it.weld   : null,
-            it.steel  && it.steel!=='-'  ? '🔩 '+it.steel  : null,
-            it.wire   && it.wire!=='-'   ? '〰 '+it.wire   : null,
-            it.ba     && it.ba!=='-'     ? '🔷 '+it.ba     : null,
-            it.extra  && it.extra!=='-'  ? '📝 '+it.extra  : null,
-          ].filter(Boolean);
-          const lenDisp     = specParts.length ? '<span style="white-space:nowrap;">'+specParts.join(' · ')+'</span>' : '<span style="color:#CBD5E1;">—</span>';
+          let lenDisp;
+          if (isG) {
+            // Girder: จัดกลุ่มเป็นชิปอ่านง่าย
+            const _chip = (label, val, bg, tc) => `<span style="display:inline-flex;align-items:baseline;gap:4px;background:${bg};border-radius:6px;padding:2px 8px;font-size:11px;line-height:1.7;"><span style="color:#64748B;font-weight:600;">${label}</span><span style="color:${tc};font-weight:700;">${val}</span></span>`;
+            const _dim = [
+              it.height && it.height!=='-' ? it.height : null,
+              it.width  && it.width!=='-'  ? it.width  : null,
+              it.length && it.length!=='-' ? it.length : null,
+            ].filter(Boolean).join(' × ');
+            const _wire = [
+              it.wireTop && it.wireTop!=='-' ? 'บน '+it.wireTop : null,
+              it.wireMid && it.wireMid!=='-' ? 'กลาง '+it.wireMid : null,
+              it.wireBottom && it.wireBottom!=='-' ? 'ล่าง '+it.wireBottom : null,
+            ].filter(Boolean).join(' / ');
+            const chips = [
+              _dim ? _chip('📐 ขนาด', _dim, '#EFF6FF', '#1D4ED8') : '',
+              (it.rebar && it.rebar!=='-') ? _chip('🔩 เหล็ก', it.rebar, '#F3E8FF', '#6D28D9') : '',
+              _wire ? _chip('〰 ลวด', _wire, '#DCFCE7', '#166534') : '',
+              (it.pipe && it.pipe!=='-') ? _chip('🕳 ท่อ', it.pipe, '#FEF9C3', '#854D0E') : '',
+              (it.position && it.position!=='-') ? _chip('📍', it.position, '#F1F5F9', '#334155') : '',
+            ].filter(Boolean).join(' ');
+            lenDisp = chips ? `<div style="display:flex;flex-wrap:wrap;gap:5px;max-width:340px;">${chips}</div>` : '<span style="color:#CBD5E1;">—</span>';
+          } else {
+            const specParts = [
+              it.length && it.length!=='-' ? it.length : null,
+              it.weld   && it.weld!=='-'   ? '🔗 '+it.weld   : null,
+              it.steel  && it.steel!=='-'  ? '🔩 '+it.steel  : null,
+              it.wire   && it.wire!=='-'   ? '〰 '+it.wire   : null,
+              it.ba     && it.ba!=='-'     ? '🔷 '+it.ba     : null,
+              it.extra  && it.extra!=='-'  ? '📝 '+it.extra  : null,
+            ].filter(Boolean);
+            lenDisp = specParts.length ? '<span style="white-space:nowrap;">'+specParts.join(' · ')+'</span>' : '<span style="color:#CBD5E1;">—</span>';
+          }
           const valDisp     = o.orderValue > 0 ? o.orderValue.toLocaleString('th-TH')+' ฿' : '—';
           const rowCls      = deadlineRowClass(o.deliveryDateISO, iPct);
 
@@ -4532,7 +4756,13 @@ function renderOrders() {
     const stCls    = statusClass(o.status||'รับ Order แล้ว');
     const stLabel  = o.status||'รับ Order แล้ว';
     const isMulti  = items.length > 1;
-    const pileDisp = isMulti ? items.length+'<br><span style="font-size:10px;">ชนิด</span>' : (items[0]?.pileType||o.pileType||'-');
+    const _allGird = (items.length && items.every(x => x.productType === 'girder'));
+    const _anyGird = items.some(x => x.productType === 'girder');
+    const uMob     = _allGird ? 'ตัว' : 'ต้น';
+    const _typeBadge = isMulti
+      ? (_anyGird ? '<div style="font-size:9px;font-weight:700;margin-top:3px;padding:1px 6px;border-radius:99px;background:#F3E8FF;color:#7C3AED;display:inline-block;">🌉 มี Girder</div>' : '<div style="font-size:9px;font-weight:700;margin-top:3px;padding:1px 6px;border-radius:99px;background:#E0F2FE;color:#0369A1;display:inline-block;">🏗️ เสาเข็ม</div>')
+      : (_allGird ? '<div style="font-size:9px;font-weight:700;margin-top:3px;padding:1px 6px;border-radius:99px;background:#F3E8FF;color:#7C3AED;display:inline-block;">🌉 คานสะพาน</div>' : '<div style="font-size:9px;font-weight:700;margin-top:3px;padding:1px 6px;border-radius:99px;background:#E0F2FE;color:#0369A1;display:inline-block;">🏗️ เสาเข็ม</div>');
+    const pileDisp = (isMulti ? items.length+'<br><span style="font-size:10px;">ชนิด</span>' : (items[0]?.pileType||o.pileType||'-')) + _typeBadge;
     const valDisp  = o.orderValue > 0 ? '฿'+o.orderValue.toLocaleString('th-TH') : '';
     let btns = '';
     if (canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='รับ Order แล้ว') btns += `<button onclick="acceptOrder('${o.orderNum}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🏭 รับ</button>`;
@@ -4543,9 +4773,9 @@ function renderOrders() {
       <div class="mob-oc-cust">${o.customer}<span class="mob-oc-tel">${o.tel?' · '+o.tel:''}</span>${valDisp?'<span style="margin-left:auto;font-size:12px;color:#166534;font-weight:700;">'+valDisp+'</span>':''}</div>
       <div class="mob-oc-div"></div>
       <div class="mob-oc-mid">
-        <div class="mob-oc-pile"><div class="mob-oc-pile-type">${pileDisp}</div><div class="mob-oc-pile-qty">${tq} ต้น</div></div>
+        <div class="mob-oc-pile"><div class="mob-oc-pile-type">${pileDisp}</div><div class="mob-oc-pile-qty">${tq} ${uMob}</div></div>
         <div class="mob-oc-info">
-          <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt">ส่งแล้ว ${delLbl}/${tq} ต้น</span><span style="font-size:12px;font-weight:700;">${pctBar}%</span></div>
+          <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt">ส่งแล้ว ${delLbl}/${tq} ${uMob}</span><span style="font-size:12px;font-weight:700;">${pctBar}%</span></div>
           <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${pctBar}%;background:${barC};"></div></div>
           <div class="mob-oc-meta"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
         </div>
@@ -4728,6 +4958,8 @@ function renderProdSection() {
     const delivLine = o.delivDate ? `<span style="font-size:11px;color:#64748B;">📅 ส่ง ${isoToThai(o.delivDate)}</span>` : '';
     const pilesHtml = items.map((it, itemIdx) => {
       const pileType = it.pileType || o.pileType || '-';
+      const isG = it.productType === 'girder';
+      const u   = isG ? 'ตัว' : 'ต้น';
       const totalProduced = getTotalProduced(o.orderNum, pileType, itemIdx);
       const stockDelivered = it.stockDelivered || 0;
       const pct = it.qty > 0 ? Math.min(100, Math.round((totalProduced + stockDelivered) / it.qty * 100)) : 0;
@@ -4738,39 +4970,49 @@ function renderProdSection() {
       const inProgQty = _actList.reduce((s,a) => s + (a.qtyCasting||0), 0);
       const itLen  = (it.length||o.length||'-').replace(/'/g,"\\'");
       // spec tags
-      const tags = [
+      const tags = (isG ? [
+        it.height && it.height!=='-' ? `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📐 สูง ${it.height}</span>` : '',
+        it.width  && it.width !=='-' ? `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📐 กว้าง ${it.width}</span>` : '',
+        it.length && it.length!=='-' ? `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📐 ยาว ${it.length}</span>` : '',
+        it.rebar  && it.rebar !=='-' ? `<span style="background:#F3E8FF;color:#6D28D9;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔩 ${it.rebar}</span>`  : '',
+        it.wireTop && it.wireTop!=='-' ? `<span style="background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">〰บน ${it.wireTop}</span>` : '',
+        it.wireMid && it.wireMid!=='-' ? `<span style="background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">〰กลาง ${it.wireMid}</span>` : '',
+        it.wireBottom && it.wireBottom!=='-' ? `<span style="background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">〰ล่าง ${it.wireBottom}</span>` : '',
+        it.pipe   && it.pipe !=='-'  ? `<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🕳 ${it.pipe}</span>`   : '',
+        it.position && it.position!=='-' ? `<span style="background:#F1F5F9;color:#475569;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📍 ${it.position}</span>` : '',
+      ] : [
         it.length && it.length!=='-' ? `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📐 ${it.length}</span>` : '',
         it.weld   && it.weld  !=='-' ? `<span style="background:#FEF9C3;color:#854D0E;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔗 ${it.weld}</span>`   : '',
         it.steel  && it.steel !=='-' ? `<span style="background:#F3E8FF;color:#6D28D9;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔩 ${it.steel}</span>`  : '',
         it.wire   && it.wire  !=='-' ? `<span style="background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">〰 ${it.wire}</span>`   : '',
         it.ba     && it.ba    !=='-' ? `<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔷 ${it.ba}</span>`     : '',
         it.extra  && it.extra !=='-' ? `<span style="background:#F1F5F9;color:#475569;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📝 ${it.extra}</span>`  : '',
-      ].filter(Boolean).join(' ');
+      ]).filter(Boolean).join(' ');
       const btn = !canDo('log_production') ? '' : inProd
         ? `<div style="margin-top:8px;">
-            <div style="background:#FEF3C7;color:#92400E;border:1.5px solid #FDE68A;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;text-align:center;margin-bottom:4px;">🏭 กำลังผลิตอยู่ ${inProgQty} ต้น (ในราง)</div>
+            <div style="background:#FEF3C7;color:#92400E;border:1.5px solid #FDE68A;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;text-align:center;margin-bottom:4px;">🏭 กำลังผลิตอยู่ ${inProgQty} ${u} (ในราง)</div>
             <button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${remaining},'${itLen}',${itemIdx})" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;padding:6px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">➕ เริ่มเทเพิ่ม</button>
            </div>`
         : `<button onclick="openStartProdForm('${o.orderNum}','${pileType.replace(/'/g,"\\'")}',${remaining},'${itLen}',${itemIdx})" style="width:100%;margin-top:8px;background:#D1FAE5;color:#065F46;border:1.5px solid #6EE7B7;padding:7px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">🏭 เริ่มเท</button>`;
       return `<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
           <span style="font-size:15px;font-weight:800;color:#1E293B;">${pileType}</span>
-          <span style="font-size:12px;font-weight:700;color:${remaining<=0?'#166534':'#1E40AF'};" title="เหลือผลิต">${remaining} ต้น</span>
+          <span style="font-size:12px;font-weight:700;color:${remaining<=0?'#166534':'#1E40AF'};" title="เหลือผลิต">${remaining} ${u}</span>
         </div>
         ${tags ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${tags}</div>` : ''}
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:4px;">
-          <span>ผลิตแล้ว <strong style="color:${pct>=100?'#166534':'#1E293B'};">${totalProduced}</strong> / ${it.qty} ต้น</span>
+          <span>ผลิตแล้ว <strong style="color:${pct>=100?'#166534':'#1E293B'};">${totalProduced}</strong> / ${it.qty} ${u}</span>
           <span style="font-weight:700;color:${pct>=100?'#166534':'#92400E'};">${pct}%</span>
         </div>
         ${stockDelivered > 0 ? `<div style="display:flex;justify-content:space-between;font-size:11px;background:#FEF3C7;border:1px solid #FCD34D;border-radius:6px;padding:4px 8px;margin-bottom:4px;">
-          <span style="color:#92400E;font-weight:700;">📦 ส่งจากสต็อกเก่าแล้ว: ${stockDelivered} ต้น</span>
-          <span style="color:#92400E;font-weight:700;">เหลือผลิต: ${remaining} ต้น</span>
+          <span style="color:#92400E;font-weight:700;">📦 ส่งจากสต็อกเก่าแล้ว: ${stockDelivered} ${u}</span>
+          <span style="color:#92400E;font-weight:700;">เหลือผลิต: ${remaining} ${u}</span>
         </div>` : ''}
         <div style="height:7px;background:#E2E8F0;border-radius:4px;overflow:hidden;margin-bottom:4px;">
           <div style="height:100%;width:${pct}%;background:${pct>=100?'#22C55E':'#F59E0B'};border-radius:4px;transition:width .3s;"></div>
         </div>
-        ${remaining > 0 ? `<div style="font-size:10px;color:#92400E;">เหลือ ${remaining} ต้น</div>` : ''}
-        ${excess    > 0 ? `<div style="font-size:10px;color:#DC2626;font-weight:700;">เกิน +${excess} ต้น</div>` : ''}
+        ${remaining > 0 ? `<div style="font-size:10px;color:#92400E;">เหลือ ${remaining} ${u}</div>` : ''}
+        ${excess    > 0 ? `<div style="font-size:10px;color:#DC2626;font-weight:700;">เกิน +${excess} ${u}</div>` : ''}
         ${btn}
       </div>`;
     }).join('');
@@ -4893,7 +5135,7 @@ function renderActiveProd() {
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
         +   '<div><div>' + orderLabel + '</div>'
         +   '<div class="ap-pile">' + a.pileType + '</div>'
-        +   '<div style="font-size:11px;color:#92400E;margin-top:2px;"><strong>' + (a.qtyCasting || a.qtyRequired) + ' ต้น</strong> ในราง</div>'
+        +   '<div style="font-size:11px;color:#92400E;margin-top:2px;"><strong>' + (a.qtyCasting || a.qtyRequired) + ' ' + (a.productType === 'girder' ? 'ตัว' : 'ต้น') + '</strong> ในราง</div>'
         +   (tagsHtml ? '<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px;">'+tagsHtml+'</div>' : '')
         +   '</div>'
         +   '<div style="text-align:right;">'
@@ -4924,13 +5166,28 @@ function renderActiveProd() {
 }
 
 // ── Free Production (ผลิตเพิ่มสต็อก ไม่มี Order) ──────────────
-function openFreeProdForm() {
+function openFreeProdForm(kind) {
   if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
+  const isGirder = kind === 'girder';
   const cfg = getConfig();
   const sel = document.getElementById('fprod_pile');
   const piles = cfg.pileTypes && cfg.pileTypes.length ? cfg.pileTypes : [];
-  sel.innerHTML = '<option value="">— เลือกชนิดเสา —</option>'
+  // Girder = ปุ่มแยก ไม่ต้องมีใน dropdown เสาเข็ม
+  sel.innerHTML = '<option value="">— เลือกชนิด —</option>'
     + piles.map(p => `<option value="${p}">${p}</option>`).join('');
+  sel.value = isGirder ? '' : '';
+  // ปรับหัวฟอร์ม + สลับช่องชนิด (dropdown เสาเข็ม vs ป้าย Girder)
+  const _pf = document.getElementById('fprodPileTypeField');
+  const _gf = document.getElementById('fprodGirderBadgeField');
+  const _ti = document.getElementById('fprodTitle');
+  if (_pf) _pf.style.display = isGirder ? 'none' : '';
+  if (_gf) _gf.style.display = isGirder ? '' : 'none';
+  if (_ti) _ti.textContent = isGirder ? '🌉 ผลิตเพิ่มสต็อก — Girder' : '📦 ผลิตเพิ่มสต็อก — เสาเข็ม';
+  document.getElementById('fprod_pile').setAttribute('data-mode', isGirder ? 'girder' : 'pile');
+  ['fprod_g_height','fprod_g_length','fprod_g_rebar','fprod_g_wtop','fprod_g_wmid','fprod_g_wbot','fprod_g_pipe'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  const _gw = document.getElementById('fprod_g_width'); if (_gw) _gw.value = '0.99 ม.';
+  const _gp = document.getElementById('fprod_g_pos');   if (_gp) _gp.selectedIndex = 0;
+  fprodTypeChange();
   document.getElementById('fprod_qty').value        = '';
   document.getElementById('fprod_length').value     = '';
   document.getElementById('fprod_weld').value       = '';
@@ -4956,16 +5213,35 @@ function openFreeProdForm() {
 function closeFreeProdForm() {
   document.getElementById('freeProdFormCard').style.display = 'none';
 }
+// สลับฟิลด์สเปคระหว่างเสาเข็ม / Girder ในฟอร์มผลิตเพิ่มสต็อก
+function fprodTypeChange() {
+  const isG = document.getElementById('fprod_pile').getAttribute('data-mode') === 'girder';
+  document.querySelectorAll('.fprod-pile-only').forEach(el => el.style.display = isG ? 'none' : '');
+  document.querySelectorAll('.fprod-girder-only').forEach(el => el.style.display = isG ? '' : 'none');
+  const up = document.getElementById('fprodUnitPile'), ug = document.getElementById('fprodUnitGirder');
+  if (up) up.style.display = isG ? 'none' : '';
+  if (ug) ug.style.display = isG ? '' : 'none';
+}
 function submitFreeProd() {
   if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
-  const pileType  = document.getElementById('fprod_pile').value.trim();
-  const length    = (document.getElementById('fprod_length').value || '').trim() || '-';
+  const _pileEl   = document.getElementById('fprod_pile');
+  const isGirder  = _pileEl.getAttribute('data-mode') === 'girder';
+  const pileType  = isGirder ? 'Girder' : _pileEl.value.trim();
+  const length    = ((isGirder ? document.getElementById('fprod_g_length') : document.getElementById('fprod_length')).value || '').trim() || '-';
   const qty       = parseInt(document.getElementById('fprod_qty').value) || 0;
   const weld      = (document.getElementById('fprod_weld')?.value  || '').trim() || '-';
   const steel     = (document.getElementById('fprod_steel')?.value || '').trim() || '-';
   const wire      = (document.getElementById('fprod_wire')?.value  || '').trim() || '-';
   const ba        = (document.getElementById('fprod_ba')?.value    || '').trim() || '-';
   const note      = document.getElementById('fprod_note').value.trim();
+  // สเปค Girder
+  const gHeight   = (document.getElementById('fprod_g_height')?.value || '').trim() || '-';
+  const gRebar    = (document.getElementById('fprod_g_rebar')?.value  || '').trim() || '-';
+  const gWTop     = (document.getElementById('fprod_g_wtop')?.value   || '').trim() || '-';
+  const gWMid     = (document.getElementById('fprod_g_wmid')?.value   || '').trim() || '-';
+  const gWBot     = (document.getElementById('fprod_g_wbot')?.value   || '').trim() || '-';
+  const gPipe     = (document.getElementById('fprod_g_pipe')?.value   || '').trim() || '-';
+  const gPos      = document.getElementById('fprod_g_pos')?.value     || 'ตัวกลาง';
   const prodDate  = document.getElementById('fprod_date').value || new Date().toISOString().slice(0, 10);
   const _fpTime   = document.getElementById('fprod_time').value;
   const _fpStartedAt = (() => { try { const d = new Date(prodDate + 'T' + (_fpTime || new Date().toTimeString().slice(0,5)) + ':00'); return isNaN(d) ? Date.now() : d.getTime(); } catch(e) { return Date.now(); } })();
@@ -4978,20 +5254,28 @@ function submitFreeProd() {
   const standQty3  = parseInt(document.getElementById('fprod_stand_qty3').value) || 0;
   const standSize3 = document.getElementById('fprod_stand_size3').value.trim();
   const standRows = [{qty:standQty,size:standSize},{qty:standQty2,size:standSize2},{qty:standQty3,size:standSize3}].filter(r=>r.qty>0||r.size);
-  if (!pileType) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
+  if (!pileType) { showToast('⚠️ กรุณาเลือกชนิดสินค้าก่อน'); return; }
   if (qty < 1)   { showToast('⚠️ กรุณากรอกจำนวนที่เทลงราง'); return; }
+  const u = isGirder ? 'ตัว' : 'ต้น';
   const list = getProdActive();
-  list.push({
+  const entry = {
     id: genVid(),
     orderNum: 'STOCK',
     isStockProd: true,
     pileType, length, weld, steel, wire, ba, qtyRequired: 0, qtyCasting: qty, note, prodDate, lane, tong, standQty, standSize, standRows,
     startedAt: _fpStartedAt,
     startedBy: (_currentUser && _currentUser.email) || '-'
-  });
+  };
+  if (isGirder) {
+    entry.productType = 'girder';
+    entry.height = gHeight; entry.width = '0.99 ม.';
+    entry.rebar = gRebar; entry.wireTop = gWTop; entry.wireMid = gWMid; entry.wireBottom = gWBot;
+    entry.pipe = gPipe; entry.position = gPos;
+  }
+  list.push(entry);
   saveProdActive(list);
   closeFreeProdForm();
-  showToast('🏭 เริ่มเทแล้ว — ' + pileType + ' · ' + qty + ' ต้น (สต็อก)');
+  showToast('🏭 เริ่มเทแล้ว — ' + pileType + ' · ' + qty + ' ' + u + ' (สต็อก)');
   renderActiveProd(); renderProdSection();
 }
 
@@ -5047,7 +5331,20 @@ function submitStartProd() {
   const _spfItemIdx = document.getElementById('spf_item_idx')?.value;
   const _itemIdxNum = (_spfItemIdx !== '' && _spfItemIdx !== undefined && _spfItemIdx !== null) ? parseInt(_spfItemIdx) : undefined;
   const list = getProdActive();
-  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, note, prodDate, lane, tong, standQty, standSize, standRows, startedAt: _startedAt, startedBy: (_currentUser && _currentUser.email) || '-', ...(_itemIdxNum !== undefined ? { itemIdx: _itemIdxNum } : {}) });
+  // ดึงสเปค Girder จาก order item เพื่อเก็บติดไปกับ entry (ให้แสดง/บันทึกครบ)
+  let _gExtra = {};
+  try {
+    const _o = getOrders().find(x => x.orderNum === orderNum);
+    if (_o) {
+      const _its = getOrderItems(_o);
+      const _it = (_itemIdxNum !== undefined && _its[_itemIdxNum]) ? _its[_itemIdxNum] : _its.find(x => (x.pileType||_o.pileType) === pileType);
+      if (_it && _it.productType === 'girder') {
+        _gExtra = { productType:'girder', height:_it.height, width:_it.width, rebar:_it.rebar,
+          wireTop:_it.wireTop, wireMid:_it.wireMid, wireBottom:_it.wireBottom, pipe:_it.pipe, position:_it.position };
+      }
+    }
+  } catch(e) {}
+  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, note, prodDate, lane, tong, standQty, standSize, standRows, startedAt: _startedAt, startedBy: (_currentUser && _currentUser.email) || '-', ..._gExtra, ...(_itemIdxNum !== undefined ? { itemIdx: _itemIdxNum } : {}) });
   saveProdActive(list);
   // อัปเดตสถานะออเดอร์ → กำลังผลิต
   const orders = getOrders();
@@ -5148,9 +5445,11 @@ function submitFinishProd() {
     qtyRequired: required, qtyProduced: qty,
     qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0,
     lane: a.lane||'', tong: a.tong||'', standRows: a.standRows||[], ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}) };
+  if (a.productType === 'girder') _newLog.productType = 'girder';
+  const _u = a.productType === 'girder' ? 'ตัว' : 'ต้น';
   getProdLog().unshift(_newLog);                    // อัปเดต cache ทันที (UI ไม่ต้องรอ round-trip)
   const _prodLogKey = saveSingleProdLog(_newLog);   // เขียนเฉพาะ record ใหม่ 1 รายการ (ไม่ rewrite ทั้งกอง)
-  logAudit('บันทึกผลิต', a.isStockProd ? 'STOCK' : a.orderNum, a.pileType + ' ผลิต ' + qty + ' ต้น' + (defect>0 ? ' · เสีย ' + defect : ''));
+  logAudit('บันทึกผลิต', a.isStockProd ? 'STOCK' : a.orderNum, a.pileType + ' ผลิต ' + qty + ' ' + _u + (defect>0 ? ' · เสีย ' + defect : ''));
 
   // อัปเดตสถานะออเดอร์
   const orders = getOrders();
@@ -5189,7 +5488,17 @@ function submitFinishProd() {
   // เพิ่มสต็อก
   if (netQty > 0) {
     // สร้าง spec label จากทุก field ที่มี
-    const _specParts = [
+    const _specParts = a.productType === 'girder' ? [
+      a.height   && a.height   !== '-' ? 'สูง ' + a.height : null,
+      a.width    && a.width    !== '-' ? 'กว้าง ' + a.width : null,
+      a.length   && a.length   !== '-' ? 'ยาว ' + a.length : null,
+      a.rebar    && a.rebar    !== '-' ? 'เหล็ก ' + a.rebar : null,
+      a.wireTop  && a.wireTop  !== '-' ? 'ลวดบน ' + a.wireTop : null,
+      a.wireMid  && a.wireMid  !== '-' ? 'ลวดกลาง ' + a.wireMid : null,
+      a.wireBottom && a.wireBottom !== '-' ? 'ลวดล่าง ' + a.wireBottom : null,
+      a.pipe     && a.pipe     !== '-' ? 'ท่อ ' + a.pipe : null,
+      a.position && a.position !== '-' ? a.position : null,
+    ].filter(Boolean) : [
       a.length              && a.length              !== '-' ? a.length              : null,
       itemSpecs.weld        && itemSpecs.weld         !== '-' ? itemSpecs.weld        : null,
       itemSpecs.steel       && itemSpecs.steel        !== '-' ? itemSpecs.steel       : null,
@@ -5204,12 +5513,13 @@ function submitFinishProd() {
       id: 'cp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
       orderNum: a.isStockProd ? '' : a.orderNum,
       pileType: a.pileType,
+      ...(a.productType === 'girder' ? { productType: 'girder' } : {}),
       spec: specLabel !== '-' ? specLabel : '',
       qty: netQty,
       online: !a.isStockProd,   // ผลิตตาม Order → เสาลูกค้า (online), ผลิตเพิ่มสต็อก → เสาค้างสต็อก (offline)
       prodLogKey: _prodLogKey,
       createdAt: Date.now(),
-      note: 'Auto: ' + (a.isStockProd ? 'ผลิตเพิ่มสต็อก' : 'ผลิตเสร็จ') + (defect > 0 ? ' (เสีย ' + defect + ' ต้น)' : '')
+      note: 'Auto: ' + (a.isStockProd ? 'ผลิตเพิ่มสต็อก' : 'ผลิตเสร็จ') + (defect > 0 ? ' (เสีย ' + defect + ' ' + _u + ')' : '')
     });
 
     const logArr = getStockLog() || [];
@@ -5218,9 +5528,9 @@ function submitFinishProd() {
       qty: netQty, newStock: newMain, qtyDisplay: '+' + netQty,
       ref: a.isStockProd ? 'ผลิตเพิ่มสต็อก' : a.orderNum,
       staff: (_currentUser && _currentUser.email) || '-',
-      note: '🤖 Auto: ' + (a.isStockProd ? 'ผลิตเพิ่มสต็อก' : 'ผลิตจาก ' + a.orderNum) + (specLabel !== '-' ? ' สเปค ' + specLabel : '') + (defect > 0 ? ' (เสีย ' + defect + ' ต้น)' : '') });
+      note: '🤖 Auto: ' + (a.isStockProd ? 'ผลิตเพิ่มสต็อก' : 'ผลิตจาก ' + a.orderNum) + (specLabel !== '-' ? ' สเปค ' + specLabel : '') + (defect > 0 ? ' (เสีย ' + defect + ' ' + _u + ')' : '') });
     saveStockLog(logArr);
-    showToast('🏭 เพิ่มสต็อก ' + a.pileType + ' +' + netQty + ' ต้น' + (defect > 0 ? ' (เสีย ' + defect + ')' : ''));
+    showToast('🏭 เพิ่มสต็อก ' + a.pileType + ' +' + netQty + ' ' + _u + (defect > 0 ? ' (เสีย ' + defect + ')' : ''));
   }
   renderActiveProd(); renderProdSection(); renderProdLogHistory(); renderOrders(); renderSummary();
 }
@@ -6261,6 +6571,38 @@ function renderStockCards() {
       <div class="stock-card-footer">${tsHtml}${quickBtn}</div>
     </div>`;
   });
+  // ── การ์ด Girder (หมวดเดียว แยกจากเสาเข็ม, หน่วย "ตัว") ──────────
+  const gQty     = stock['Girder'] || 0;
+  const gOnline  = cpOnline['Girder']  || 0;
+  const gOffline = cpOffline['Girder'] || 0;
+  const gTotal   = gOnline + gOffline;
+  const gRes     = getReservedStock()['Girder'] || 0;
+  const gAvail   = gQty - gRes;
+  const gDisplay = gTotal > 0 ? gTotal : gQty;
+  let gCls = 'stock-ok';
+  if (gAvail < cfg.stockLow)       gCls = 'stock-low';
+  else if (gAvail < cfg.stockWarn) gCls = 'stock-warn';
+  let gCpHtml = '';
+  if (gTotal > 0) {
+    gCpHtml = `<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:4px;font-size:12px;font-weight:700;">
+      <span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:5px;">🟢 ${gOnline}</span>
+      <span style="color:#94A3B8;">+</span>
+      <span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:5px;">🔴 ${gOffline}</span>
+    </div>`;
+  }
+  const gTs       = getLastStockTs('Girder');
+  const gTsHtml   = gTs ? `<span class="stock-ts">อัปเดต: ${gTs}</span>` : `<span class="stock-ts">ยังไม่มีประวัติ</span>`;
+  const gQuickBtn = canDo('edit_stock') ? `<button class="stock-quick-btn" onclick="quickFillStock('Girder')">+ รับเข้า</button>` : '';
+  const gStatusChip = `<span class="chip ${gAvail < cfg.stockLow ? 'ch-err' : gAvail < cfg.stockWarn ? 'ch-delay' : 'ch-in'}">${gAvail < cfg.stockLow ? '🚨 ต่ำมาก' : gAvail < cfg.stockWarn ? '⚠ ใกล้หมด' : '✓ ปกติ'}</span>`;
+  const girderCard = `<div class="stock-card ${gCls}" style="border-left:4px solid #7C3AED;" onclick="openStockDetail('Girder')">
+      <div class="stock-name">🌉 Girder</div>
+      <div class="stock-qty">${gDisplay}</div>
+      <div class="stock-unit">ตัวทั้งหมด</div>
+      ${gCpHtml}
+      ${gStatusChip}
+      <div class="stock-card-footer">${gTsHtml}${gQuickBtn}</div>
+    </div>`;
+
   // Summary value row
   const valueRow = totalValue > 0
     ? `<div class="stock-card stock-ok" style="grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:14px 18px;">
@@ -6269,7 +6611,7 @@ function renderStockCards() {
         <span style="font-size:11px;color:#64748B;">(คำนวณจากราคาต่อต้นที่ตั้งไว้)</span>
       </div>`
     : '';
-  grid.innerHTML = cards.join('') + valueRow;
+  grid.innerHTML = cards.join('') + girderCard + valueRow;
 }
 
 function stockUpdatePreview() {
@@ -7177,9 +7519,10 @@ function openStockDetail(name) {
   const custQty   = onlineCp.reduce((s,p)  => s+(p.qty||0), 0);
   const stockQty  = offlineCp.reduce((s,p) => s+(p.qty||0), 0);
   const orderNums = [...new Set(onlineCp.map(p => p.orderNum).filter(Boolean))];
+  const _u = (name === 'Girder') ? 'ตัว' : 'ต้น';
   const statItems = [
-    { val: custQty,          lbl: 'เสาลูกค้า (ต้น)' },
-    { val: stockQty,         lbl: 'เสาค้างสต็อก (ต้น)' },
+    { val: custQty,          lbl: 'เสาลูกค้า (' + _u + ')' },
+    { val: stockQty,         lbl: 'เสาค้างสต็อก (' + _u + ')' },
     { val: orderNums.length, lbl: 'จำนวนสั่ง (ออเดอร์)' },
   ];
   document.getElementById('sdStats').innerHTML = statItems.map(s =>
@@ -7212,7 +7555,9 @@ function renderSpecGrid() {
   const grid  = document.getElementById('sdSpecGrid');
   const count = document.getElementById('sdSpecCount');
   if (!grid) return;
-  if (count) count.textContent = specs.length ? specs.length + ' สเปค · รวม ' + specs.reduce((s,v)=>s+(v.qty||0),0) + ' ต้น' : '';
+  const _isG = (name === 'Girder');
+  const _u   = _isG ? 'ตัว' : 'ต้น';
+  if (count) count.textContent = specs.length ? specs.length + ' สเปค · รวม ' + specs.reduce((s,v)=>s+(v.qty||0),0) + ' ' + _u : '';
 
   if (!specs.length) {
     grid.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:16px;font-size:12px;font-style:italic;">ยังไม่มีสเปค · บันทึกรับเข้าด้านล่างเพื่อเริ่มต้น</div>';
@@ -7231,7 +7576,12 @@ function renderSpecGrid() {
     const color = (v.qty||0) === 0 ? '#E2E8F0' : '#3B82F6';
     // สร้าง tag จาก field แยก (ใหม่) หรือ parse "/" (เก่า)
     let tagsHtml = '';
-    if (v.weld || v.steel || v.wire || v.ba) {
+    if (_isG) {
+      // Girder: สเปคเก็บเป็น "สูง .../กว้าง .../ยาว ..." — แสดงเป็นชิปสีม่วงตามลำดับ
+      const gparts = String(v.spec||'').split('/').map(s => s.trim()).filter(Boolean);
+      tagsHtml = gparts.map(p => `<span style="background:#F3E8FF;color:#7C3AED;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${escHtml(p)}</span>`).join(' ')
+        || `<span style="background:#F3E8FF;color:#7C3AED;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${escHtml(v.spec)}</span>`;
+    } else if (v.weld || v.steel || v.wire || v.ba) {
       // format ใหม่: มี field แยก
       const parts = [
         v.spec   && v.spec  !=='-' ? { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8', val:v.spec  } : null,
@@ -7264,7 +7614,7 @@ function renderSpecGrid() {
         <div style="flex:1;height:7px;background:#E2E8F0;border-radius:4px;overflow:hidden;">
           <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .3s;"></div>
         </div>
-        <span style="font-size:13px;font-weight:700;color:#1E293B;white-space:nowrap;">${v.qty||0} ต้น</span>
+        <span style="font-size:13px;font-weight:700;color:#1E293B;white-space:nowrap;">${v.qty||0} ${_u}</span>
       </div>
       <div style="display:flex;gap:6px;">
         <button onclick="quickDeductSpec('${v.spec.replace(/'/g,"\\'")}',this)" style="flex:1;padding:4px 8px;font-size:11px;font-weight:700;border-radius:6px;border:1.5px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;">− เบิก</button>
