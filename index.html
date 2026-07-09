@@ -957,7 +957,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
             <input type="text" id="spf_lane" placeholder="เช่น 1, 2, A"/>
           </div>
           <div class="field">
-            <label class="field-label">จำนวนที่เทลงราง <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select> <span class="req">*</span></label>
+            <label class="field-label">จำนวนที่เทลงราง <span id="spfUnitPile"><select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></span><span id="spfUnitGirder" style="display:none;font-weight:700;color:#7C3AED;">ตัว</span> <span class="req">*</span></label>
             <input type="number" id="spf_qty" min="1" placeholder="เช่น 50"/>
           </div>
           <div class="field">
@@ -1023,14 +1023,14 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
       <div class="card-body">
         <input type="hidden" id="fp_active_id"/>
         <div style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;padding:14px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;text-align:center;">
-          <div><div style="font-size:11px;color:#64748B;font-weight:700;margin-bottom:4px;">ผลิตได้</div><div style="font-size:24px;font-weight:900;color:#166534;" id="fp_produced_display">—</div><div style="font-size:11px;color:#94A3B8;">ต้น</div></div>
-          <div><div style="font-size:11px;color:#DC2626;font-weight:700;margin-bottom:4px;">เสีย</div><div style="font-size:24px;font-weight:900;color:#DC2626;" id="fp_defect_display">0</div><div style="font-size:11px;color:#94A3B8;">ต้น</div></div>
-          <div><div style="font-size:11px;color:#1D4ED8;font-weight:700;margin-bottom:4px;">พร้อมส่ง</div><div style="font-size:24px;font-weight:900;color:#1D4ED8;" id="fp_net_display">—</div><div style="font-size:11px;color:#94A3B8;">ต้น</div></div>
+          <div><div style="font-size:11px;color:#64748B;font-weight:700;margin-bottom:4px;">ผลิตได้</div><div style="font-size:24px;font-weight:900;color:#166534;" id="fp_produced_display">—</div><div style="font-size:11px;color:#94A3B8;" id="fpu1">ต้น</div></div>
+          <div><div style="font-size:11px;color:#DC2626;font-weight:700;margin-bottom:4px;">เสีย</div><div style="font-size:24px;font-weight:900;color:#DC2626;" id="fp_defect_display">0</div><div style="font-size:11px;color:#94A3B8;" id="fpu2">ต้น</div></div>
+          <div><div style="font-size:11px;color:#1D4ED8;font-weight:700;margin-bottom:4px;">พร้อมส่ง</div><div style="font-size:24px;font-weight:900;color:#1D4ED8;" id="fp_net_display">—</div><div style="font-size:11px;color:#94A3B8;" id="fpu3">ต้น</div></div>
           <div><div style="font-size:11px;color:#92400E;font-weight:700;margin-bottom:4px;">⏱ เวลาเท</div><div style="font-size:18px;font-weight:900;color:#92400E;font-variant-numeric:tabular-nums;" id="fp_elapsed_display">—</div><div style="font-size:10px;color:#92400E;font-weight:600;" id="fp_started_display">—</div></div>
         </div>
         <div class="form-grid">
           <div class="field">
-            <label class="field-label">ผลิตเสียกี่ต้น?</label>
+            <label class="field-label" id="fp_defect_label">ผลิตเสียกี่ต้น?</label>
             <input type="number" id="fp_defect" min="0" placeholder="0 (ถ้าไม่เสียเลย)" oninput="updateFinishCalc()"/>
           </div>
           <div class="field" style="align-self:flex-end;">
@@ -5316,7 +5316,13 @@ function openStartProdForm(orderNum, pileType, qtyRequired, length, itemIdx) {
   document.getElementById('spf_date').value = _now.toISOString().slice(0, 10);
   document.getElementById('spf_time').value = _now.toTimeString().slice(0, 5);
   const specLabel = (length && length !== '-') ? ' · ' + length : '';
-  document.getElementById('spfSub').textContent = orderNum + ' — ' + pileType + specLabel + ' (ต้องผลิต ' + qtyRequired + ' ต้น)';
+  const _isG = (pileType === 'Girder');
+  const _u   = _isG ? 'ตัว' : 'ต้น';
+  const _up  = document.getElementById('spfUnitPile');
+  const _ug  = document.getElementById('spfUnitGirder');
+  if (_up) _up.style.display = _isG ? 'none' : '';
+  if (_ug) _ug.style.display = _isG ? '' : 'none';
+  document.getElementById('spfSub').textContent = orderNum + ' — ' + pileType + specLabel + ' (ต้องผลิต ' + qtyRequired + ' ' + _u + ')';
   document.getElementById('spf_item_idx').value = itemIdx !== undefined ? itemIdx : '';
   document.getElementById('startProdFormCard').style.display = '';
   document.getElementById('startProdFormCard').scrollIntoView({ behavior:'smooth', block:'start' });
@@ -5388,7 +5394,11 @@ function openFinishProd(activeId) {
   document.getElementById('fp_defect_display').textContent   = '0';
   document.getElementById('fp_net_display').textContent      = qty;
   const specLabel = (a.length && a.length !== '-') ? ' · ' + a.length : '';
-  document.getElementById('fpSub').textContent = a.orderNum + ' — ' + a.pileType + specLabel + ' · ผลิตได้ ' + qty + ' ต้น';
+  const _fpIsG = (a.pileType === 'Girder' || a.productType === 'girder');
+  const _fpU   = _fpIsG ? 'ตัว' : 'ต้น';
+  ['fpu1','fpu2','fpu3'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = _fpU; });
+  const _fpDL = document.getElementById('fp_defect_label'); if (_fpDL) _fpDL.textContent = 'ผลิตเสียกี่' + _fpU + '?';
+  document.getElementById('fpSub').textContent = a.orderNum + ' — ' + a.pileType + specLabel + ' · ผลิตได้ ' + qty + ' ' + _fpU;
   // แสดงเวลาที่ใช้เท
   if (a.startedAt) {
     document.getElementById('fp_elapsed_display').textContent = fmtElapsed(a.startedAt);
