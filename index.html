@@ -15,7 +15,7 @@
 <style>
 /* ============================================================ BASE ============================================================ */
 *{box-sizing:border-box;margin:0;padding:0;}
-.unit-pick{font-family:inherit;font-size:11px;font-weight:700;color:#2563EB;background:transparent;border:1px solid #CBD5E1;border-radius:8px;padding:1px 5px;margin-left:4px;cursor:pointer;outline:none;vertical-align:middle;line-height:1.5;}.unit-pick:hover,.unit-pick:focus{background:#EFF6FF;border-color:#93C5FD;}
+.unit-pick,.unit-pick-local{font-family:inherit;font-size:11px;font-weight:700;color:#2563EB;background:transparent;border:1px solid #CBD5E1;border-radius:8px;padding:1px 6px;margin-left:0;cursor:pointer;outline:none;vertical-align:middle;line-height:1.4;}.unit-pick:hover,.unit-pick:focus,.unit-pick-local:hover,.unit-pick-local:focus{background:#EFF6FF;border-color:#93C5FD;}
 html{overflow-x:hidden;}
 body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-height:100vh;font-size:14px;color:#1E293B;overflow-x:hidden;}
 
@@ -60,8 +60,11 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 @media(max-width:600px){.form-grid{grid-template-columns:1fr;}}
 .field{display:flex;flex-direction:column;gap:5px;}
-.field-label{font-size:12px;font-weight:700;color:#374151;}
+.field-label{font-size:12px;font-weight:700;color:#374151;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;line-height:1.4;height:24px;overflow:visible;}
 .field-label .req{color:#EF4444;}
+#spf_qty,#fprod_qty{border:2px solid #F59E0B !important;background:#FFFBEB !important;font-weight:800;color:#92400E;box-shadow:0 0 0 3px rgba(245,158,11,0.15);}
+#spf_qty:focus,#fprod_qty:focus{border-color:#D97706 !important;background:#fff !important;box-shadow:0 0 0 4px rgba(245,158,11,0.28);}
+#spf_qty::placeholder,#fprod_qty::placeholder{color:#D9A441;font-weight:600;}
 .field input,.field select,.field textarea{padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;color:#111827;background:#F9FAFB;outline:none;transition:border-color 0.15s,box-shadow 0.15s;font-family:inherit;}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:#3B82F6;background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,0.12);}
 .field input::placeholder,.field textarea::placeholder{color:#9CA3AF;}
@@ -767,7 +770,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
                 <select id="f_type"><option value="">— เลือก —</option></select>
               </div>
               <div class="field" style="min-width:118px;flex:1;">
-                <label class="field-label">จำนวน <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select> <span class="req">*</span></label>
+                <label class="field-label">จำนวน <select id="f_unit" class="unit-pick-local" title="หน่วยของรายการนี้"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select> <span class="req">*</span></label>
                 <input type="number" id="f_qty" placeholder="60" min="1"/>
               </div>
               <div class="field" style="min-width:90px;flex:1;">
@@ -809,8 +812,8 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
                   <input type="text" id="g_height" placeholder="เช่น 0.30 ม."/>
                 </div>
                 <div class="field" style="min-width:120px;flex:1;">
-                  <label class="field-label">กว้าง <span style="font-weight:400;color:#9CA3AF;">(ฟิกซ์)</span></label>
-                  <input type="text" id="g_width" value="0.99 ม." readonly style="background:#F1F5F9;color:#64748B;cursor:not-allowed;"/>
+                  <label class="field-label">กว้าง <span style="font-weight:400;color:#9CA3AF;">(ค่าเริ่มต้น 0.99 — แก้ได้)</span></label>
+                  <input type="text" id="g_width" value="0.99 ม." style="background:#fff;color:#0F172A;"/>
                 </div>
                 <div class="field" style="min-width:120px;flex:1;">
                   <label class="field-label">ยาว <span class="req">*</span></label>
@@ -1163,7 +1166,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
                 </div>
                 <div style="flex:1;min-width:120px;">
                   <div style="font-size:11px;color:#0F172A;font-weight:600;margin-bottom:4px;">กว้าง</div>
-                  <input type="text" id="fprod_g_width" value="0.99 ม." readonly style="width:100%;background:#F1F5F9;color:#64748B;"/>
+                  <input type="text" id="fprod_g_width" value="0.99 ม." style="width:100%;background:#fff;color:#0F172A;"/>
                 </div>
                 <div style="flex:1;min-width:120px;">
                   <div style="font-size:11px;color:#0F172A;font-weight:600;margin-bottom:4px;">ยาว</div>
@@ -3100,7 +3103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;">เพิ่มชนิดเสา</div>
             <div style="display:flex;flex-wrap:wrap;gap:8px;">
               <div class="field" style="min-width:150px;flex:2;"><label class="field-label">ชนิดเสา</label><select id="edit_f_type"><option value="">— เลือก —</option></select></div>
-              <div class="field" style="min-width:104px;flex:1;"><label class="field-label">จำนวน <select class="unit-pick" onchange="setUnit(this.value)"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label><input type="number" id="edit_f_qty" min="1" placeholder="0" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
+              <div class="field" style="min-width:104px;flex:1;"><label class="field-label">จำนวน <select id="edit_f_unit" class="unit-pick-local" title="หน่วยของรายการนี้"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label><input type="number" id="edit_f_qty" min="1" placeholder="0" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
               <div class="field" style="min-width:80px;flex:1;"><label class="field-label">ความยาว</label><input type="text" id="edit_f_len" placeholder="เช่น 6m, 9m" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
               <div class="field" style="min-width:80px;flex:1;"><label class="field-label">เชื่อม</label><input type="text" id="edit_f_weld" placeholder="เช่น มี, ไม่มี" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
               <div class="field" style="min-width:80px;flex:1;"><label class="field-label">เหล็กเสริม</label><input type="text" id="edit_f_steel" placeholder="เช่น DB12" style="padding:7px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;"/></div>
@@ -3832,18 +3835,24 @@ function _swapUnitTextNode(node){
   const nv = node.nodeValue.replace(_UNIT_RE, u);
   if (nv !== node.nodeValue) node.nodeValue = nv;
 }
+function _isUnitLocked(node){
+  const el = (node && node.nodeType === 3) ? node.parentNode : node;
+  return !!(el && el.closest && el.closest('[data-unit-lock]'));
+}
 function _swapUnitInNode(root){
   if (!root) return;
   if (root.nodeType === 3){
     const p = root.parentNode;
-    if (!(p && _UNIT_SKIP[p.nodeName])) _swapUnitTextNode(root);
+    if (!(p && _UNIT_SKIP[p.nodeName]) && !_isUnitLocked(root)) _swapUnitTextNode(root);
     return;
   }
   if (root.nodeType !== 1 || _UNIT_SKIP[root.nodeName]) return;
+  if (root.closest && root.closest('[data-unit-lock]')) return;
   const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(n){
       const p = n.parentNode;
       if (p && _UNIT_SKIP[p.nodeName]) return NodeFilter.FILTER_REJECT;
+      if (_isUnitLocked(n)) return NodeFilter.FILTER_REJECT;
       return _UNIT_TEST.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
     }
   });
@@ -4257,7 +4266,7 @@ function renderOrderItemsDraft() {
       pileCount++; pileQty += (it.qty || 0); pileVal += (it.value || 0);
       const valDisp = it.value > 0 ? it.value.toLocaleString('th-TH') + ' ฿' : '—';
       pileRows += '<tr><td style="font-weight:600;">' + it.pileType + '</td>'
-        + '<td style="font-weight:700;color:#1E293B;">' + it.qty + ' ต้น</td>'
+        + '<td style="font-weight:700;color:#1E293B;" data-unit-lock>' + it.qty + ' ' + (it.unit || 'ต้น') + '</td>'
         + '<td style="color:#64748B;">' + d(it.length) + '</td>'
         + '<td style="color:#64748B;">' + d(it.weld) + '</td>'
         + '<td style="color:#64748B;">' + d(it.steel) + '</td>'
@@ -4276,12 +4285,15 @@ function renderOrderItemsDraft() {
       + '</tr></thead><tbody>' + pileRows + '</tbody></table>';
   }
   if (box) {
-    if (pileCount === 0) { box.className = 'order-value-box'; box.textContent = '— ยังไม่มีรายการสั่งซื้อ'; }
+    if (pileCount === 0) { box.className = 'order-value-box'; box.removeAttribute('data-unit-lock'); box.textContent = '— ยังไม่มีรายการสั่งซื้อ'; }
     else {
+      const _pUnits = new Set(orderItemsDraft.filter(x => x.productType !== 'girder').map(x => x.unit || 'ต้น'));
+      const _totUnit = _pUnits.size === 1 ? [..._pUnits][0] : 'ต้น';
       box.className = 'order-value-box has-value';
+      box.setAttribute('data-unit-lock', '');
       box.textContent = pileVal > 0
-        ? 'รวม ' + pileQty + ' ต้น · มูลค่า ' + pileVal.toLocaleString('th-TH') + ' บาท'
-        : 'รวม ' + pileQty + ' ต้น · (ยังไม่ได้ตั้งราคา)';
+        ? 'รวม ' + pileQty + ' ' + _totUnit + ' · มูลค่า ' + pileVal.toLocaleString('th-TH') + ' บาท'
+        : 'รวม ' + pileQty + ' ' + _totUnit + ' · (ยังไม่ได้ตั้งราคา)';
     }
   }
 
@@ -4316,7 +4328,7 @@ function addGirderItem() {
     productType: 'girder',
     pileType:    'Girder',
     qty,
-    height, width: '0.99 ม.', length,
+    height, width: ((g('g_width').value||'').trim() || '0.99 ม.'), length,
     rebar:      rebar   || '-',
     wireTop:    wireTop || '-',
     wireMid:    wireMid || '-',
@@ -4339,10 +4351,12 @@ function addOrderItem() {
   const wire  = (document.getElementById('f_wire').value  || '').trim();
   const ba    = (document.getElementById('f_ba').value    || '').trim();
   const extra = (document.getElementById('f_extra').value || '').trim();
+  const unitEl = document.getElementById('f_unit');
+  const unit = (unitEl && unitEl.value) || 'ต้น';
   if (!type) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
-  if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (ต้น)'); return; }
+  if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (' + unit + ')'); return; }
   const value = calcOrderValue(type, qty);
-  orderItemsDraft.push({ productType: 'pile', pileType: type, qty, length: len || '-', weld: weld || '-', steel: steel || '-', wire: wire || '-', ba: ba || '-', extra: extra || '-', value });
+  orderItemsDraft.push({ productType: 'pile', pileType: type, qty, unit, length: len || '-', weld: weld || '-', steel: steel || '-', wire: wire || '-', ba: ba || '-', extra: extra || '-', value });
   document.getElementById('f_type').selectedIndex = 0;
   document.getElementById('f_qty').value    = '';
   document.getElementById('f_length').value = '';
@@ -5285,7 +5299,7 @@ function submitFreeProd() {
   };
   if (isGirder) {
     entry.productType = 'girder';
-    entry.height = gHeight; entry.width = '0.99 ม.';
+    entry.height = gHeight; entry.width = ((document.getElementById('fprod_g_width')?.value||'').trim() || '0.99 ม.');
     entry.rebar = gRebar; entry.wireTop = gWTop; entry.wireMid = gWMid; entry.wireBottom = gWBot;
     entry.pipe = gPipe; entry.position = gPos;
   }
@@ -6018,8 +6032,7 @@ function renderSummary() {
   })).filter(d=>d.v>0);
 
   document.getElementById('chartsRow').innerHTML =
-    '<div class="chart-card"><div class="chart-title">📊 Orders ต่อเดือน (6 เดือนล่าสุด)</div>' + svgBarChart(monthly, '#3B82F6') + '</div>' +
-    '<div class="chart-card"><div class="chart-title">📋 สถานะ Order</div>' + (statusData.length ? hBarChart(statusData) : '<div style="text-align:center;color:#94A3B8;padding:24px;font-size:12px;">ยังไม่มีข้อมูล</div>') + '</div>';
+    '<div class="chart-card" style="grid-column:1/-1;"><div class="chart-title">📋 สถานะ Order</div>' + (statusData.length ? hBarChart(statusData) : '<div style="text-align:center;color:#94A3B8;padding:24px;font-size:12px;">ยังไม่มีข้อมูล</div>') + '</div>';
 }
 
 
@@ -8018,8 +8031,9 @@ function renderEditItemsTable() {
 
   const rows = _editItemsDraft.map((it, i) => {
     const hasDel   = (it.delivered || 0) > 0;
+    const _u       = it.unit || 'ต้น';
     const qtyCell  = hasDel
-      ? `<span style="font-weight:700;">${it.qty} ต้น</span><br><span style="font-size:10px;color:#94A3B8;">ส่งแล้ว ${it.delivered} ต้น (ล็อก)</span>`
+      ? `<span style="font-weight:700;" data-unit-lock>${it.qty} ${_u}</span><br><span style="font-size:10px;color:#94A3B8;" data-unit-lock>ส่งแล้ว ${it.delivered} ${_u} (ล็อก)</span>`
       : `<input type="number" min="1" value="${it.qty}" style="width:70px;padding:5px 8px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none;" onchange="editItemChangeQty(${i},this.value)" oninput="editItemChangeQty(${i},this.value)"/>`;
     const fld = (field, ph) => `<input type="text" value="${(it[field]&&it[field]!=='-'?it[field]:'')}" placeholder="${ph}" style="width:72px;padding:4px 6px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:11px;outline:none;" onchange="editItemChangeField(${i},'${field}',this.value)"/>`;
     const delCell  = hasDel ? '<span style="font-size:10px;color:#94A3B8;">—</span>'
@@ -8047,10 +8061,13 @@ function renderEditItemsTable() {
   const totalQty = _editItemsDraft.reduce((s, it) => s + (it.qty || 0), 0);
   const totalVal = _editItemsDraft.reduce((s, it) => s + (it.value || 0), 0);
   if (box) {
+    const _eUnits = new Set(_editItemsDraft.map(x => x.unit || 'ต้น'));
+    const _eTotUnit = _eUnits.size === 1 ? [..._eUnits][0] : 'ต้น';
     box.className = 'order-value-box has-value';
+    box.setAttribute('data-unit-lock', '');
     box.textContent = totalVal > 0
-      ? 'รวม ' + totalQty + ' ต้น · มูลค่า ' + totalVal.toLocaleString('th-TH') + ' บาท'
-      : 'รวม ' + totalQty + ' ต้น';
+      ? 'รวม ' + totalQty + ' ' + _eTotUnit + ' · มูลค่า ' + totalVal.toLocaleString('th-TH') + ' บาท'
+      : 'รวม ' + totalQty + ' ' + _eTotUnit;
   }
 }
 
@@ -8064,10 +8081,13 @@ function editItemChangeQty(i, val) {
   const totalVal = _editItemsDraft.reduce((s, it) => s + (it.value || 0), 0);
   const box = document.getElementById('editOrderValueBox');
   if (box) {
+    const _eUnits = new Set(_editItemsDraft.map(x => x.unit || 'ต้น'));
+    const _eTotUnit = _eUnits.size === 1 ? [..._eUnits][0] : 'ต้น';
     box.className   = 'order-value-box has-value';
+    box.setAttribute('data-unit-lock', '');
     box.textContent = totalVal > 0
-      ? 'รวม ' + totalQty + ' ต้น · มูลค่า ' + totalVal.toLocaleString('th-TH') + ' บาท'
-      : 'รวม ' + totalQty + ' ต้น';
+      ? 'รวม ' + totalQty + ' ' + _eTotUnit + ' · มูลค่า ' + totalVal.toLocaleString('th-TH') + ' บาท'
+      : 'รวม ' + totalQty + ' ' + _eTotUnit;
   }
 }
 
@@ -8095,10 +8115,12 @@ function editAddItem() {
   const wire  = (document.getElementById('edit_f_wire')  ? document.getElementById('edit_f_wire').value  : '').trim();
   const ba    = (document.getElementById('edit_f_ba')    ? document.getElementById('edit_f_ba').value    : '').trim();
   const extra = (document.getElementById('edit_f_extra') ? document.getElementById('edit_f_extra').value : '').trim();
+  const editUnitEl = document.getElementById('edit_f_unit');
+  const unit = (editUnitEl && editUnitEl.value) || 'ต้น';
   if (!type) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
-  if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (ต้น)'); return; }
+  if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (' + unit + ')'); return; }
   const value = calcOrderValue(type, qty);
-  _editItemsDraft.push({ pileType: type, qty, length: len||'-', weld: weld||'-', steel: steel||'-', wire: wire||'-', ba: ba||'-', extra: extra||'-', value, delivered: 0 });
+  _editItemsDraft.push({ pileType: type, qty, unit, length: len||'-', weld: weld||'-', steel: steel||'-', wire: wire||'-', ba: ba||'-', extra: extra||'-', value, delivered: 0 });
   document.getElementById('edit_f_type').selectedIndex = 0;
   ['edit_f_qty','edit_f_len','edit_f_weld','edit_f_steel','edit_f_wire','edit_f_ba','edit_f_extra'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   renderEditItemsTable();
