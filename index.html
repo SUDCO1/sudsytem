@@ -102,6 +102,9 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .data-table td{padding:9px 12px;border-bottom:1px solid #F1F5F9;vertical-align:top;}
 .data-table tr:last-child td{border-bottom:none;}
 .data-table tr:hover td{background:#FAFBFF;}
+.data-table.otrack{table-layout:fixed;}
+.data-table.otrack th{white-space:normal;}
+.data-table.otrack td{word-break:break-word;overflow-wrap:anywhere;}
 .data-table .new-row td{background:#F0FDF4 !important;}
 .data-table .overdue-row td{background:#FFF1F1 !important;}
 .data-table .soon-row td{background:#FFFBEB !important;}
@@ -890,7 +893,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
       <div class="card-header">
         <div>
           <div class="card-title">📋 ติดตามสถานะ Order</div>
-          <div class="card-sub">จัดกลุ่มตามชนิดเสา · คลิกตัวเลข "ส่งแล้ว" เพื่ออัปเดตจำนวน</div>
+          <div class="card-sub">จัดกลุ่มตามชนิดเสา · คลิกตัวเลข "🚚 ส่ง" เพื่ออัปเดตจำนวน</div>
         </div>
       </div>
       <div class="toolbar">
@@ -2909,8 +2912,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="field">
               <label class="field-label">🎖 สิทธิ์ <span class="req">*</span></label>
               <select id="um_role" class="filter-sel" style="width:100%;">
-                <option value="sale">💼 Sale</option>
-                <option value="manager">📊 Manager</option>
+                <option value="">🚫 ไม่มีตำแหน่ง</option>
                 <option value="admin">👑 Admin</option>
               </select>
             </div>
@@ -3216,23 +3218,28 @@ function getSecondaryAuth() {
 }
 
 function getRoleLabel(role) {
+  if (!role)              return '🚫 ไม่มีตำแหน่ง';
   if (role === 'admin')   return '👑 Admin';
-  if (role === 'manager') return '📊 Manager';
-  if (role === 'sale')    return '💼 Sale';
   const found = (_permRoles || []).find(r => r.id === role);
   return found ? found.label : role;
 }
 
 function applyRole(role) {
-  _currentRole = role;
-  document.body.classList.remove('role-admin','role-manager','role-sale');
-  const _builtinRoles = ['admin','manager','sale'];
-  document.body.classList.add('role-' + (_builtinRoles.includes(role) ? role : 'sale'));
-  if (!_builtinRoles.includes(role)) document.body.classList.add('role-custom');
+  _currentRole = role || null;
+  document.body.classList.remove('role-admin','role-sale','role-manager','role-custom','role-none');
+  if (_currentRole === 'admin') {
+    document.body.classList.add('role-admin');
+  } else if (!_currentRole) {
+    // ไม่มีตำแหน่ง — เข้าได้แค่หน้าแรก การ์ดล็อกหมด
+    document.body.classList.add('role-none');
+  } else {
+    // role ที่สร้างเอง — ใช้สไตล์ซ่อนแบบเดียวกับพนักงานทั่วไป
+    document.body.classList.add('role-sale','role-custom');
+  }
   const badge = document.getElementById('hdrRoleBadge');
   if (badge) {
-    badge.textContent   = getRoleLabel(role);
-    badge.className     = 'role-badge role-' + role;
+    badge.textContent   = getRoleLabel(_currentRole);
+    badge.className     = 'role-badge role-' + (_currentRole || 'none');
     badge.style.display = 'inline-block';
   }
   applyPermissions();
@@ -3293,11 +3300,11 @@ function loadRoleFromDB(uid, callback) {
         }).catch(()=>{});
         callback('admin');
       } else {
-        // ยังไม่มี role → sale โดย default
-        callback('sale');
+        // ยังไม่มี role → "ไม่มีตำแหน่ง" (เข้าได้แค่หน้าแรก การ์ดล็อกหมด) รอ admin กำหนดสิทธิ์
+        callback(null);
       }
     }
-  }).catch(() => callback('sale'));
+  }).catch(() => callback(null));
 }
 
 // ── Login / Logout ────────────────────────────────────────────
@@ -3711,6 +3718,14 @@ function _auditFmtTime(ts) {
 function _esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// จับคู่เลข Order กับ error แบบทั้งคำ (กัน ORD-1 ไปชนกับ ORD-10)
+function _orderMatch(errOrder, orderNum) {
+  if (!errOrder || !orderNum) return false;
+  const eo = String(errOrder).trim(), on = String(orderNum).trim();
+  if (eo === on) return true;
+  const esc = on.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('(^|[^\\w-])' + esc + '([^\\w-]|$)').test(eo);
+}
 // เติม dropdown ประเภทการกระทำจาก log ที่มีจริง
 function auditPopulateActions() {
   // เติมค่าจำนวนวันเก็บ log อัตโนมัติลงช่องตั้งค่า
@@ -3908,7 +3923,7 @@ function getOrderDelivered(o) {
 
 // ── Reserved Stock (from active orders at or past "กำลังผลิต") ──
 // สถานะ 0-1 (รับ/ยืนยัน) ยังไม่จองสต็อก เพื่อไม่ให้ตัวเลขต่ำเกินจริง
-const RESERVE_FROM_STATUS = ['กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง'];
+const RESERVE_FROM_STATUS = ['กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง','ส่งแล้วบางส่วน'];
 function getReservedStock() {
   // BugFix#6: use per-item delivered instead of uniform doneRatio
   const reserved = {};
@@ -3951,6 +3966,13 @@ function isoToThai(iso) {
   const [y,m,d] = iso.split('-');
   return `${d}/${m}/${String(+y+543).slice(-2)}`;
 }
+// parse 'YYYY-MM-DD' เป็นเที่ยงคืนเวลาท้องถิ่น (กัน new Date() ตีความเป็น UTC แล้วเพี้ยน 1 วัน)
+function _parseLocalDate(iso) {
+  if (!iso) return null;
+  const [y,m,d] = String(iso).split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m-1, d);
+}
 function genOrderNum() {
   const d = new Date();
   return `ORD-${pad(d.getMonth()+1)}${pad(d.getDate())}-${String(incCtr()).padStart(3,'0')}`;
@@ -3960,7 +3982,7 @@ function genOrderNum() {
 function deadlineBadge(deliveryDateISO, pct) {
   if (pct >= 100 || !deliveryDateISO) return '';
   const today = new Date(); today.setHours(0,0,0,0);
-  const dl = new Date(deliveryDateISO);
+  const dl = _parseLocalDate(deliveryDateISO); if (!dl) return '';
   const diff = Math.round((dl - today) / 86400000);
   if (diff < 0)  return `<br><span class="dl-badge dl-overdue">⚠️ เกินกำหนด ${Math.abs(diff)} วัน</span>`;
   if (diff === 0) return `<br><span class="dl-badge dl-today">🔴 ครบกำหนดวันนี้!</span>`;
@@ -3970,7 +3992,8 @@ function deadlineBadge(deliveryDateISO, pct) {
 function deadlineRowClass(deliveryDateISO, pct) {
   if (pct >= 100 || !deliveryDateISO) return '';
   const today = new Date(); today.setHours(0,0,0,0);
-  const diff = Math.round((new Date(deliveryDateISO) - today) / 86400000);
+  const _dl = _parseLocalDate(deliveryDateISO); if (!_dl) return '';
+  const diff = Math.round((_dl - today) / 86400000);
   if (diff < 0) return 'overdue-row';
   if (diff <= 3) return 'soon-row';
   return '';
@@ -4084,8 +4107,6 @@ const PERM_SECTIONS = [
 // Levels: 'view' | 'edit' | 'delete'
 const DEFAULT_ROLE_PERMS = {
   admin:   { overview:['view','edit'], sale:true,  orderstatus:['view','edit','delete'], production:['view','edit','delete'], shipping:['view','edit','delete'], stock:['view','edit','delete'], customer:['view','edit','delete'] },
-  manager: { overview:['view'],        sale:false, orderstatus:['view'],                 production:['view'],                 shipping:['view'],                 stock:['view'],                 customer:['view']                 },
-  sale:    { overview:[],              sale:true,  orderstatus:['view','edit'],           production:['view','edit'],          shipping:['view','edit'],          stock:['view'],                 customer:['view']                 },
 };
 // Keep ALL_PERMISSIONS as empty stub so legacy references don't crash
 const ALL_PERMISSIONS = [];
@@ -4454,26 +4475,32 @@ function submitOrder() {
     }
   }
 
-  const orders = getOrders();
-  orders.unshift(order);
-  saveOrders(orders);
-  logAudit('สร้างออเดอร์', finalOrderNum, customer + ' · ' + pileLabel + ' รวม ' + totalQty + ' ต้น');
+  try {
+    const orders = getOrders();
+    orders.unshift(order);
+    saveOrders(orders);
+    logAudit('สร้างออเดอร์', finalOrderNum, customer + ' · ' + pileLabel + ' รวม ' + totalQty + ' ต้น');
 
-  autoSaveCustomer(customer, tel, g('f_cust_addr').trim());
+    autoSaveCustomer(customer, tel, g('f_cust_addr').trim());
 
-  document.getElementById('formView').style.display    = 'none';
-  document.getElementById('successView').style.display = 'block';
-  document.getElementById('newOrderNum').textContent   = order.orderNum;
-  const valPart = totalValue > 0 ? ' · มูลค่า ' + totalValue.toLocaleString('th-TH') + ' ฿' : '';
-  document.getElementById('successDetail').innerHTML =
-    '<strong>' + customer + '</strong> · ' + tel + '<br>'
-    + pileLabel + ' · รวม ' + totalQty + ' ต้น' + valPart
-    + '<br>📍 ' + order.site + '<br>📅 วันส่ง: ' + order.deliveryDate;
+    document.getElementById('formView').style.display    = 'none';
+    document.getElementById('successView').style.display = 'block';
+    document.getElementById('newOrderNum').textContent   = order.orderNum;
+    const valPart = totalValue > 0 ? ' · มูลค่า ' + totalValue.toLocaleString('th-TH') + ' ฿' : '';
+    document.getElementById('successDetail').innerHTML =
+      '<strong>' + _esc(customer) + '</strong> · ' + _esc(tel) + '<br>'
+      + _esc(pileLabel) + ' · รวม ' + totalQty + ' ต้น' + valPart
+      + '<br>📍 ' + _esc(order.site) + '<br>📅 วันส่ง: ' + _esc(order.deliveryDate);
 
-  const navStatus = document.getElementById('nav-status'); if (navStatus) navStatus.classList.add('has-new');
-  updateHeaderCount();
-  orderItemsDraft = [];
-  btn.disabled = false; btn.textContent = '✓ ส่ง Order';
+    const navStatus = document.getElementById('nav-status'); if (navStatus) navStatus.classList.add('has-new');
+    updateHeaderCount();
+    orderItemsDraft = [];
+  } catch (err) {
+    console.error('submitOrder error:', err);
+    alert('❌ บันทึก Order ไม่สำเร็จ: ' + (err && err.message ? err.message : err));
+  } finally {
+    btn.disabled = false; btn.textContent = '✓ ส่ง Order';
+  }
 }
 
 function autoSaveCustomer(name, tel, addr) {
@@ -4661,11 +4688,16 @@ function renderOrders() {
               <div style="font-size:10px;color:#94A3B8;">ทั้งหมด ${stockTotal} · จอง ${reserved}</div>
             </div>
           </div>
-          <div class="table-wrap"><table class="data-table">
+          <div class="table-wrap"><table class="data-table otrack">
+            <colgroup>
+              <col style="width:8%"><col style="width:17%"><col style="width:19%">
+              <col style="width:6%"><col style="width:16%">
+              <col style="width:10%"><col style="width:13%"><col style="width:11%">
+            </colgroup>
             <thead><tr>
               <th>เลข Order</th><th>ลูกค้า</th><th>สเปค</th>
-              <th>สั่ง</th><th>ส่งแล้ว ✎</th><th>ผลิต / ส่ง</th>
-              <th>กำหนดส่ง</th><th>Sale / หมายเหตุ</th>
+              <th>สั่ง</th><th>ผลิต / ส่ง</th>
+              <th>กำหนดส่ง</th><th>ที่อยู่ไซต์งาน</th><th>Sale / หมายเหตุ</th>
             </tr></thead><tbody>`;
 
         entries.forEach(({o, it, idx}) => {
@@ -4682,7 +4714,7 @@ function renderOrders() {
           const prodPctBar = Math.min(prodPct, 100);
           const prodBarC   = prodPct>=100?'#22C55E':prodPct>=50?'#F59E0B':'#F97316';
           const prodPctC   = prodPct>=100?'#166534':prodPct>=50?'#92400E':'#9A3412';
-          const relErr  = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
+          const relErr  = prodErrs.filter(e => _orderMatch(e.order, o.orderNum));
           const errNote = relErr.length > 0
             ? '⚠️ ' + relErr[relErr.length-1].errorType
             : (o.sale||'') + (o.note && o.note!=='-' ? ' · '+o.note.slice(0,18)+(o.note.length>18?'…':'') : '');
@@ -4721,25 +4753,23 @@ function renderOrders() {
               it.ba     && it.ba!=='-'     ? '🔷 '+it.ba     : null,
               it.extra  && it.extra!=='-'  ? '📝 '+it.extra  : null,
             ].filter(Boolean);
-            lenDisp = specParts.length ? '<span style="white-space:nowrap;">'+specParts.join(' · ')+'</span>' : '<span style="color:#CBD5E1;">—</span>';
+            lenDisp = specParts.length ? '<span>'+specParts.join(' · ')+'</span>' : '<span style="color:#CBD5E1;">—</span>';
           }
           const valDisp     = o.orderValue > 0 ? o.orderValue.toLocaleString('th-TH')+' ฿' : '—';
           const rowCls      = deadlineRowClass(o.deliveryDateISO, iPct);
 
           html += `<tr class="${rowCls}">
             <td><span class="order-id">${o.orderNum}</span>${isMultiItem?`<br><span style="font-size:10px;color:#94A3B8;">[${idx+1}/${o.items.length}]</span>`:''}</td>
-            <td><strong>${o.customer}</strong>${o.tel?`<br><span style="font-size:11px;color:#64748B;">${o.tel}</span>`:''}</td>
+            <td><strong>${_esc(o.customer)}</strong>${o.tel?`<br><span style="font-size:11px;color:#64748B;">${_esc(o.tel)}</span>`:''}</td>
             <td style="font-size:12px;">${lenDisp}</td>
             <td><strong>${it.qty}</strong></td>
-            <td><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''}>${delDisp} / ${it.qty}</span><br><span style="font-size:11px;color:${over>0?'#DC2626':rem>0?'#854D0E':'#166534'};">${over>0?'ส่งเกิน '+over:'เหลือ '+rem}</span></td>
             <td style="min-width:140px;"><div style="display:flex;flex-direction:column;gap:6px;">
               <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span style="color:#9A3412;">🏭 ผลิต ${produced}/${it.qty}</span><span style="color:${prodPctC};">${prodPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div></div>
-              <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span style="color:#1D4ED8;">🚚 ส่ง ${del}/${it.qty}</span><span style="color:${iPctC};">${iPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''} style="color:#1D4ED8;">🚚 ส่ง ${delDisp}/${it.qty}</span><span style="color:${iPctC};">${iPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div><div style="font-size:10px;color:${over>0?'#DC2626':rem>0?'#854D0E':'#166534'};margin-top:1px;">${over>0?'ส่งเกิน '+over:'เหลือ '+rem}</div></div>
             </div></td>
             <td style="font-size:12px;">${o.deliveryDate}${dlBadge}</td>
-            
-            
-            <td style="${noteStyle};font-size:12px;">${errNote}
+            <td style="font-size:12px;max-width:180px;">${o.site && o.site!=='-' ? '📍 '+_esc(o.site) : '<span style="color:#CBD5E1;">—</span>'}</td>
+            <td style="${noteStyle};font-size:12px;">${_esc(errNote)}
               ${canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='รับ Order แล้ว'?`<br><button onclick="acceptOrder('${o.orderNum}')" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:6px;cursor:pointer;">🏭 รับ</button>`:''}
               ${canDo('change_order_status')&&((o.status||'รับ Order แล้ว')==='ส่งครบ'||o.status==='ส่งครบแล้ว')?`<br><button onclick="closeBill('${o.orderNum}')" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;">🔴 จบบิล</button>`:''}
               <div class="act-row">${canDo('edit_order')?`<button class="act-btn act-edit" onclick="openEditOrder('${o.orderNum}')">✏️ แก้ไข</button>`:''} ${canDo('delete_order')?`<button class="act-btn act-del" onclick="deleteOrder('${o.orderNum}')">🗑 ลบ</button>`:''}</div>
@@ -4775,7 +4805,7 @@ function renderOrders() {
     const prodPctM    = tq>0 ? Math.round(totalProd/tq*100) : 0;
     const prodPctBarM = Math.min(prodPctM, 100);
     const prodBarCM   = prodPctM>=100?'#22C55E':prodPctM>=50?'#F59E0B':'#F97316';
-    const relErr   = prodErrs.filter(e => e.order && e.order.includes(o.orderNum));
+    const relErr   = prodErrs.filter(e => _orderMatch(e.order, o.orderNum));
     const hasErr   = relErr.length > 0;
     const noteText = hasErr
       ? '⚠️ '+relErr[relErr.length-1].errorType+(relErr.length>1?' (+' + (relErr.length-1) + ')':'')
@@ -4799,7 +4829,7 @@ function renderOrders() {
     if (canDo('edit_order')) btns += `<button onclick="openEditOrder('${o.orderNum}')" style="padding:5px 10px;font-size:12px;background:#EFF6FF;color:#1E40AF;border:none;border-radius:8px;cursor:pointer;">✏️</button>`;
     cards.push(`<div class="${cardCls}">
       <div class="mob-oc-top"><span class="mob-oc-num">${o.orderNum}</span><span class="mob-oc-status status-sel ${stCls}">${stLabel}</span></div>
-      <div class="mob-oc-cust">${o.customer}<span class="mob-oc-tel">${o.tel?' · '+o.tel:''}</span>${valDisp?'<span style="margin-left:auto;font-size:12px;color:#166534;font-weight:700;">'+valDisp+'</span>':''}</div>
+      <div class="mob-oc-cust">${_esc(o.customer)}<span class="mob-oc-tel">${o.tel?' · '+_esc(o.tel):''}</span>${valDisp?'<span style="margin-left:auto;font-size:12px;color:#166534;font-weight:700;">'+valDisp+'</span>':''}</div>
       <div class="mob-oc-div"></div>
       <div class="mob-oc-mid">
         <div class="mob-oc-pile"><div class="mob-oc-pile-type">${pileDisp}</div><div class="mob-oc-pile-qty">${tq} ${uMob}</div></div>
@@ -4811,7 +4841,7 @@ function renderOrders() {
           <div class="mob-oc-meta"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
         </div>
       </div>
-      <div class="mob-oc-bottom"><span class="mob-oc-note">${noteText}</span>${btns}</div>
+      <div class="mob-oc-bottom"><span class="mob-oc-note">${_esc(noteText)}</span>${btns}</div>
     </div>`);
   });
   _mobOrd.innerHTML = cards.join('');
@@ -5051,8 +5081,8 @@ function renderProdSection() {
       <div onclick="toggleProdOrder(${idx})" style="background:${bg};padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;" title="แตะเพื่อดู/ซ่อนสินค้าที่ต้องผลิต">
         <span style="font-size:15px;font-weight:900;color:#1E40AF;">${o.orderNum}</span>
         <span style="background:${bg};color:${tc};border:1.5px solid ${tc}40;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">${o.status}</span>
-        <span style="font-size:13px;font-weight:700;color:#1E293B;">${o.customer}</span>
-        ${o.tel ? `<span style="font-size:11px;color:#64748B;">📞 ${o.tel}</span>` : ''}
+        <span style="font-size:13px;font-weight:700;color:#1E293B;">${_esc(o.customer)}</span>
+        ${o.tel ? `<span style="font-size:11px;color:#64748B;">📞 ${_esc(o.tel)}</span>` : ''}
         ${delivLine}
         <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
           <span style="background:#fff;color:#1E40AF;border:1.5px solid #1E40AF40;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:800;white-space:nowrap;">${items.length} รายการ ▾</span>
@@ -6571,6 +6601,7 @@ function renderStockCards() {
   });
   let totalValue = 0;
   const grid = document.getElementById('stockCardsGrid');
+  const reservedAll = getReservedStock(); // เรียกครั้งเดียว ใช้ซ้ำทุกการ์ด (กันคำนวณซ้ำ)
   const cards = cfg.pileTypes.map(name => {
     const qty      = stock[name] || 0;
     const online   = cpOnline[name]  || 0;
@@ -6580,7 +6611,7 @@ function renderStockCards() {
     const val      = price > 0 ? qty * price : 0;
     totalValue += val;
     // สถานะตาม getReservedStock (ใช้ออเดอร์เป็น basis สำหรับสีขอบ)
-    const res   = (getReservedStock()[name] || 0);
+    const res   = (reservedAll[name] || 0);
     const avail = qty - res;
     let cls = 'stock-ok';
     if (avail < cfg.stockLow)       cls = 'stock-low';
@@ -6616,7 +6647,7 @@ function renderStockCards() {
   const gOnline  = cpOnline['Girder']  || 0;
   const gOffline = cpOffline['Girder'] || 0;
   const gTotal   = gOnline + gOffline;
-  const gRes     = getReservedStock()['Girder'] || 0;
+  const gRes     = reservedAll['Girder'] || 0;
   const gAvail   = gQty - gRes;
   const gDisplay = gTotal > 0 ? gTotal : gQty;
   let gCls = 'stock-ok';
@@ -7016,8 +7047,6 @@ const PERM_PRESET_COLORS = [
 ];
 let _permRoles = [
   { id:'admin',   label:'Admin',   color:{ bg:'#FEF9C3', text:'#854D0E' }, locked:true },
-  { id:'manager', label:'Manager', color:{ bg:'#EDE9FE', text:'#5B21B6' } },
-  { id:'sale',    label:'Sale',    color:{ bg:'#DBEAFE', text:'#1E40AF' } },
 ];
 let _permSelectedColor = { ...PERM_PRESET_COLORS[0] };
 let _permUsingCustom = false;
@@ -7165,8 +7194,12 @@ function permUpdatePreview() {
 function permAddRole() {
   const name = document.getElementById('permNewRoleName').value.trim();
   if (!name) { showToast('⚠️ กรอกชื่อตำแหน่งด้วยครับ'); return; }
-  const id = name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'') || 'role_'+Date.now();
-  if (_permRoles.find(r => r.id === id)) { showToast('⚠️ ตำแหน่งนี้มีอยู่แล้ว'); return; }
+  // เตือนถ้าชื่อซ้ำ (เทียบจากชื่อที่แสดง ไม่แยกตัวพิมพ์เล็ก/ใหญ่)
+  if (_permRoles.find(r => (r.label||'').trim().toLowerCase() === name.toLowerCase())) {
+    showToast('⚠️ มีตำแหน่งชื่อนี้อยู่แล้ว'); return;
+  }
+  // สร้าง id ไม่ซ้ำเสมอ รองรับชื่อภาษาไทย (ชื่อไทยเก็บไว้เป็น label สำหรับแสดงผล)
+  const id = 'role_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   _permRoles.push({ id, label: name, color: { ..._permSelectedColor } });
   if (!_savedRolePerms) _savedRolePerms = {};
   // Init with empty permissions for all sections
@@ -7181,13 +7214,52 @@ function permAddRole() {
 
 function permDeleteRole(id) {
   const r = _permRoles.find(x => x.id === id);
-  if (!confirm(`ลบตำแหน่ง "${r?.label}" ออกจากระบบ?`)) return;
-  _permRoles = _permRoles.filter(x => x.id !== id);
-  if (_savedRolePerms) delete _savedRolePerms[id];
-  _renderPermRoles();
-  _renderPermTable();
-  logAudit('ลบตำแหน่ง (role)', r ? (r.label||id) : id, '');
-  showToast('ลบตำแหน่งแล้ว');
+  const label = r ? (r.label||id) : id;
+  // เช็คก่อนว่ามีผู้ใช้คนไหนถือตำแหน่งนี้อยู่ (async) แล้วค่อยเตือน
+  db.ref(K_USER_ROLES).once('value').then(snap => {
+    const data = snap.val() || {};
+    const holders = Object.entries(data)
+      .map(([uid, u]) => ({ uid, ...(u||{}) }))
+      .filter(u => u.role === id);
+    const n = holders.length;
+
+    let msg = `ลบตำแหน่ง "${label}" ออกจากระบบ?`;
+    if (n > 0) {
+      const names = holders.map(u => ' • ' + (u.email || u.uid)).join('\n');
+      msg = `⚠️ มีผู้ใช้ ${n} คนถือตำแหน่ง "${label}" อยู่:\n${names}\n\n`
+          + `ถ้าลบ คนเหล่านี้จะกลายเป็น "ไม่มีตำแหน่ง" ทันที (เข้าได้แค่หน้าแรก การ์ดล็อกหมด) จนกว่าจะกำหนดตำแหน่งใหม่ให้\n\nยืนยันลบ?`;
+    }
+    if (!confirm(msg)) return;
+
+    // ลบ role ออกจากระบบ
+    _permRoles = _permRoles.filter(x => x.id !== id);
+    if (_savedRolePerms) delete _savedRolePerms[id];
+    _renderPermRoles();
+    _renderPermTable();
+
+    // ตั้งผู้ใช้ที่ถือตำแหน่งนี้ให้เป็น "ไม่มีตำแหน่ง" (ลบ field role ทิ้ง)
+    const holderUpdates = {};
+    holders.forEach(u => { holderUpdates[u.uid + '/role'] = null; });
+    const p1 = n > 0 ? db.ref(K_USER_ROLES).update(holderUpdates) : Promise.resolve();
+
+    // บันทึกการลบ role ลง Firebase ทันที (กัน role โผล่กลับตอนโหลดใหม่)
+    p1.then(() => { try { saveRolePerms(true); } catch(e){} })
+      .catch(() => { try { saveRolePerms(true); } catch(e){} });
+
+    logAudit('ลบตำแหน่ง (role)', label, n > 0 ? `ย้าย ${n} คนเป็นไม่มีตำแหน่ง` : '');
+    showToast(n > 0 ? `ลบตำแหน่งแล้ว · ย้าย ${n} คนเป็นไม่มีตำแหน่ง` : 'ลบตำแหน่งแล้ว');
+    if (typeof umRefresh === 'function' && _currentRole === 'admin') umRefresh();
+  }).catch(() => {
+    // อ่าน DB ไม่ได้ — ถามยืนยันแบบไม่มีจำนวนคน แล้วลบเฉพาะฝั่ง config
+    if (!confirm(`ลบตำแหน่ง "${label}" ออกจากระบบ?\n(ตรวจจำนวนผู้ใช้ไม่ได้ตอนนี้)`)) return;
+    _permRoles = _permRoles.filter(x => x.id !== id);
+    if (_savedRolePerms) delete _savedRolePerms[id];
+    _renderPermRoles();
+    _renderPermTable();
+    try { saveRolePerms(true); } catch(e){}
+    logAudit('ลบตำแหน่ง (role)', label, '');
+    showToast('ลบตำแหน่งแล้ว');
+  });
 }
 
 // ── Auto-save (debounced 900ms) ──────────────────────────────────
@@ -7435,6 +7507,17 @@ function clearDemo() {
 
 function umRefresh() {
   if (_currentRole !== 'admin') return;
+  // เติมตัวเลือกตำแหน่งในฟอร์มเพิ่มผู้ใช้ให้ตรงกับ role ปัจจุบัน (ไม่มีตำแหน่ง + Admin + role ที่สร้างเอง)
+  const _umRoleSel = document.getElementById('um_role');
+  if (_umRoleSel) {
+    const _prev = _umRoleSel.value;
+    const _opts = [
+      {value:'',label:'🚫 ไม่มีตำแหน่ง'},{value:'admin',label:'👑 Admin'},
+      ...(_permRoles||[]).filter(r=>!r.locked).map(r=>({value:r.id,label:(r.label||r.id)}))
+    ];
+    _umRoleSel.innerHTML = _opts.map(r=>`<option value="${r.value}">${r.label}</option>`).join('');
+    if (_opts.some(o=>o.value===_prev)) _umRoleSel.value = _prev;
+  }
   const container = document.getElementById('umUserList');
   if (!container) return;
   container.innerHTML = '<div class="um-loading">⏳ กำลังโหลด...</div>';
@@ -7451,14 +7534,14 @@ function umRefresh() {
       const isMe = _currentUser && u.uid === _currentUser.uid;
       const addedAt = u.addedAt ? new Date(u.addedAt).toLocaleDateString('th-TH') : '-';
       const _allRoleOpts = [
-        {value:'sale',label:'💼 Sale'},{value:'manager',label:'📊 Manager'},{value:'admin',label:'👑 Admin'},
+        {value:'',label:'🚫 ไม่มีตำแหน่ง'},{value:'admin',label:'👑 Admin'},
         ...(_permRoles||[]).filter(r=>!r.locked).map(r=>({value:r.id,label:(r.label||r.id)}))
       ];
       html += `<tr>
         <td><strong>${u.email||'-'}</strong>${isMe ? ' <span style="font-size:10px;color:#3B82F6;">(คุณ)</span>' : ''}</td>
         <td>
-          <select class="role-sel-um" id="rolesel_${u.uid}" ${isMe?'disabled':''}>
-            ${_allRoleOpts.map(r=>`<option value="${r.value}" ${u.role===r.value?'selected':''}>${r.label}</option>`).join('')}
+          <select class="role-sel-um" id="rolesel_${u.uid}" data-email="${u.email||''}" ${isMe?'disabled':''}>
+            ${_allRoleOpts.map(r=>`<option value="${r.value}" ${(u.role||'')===r.value?'selected':''}>${r.label}</option>`).join('')}
           </select>
           ${isMe ? '' : `<button class="btn btn-primary btn-sm" onclick="umChangeRole('${u.uid}')">💾 บันทึก</button>`}
         </td>
@@ -7482,8 +7565,13 @@ function umChangeRole(uid) {
   if (!sel) return;
   const newRole = sel.value;
   const _umEmail = (sel.getAttribute('data-email')) || uid;
-  db.ref(K_USER_ROLES + '/' + uid + '/role').set(newRole)
-    .then(() => { logAudit('เปลี่ยนสิทธิ์ผู้ใช้', _umEmail, 'สิทธิ์ใหม่: ' + newRole); showToast('✅ เปลี่ยนสิทธิ์เรียบร้อย'); umRefresh(); })
+  const _roleLbl = newRole ? getRoleLabel(newRole) : 'ไม่มีตำแหน่ง';
+  // ค่าว่าง = ไม่มีตำแหน่ง → ลบ field role ทิ้ง, ไม่งั้น set ตามที่เลือก
+  const _op = newRole
+    ? db.ref(K_USER_ROLES + '/' + uid + '/role').set(newRole)
+    : db.ref(K_USER_ROLES + '/' + uid + '/role').remove();
+  _op
+    .then(() => { logAudit('เปลี่ยนสิทธิ์ผู้ใช้', _umEmail, 'สิทธิ์ใหม่: ' + _roleLbl); showToast('✅ เปลี่ยนสิทธิ์เรียบร้อย'); umRefresh(); })
     .catch(() => showToast('⚠️ เปลี่ยนสิทธิ์ไม่ได้ ลองใหม่'));
 }
 
@@ -7520,11 +7608,12 @@ function umAddUser() {
       }).then(() => secAuth.signOut());
     })
     .then(() => {
-      logAudit('เพิ่มผู้ใช้', email, 'สิทธิ์: ' + role);
+      const _roleLbl = role ? getRoleLabel(role) : 'ไม่มีตำแหน่ง';
+      logAudit('เพิ่มผู้ใช้', email, 'สิทธิ์: ' + _roleLbl);
       btn.disabled = false; btn.textContent = '➕ เพิ่ม';
       document.getElementById('um_email').value = '';
       document.getElementById('um_pass').value  = '';
-      okEl.textContent = `✅ สร้างบัญชี "${email}" เรียบร้อย (สิทธิ์: ${role})`;
+      okEl.textContent = `✅ สร้างบัญชี "${email}" เรียบร้อย (สิทธิ์: ${_roleLbl})`;
       okEl.classList.add('show');
       umRefresh();
     })
@@ -8461,7 +8550,7 @@ function renderDashboard() {
   if (stEl) stEl.innerHTML = pileTypes.length ? pileTypes.map(p => {
     const qty=stock[p], pct=Math.round(qty/maxQty*100);
     const color=qty<(_cfg.stockLow||50)?'#EF4444':qty<(_cfg.stockWarn||150)?'#F59E0B':'#22C55E';
-    return `<div class="db-bar-row"><div class="db-bar-name" title="${p}">${p}</div><div class="db-bar-bg"><div class="db-bar-fill" style="width:${pct}%;background:${color};"></div></div><div class="db-bar-num">${qty}</div></div>`;
+    return `<div class="db-bar-row"><div class="db-bar-name" title="${_esc(p)}">${_esc(p)}</div><div class="db-bar-bg"><div class="db-bar-fill" style="width:${pct}%;background:${color};"></div></div><div class="db-bar-num">${qty}</div></div>`;
   }).join('') : '<div class="db-empty">ยังไม่มีสต็อก</div>';
 
   // Top customers
@@ -8474,7 +8563,7 @@ function renderDashboard() {
   const topCust = Object.entries(custMap).sort((a,b)=>b[1].count-a[1].count).slice(0,6);
   const custEl = document.getElementById('dbTopCustomers');
   if (custEl) custEl.innerHTML = topCust.length
-    ? topCust.map(([name,d],i)=>`<tr><td style="color:#94A3B8;font-weight:700;">${i+1}</td><td style="font-weight:600;">${name}</td><td style="text-align:center;">${d.count}</td><td>฿${d.val.toLocaleString('th-TH')}</td></tr>`).join('')
+    ? topCust.map(([name,d],i)=>`<tr><td style="color:#94A3B8;font-weight:700;">${i+1}</td><td style="font-weight:600;">${_esc(name)}</td><td style="text-align:center;">${d.count}</td><td>฿${d.val.toLocaleString('th-TH')}</td></tr>`).join('')
     : '<tr><td colspan="4" class="db-empty">ยังไม่มีข้อมูล</td></tr>';
 
   // Top pile types
@@ -8487,7 +8576,7 @@ function renderDashboard() {
   const maxP = topPiles.length ? topPiles[0][1] : 1;
   const pileEl = document.getElementById('dbTopPiles');
   if (pileEl) pileEl.innerHTML = topPiles.map(([name,qty])=>
-    `<div class="db-bar-row"><div class="db-bar-name" title="${name}">${name}</div><div class="db-bar-bg"><div class="db-bar-fill" style="width:${Math.round(qty/maxP*100)}%;background:#A855F7;"></div></div><div class="db-bar-num">${qty.toLocaleString()}</div></div>`
+    `<div class="db-bar-row"><div class="db-bar-name" title="${_esc(name)}">${_esc(name)}</div><div class="db-bar-bg"><div class="db-bar-fill" style="width:${Math.round(qty/maxP*100)}%;background:#A855F7;"></div></div><div class="db-bar-num">${qty.toLocaleString()}</div></div>`
   ).join('') || '<div class="db-empty">ยังไม่มีข้อมูล</div>';
 }
 
