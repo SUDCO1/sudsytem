@@ -534,8 +534,8 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   .stack{padding:10px 12px 80px;}
   table.data-table td,table.data-table th{padding:7px 8px;font-size:12px;}
   .card{border-radius:12px;}
-  #ordersTableWrap{display:none !important;}
-  #ordersMobile{display:block;}
+  #ordersGrouped{display:none !important;}
+  #ordersMobile{display:block !important;}
   #prodOrdersTableWrap{display:none !important;}
   #prodOrdersMobile{display:block !important;}
   #prodLogTableWrap{display:none !important;}
@@ -568,6 +568,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   .mob-oc-fill{height:100%;border-radius:4px;}
   .mob-oc-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
   .mob-oc-date{font-size:11px;color:#64748B;background:#F8FAFC;padding:3px 8px;border-radius:6px;}
+  .mob-oc-site{font-size:11px;color:#475569;margin-top:2px;word-break:break-word;}
   .mob-oc-bottom{padding:8px 14px;border-top:1px solid #F1F5F9;display:flex;gap:8px;align-items:center;}
   .mob-oc-note{flex:1;font-size:11px;color:#64748B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
   /* Prod Log Cards */
@@ -4839,6 +4840,7 @@ function renderOrders() {
           <div class="mob-oc-prog-lbl" style="margin-top:6px;"><span class="mob-oc-prog-txt" style="color:#1D4ED8;">🚚 ส่ง ${delLbl}/${tq} ${uMob}</span><span style="font-size:12px;font-weight:700;">${pctBar}%</span></div>
           <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${pctBar}%;background:${barC};"></div></div>
           <div class="mob-oc-meta"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
+          ${o.site && o.site!=='-' ? `<div class="mob-oc-site">📍 ${_esc(o.site)}</div>` : ''}
         </div>
       </div>
       <div class="mob-oc-bottom"><span class="mob-oc-note">${_esc(noteText)}</span>${btns}</div>
