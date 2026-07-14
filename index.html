@@ -2563,7 +2563,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>ชื่อบริษัท / ลูกค้า</th><th>เบอร์โทร</th><th>ที่อยู่ / หมายเหตุ</th><th>Order ทั้งหมด</th><th>ยอดรวม</th><th></th></tr></thead>
+          <thead><tr><th>ชื่อบริษัท / ลูกค้า</th><th>เบอร์โทร</th><th>ที่อยู่ / หมายเหตุ</th><th>Order ทั้งหมด</th><th></th></tr></thead>
           <tbody id="custBody"></tbody>
         </table>
       </div>
@@ -3728,14 +3728,6 @@ function _auditFmtTime(ts) {
 function _esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-// ความยาวเสาเข็ม: ตัดหน่วยเดิมท้ายค่า (m/ม/เมตร) แล้วเติม "ม." ต่อท้าย เช่น 6.00 -> 6.00ม.
-function _fmtLen(v) {
-  if (v == null) return '';
-  var s = String(v).trim();
-  if (!s || s === '-') return '';
-  s = s.replace(/\s*(?:เมตร|ม\.?|m\.?)\s*$/i, '').trim();
-  return s ? s + 'ม.' : '';
-}
 // จับคู่เลข Order กับ error แบบทั้งคำ (กัน ORD-1 ไปชนกับ ORD-10)
 function _orderMatch(errOrder, orderNum) {
   if (!errOrder || !orderNum) return false;
@@ -4312,7 +4304,6 @@ function renderOrderItemsDraft() {
         + '<td style="color:#64748B;">' + d(it.wire) + '</td>'
         + '<td style="color:#64748B;">' + d(it.ba) + '</td>'
         + '<td style="color:#64748B;">' + d(it.extra) + '</td>'
-        + '<td style="color:#166534;">' + valDisp + '</td>'
         + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
     }
   });
@@ -4320,7 +4311,7 @@ function renderOrderItemsDraft() {
   if (listEl) {
     listEl.innerHTML = pileCount === 0 ? '' :
       '<table class="items-draft-table"><thead><tr>'
-      + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>บ่า</th><th>เพิ่มเติม</th><th>มูลค่า</th><th></th>'
+      + '<th>ชนิดเสา</th><th>จำนวน</th><th>ความยาว</th><th>เชื่อม</th><th>เหล็กเสริม</th><th>ลวด</th><th>บ่า</th><th>เพิ่มเติม</th><th></th>'
       + '</tr></thead><tbody>' + pileRows + '</tbody></table>';
   }
   if (box) {
@@ -4330,9 +4321,7 @@ function renderOrderItemsDraft() {
       const _totUnit = _pUnits.size === 1 ? [..._pUnits][0] : 'ต้น';
       box.className = 'order-value-box has-value';
       box.setAttribute('data-unit-lock', '');
-      box.textContent = pileVal > 0
-        ? 'รวม ' + pileQty + ' ' + _totUnit + ' · มูลค่า ' + pileVal.toLocaleString('th-TH') + ' บาท'
-        : 'รวม ' + pileQty + ' ' + _totUnit + ' · (ยังไม่ได้ตั้งราคา)';
+      box.textContent = 'รวม ' + pileQty + ' ' + _totUnit;
     }
   }
 
@@ -4504,7 +4493,7 @@ function submitOrder() {
     document.getElementById('formView').style.display    = 'none';
     document.getElementById('successView').style.display = 'block';
     document.getElementById('newOrderNum').textContent   = order.orderNum;
-    const valPart = totalValue > 0 ? ' · มูลค่า ' + totalValue.toLocaleString('th-TH') + ' ฿' : '';
+    const valPart = '';
     document.getElementById('successDetail').innerHTML =
       '<strong>' + _esc(customer) + '</strong> · ' + _esc(tel) + '<br>'
       + _esc(pileLabel) + ' · รวม ' + totalQty + ' ต้น' + valPart
@@ -4764,11 +4753,11 @@ function renderOrders() {
             lenDisp = rows ? `<div style="display:flex;flex-direction:column;gap:3px;background:#F8FAFC;border:1px solid #EEF2F7;border-radius:8px;padding:6px 9px;">${rows}</div>` : '<span style="color:#CBD5E1;">—</span>';
           } else {
             const specParts = [
-              it.length && it.length!=='-' ? _fmtLen(it.length) : null,
-              it.weld   && it.weld!=='-'   ? 'ช:'+it.weld   : null,
-              it.steel  && it.steel!=='-'  ? 'สล:'+it.steel  : null,
-              it.wire   && it.wire!=='-'   ? 'ลวด:'+it.wire   : null,
-              it.ba     && it.ba!=='-'     ? 'บ:'+it.ba     : null,
+              it.length && it.length!=='-' ? it.length : null,
+              it.weld   && it.weld!=='-'   ? '🔗 '+it.weld   : null,
+              it.steel  && it.steel!=='-'  ? '🔩 '+it.steel  : null,
+              it.wire   && it.wire!=='-'   ? '〰 '+it.wire   : null,
+              it.ba     && it.ba!=='-'     ? '🔷 '+it.ba     : null,
               it.extra  && it.extra!=='-'  ? '📝 '+it.extra  : null,
             ].filter(Boolean);
             lenDisp = specParts.length ? '<span>'+specParts.join(' · ')+'</span>' : '<span style="color:#CBD5E1;">—</span>';
@@ -4830,7 +4819,7 @@ function renderOrders() {
       const _dim = [it.height, it.width, it.length].filter(v=>v&&v!=='-').join(' × ');
       return [ _dim||null, it.rebar&&it.rebar!=='-'?'🔩 '+it.rebar:null, it.pipe&&it.pipe!=='-'?'🕳 '+it.pipe:null ].filter(Boolean).join(' · ');
     }
-    return [ it.length&&it.length!=='-'?_fmtLen(it.length):null, it.weld&&it.weld!=='-'?'ช:'+it.weld:null, it.steel&&it.steel!=='-'?'สล:'+it.steel:null, it.wire&&it.wire!=='-'?'ลวด:'+it.wire:null, it.ba&&it.ba!=='-'?'บ:'+it.ba:null, it.extra&&it.extra!=='-'?'📝 '+it.extra:null ].filter(Boolean).join(' · ');
+    return [ it.length&&it.length!=='-'?it.length:null, it.weld&&it.weld!=='-'?'🔗 '+it.weld:null, it.steel&&it.steel!=='-'?'🔩 '+it.steel:null, it.wire&&it.wire!=='-'?'〰 '+it.wire:null, it.ba&&it.ba!=='-'?'🔷 '+it.ba:null, it.extra&&it.extra!=='-'?'📝 '+it.extra:null ].filter(Boolean).join(' · ');
   };
   const _emptySpec = '<span style="color:#CBD5E1;">—</span>';
   const _canEditB  = canDo('edit_order');
@@ -4888,7 +4877,7 @@ function renderOrders() {
         const editCall   = isMultiItem ? `editItemDelivered('${o.orderNum}',${idx})` : `editDelivered('${o.orderNum}')`;
         const s = _mobSpecOf(it);
         return `<div class="mob-oe-item">
-          <div class="mob-oe-spec">${idxBadge}<span>${s?_esc(s):_emptySpec}</span><span class="mob-oe-qty">${iqty} ${iu}</span></div>
+          <div class="mob-oe-spec">${idxBadge}<span>📋 ${s?_esc(s):_emptySpec}</span><span class="mob-oe-qty">${iqty} ${iu}</span></div>
           <div class="mob-oe-prog">
             <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt" style="color:#9A3412;">🏭 ผลิต ${produced}/${iqty}</span><span style="font-size:11px;font-weight:700;color:${prodPct>=100?'#166534':'#9A3412'};">${prodPctBar}%</span></div>
             <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div>
@@ -4914,7 +4903,7 @@ function renderOrders() {
       const multiBadge = es.length > 1 ? ` <span style="font-size:10px;color:#64748B;font-weight:700;">· ${es.length} รายการ</span>` : '';
       return `<div class="mob-oe${hasErr?' err':''}">
         <div class="mob-oe-top"><span><span class="mob-oe-num">${_esc(o.orderNum)}</span>${multiBadge}</span><span class="mob-oc-status status-sel ${stCls}">${stLabel}</span></div>
-        <div class="mob-oe-cust">${_esc(o.customer)}${o.tel?`<span class="mob-oc-tel"> · ${_esc(o.tel)}</span>`:''}${valDisp?`<span style="margin-left:auto;font-size:11px;color:#166534;font-weight:700;">${valDisp}</span>`:''}</div>
+        <div class="mob-oe-cust">${_esc(o.customer)}${o.tel?`<span class="mob-oc-tel"> · ${_esc(o.tel)}</span>`:''}</div>
         ${o.site && o.site!=='-' ? `<div class="mob-oe-site">📍 ${_esc(o.site)}</div>` : ''}
         ${itemsHtml}
         <div class="mob-oe-meta"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
@@ -5129,11 +5118,11 @@ function renderProdSection() {
         it.pipe   && it.pipe !=='-'  ? `<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🕳 ${it.pipe}</span>`   : '',
         it.position && it.position!=='-' ? `<span style="background:#F1F5F9;color:#475569;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📍 ${it.position}</span>` : '',
       ] : [
-        it.length && it.length!=='-' ? `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">${_fmtLen(it.length)}</span>` : '',
-        it.weld   && it.weld  !=='-' ? `<span style="background:#FEF9C3;color:#854D0E;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">ช:${it.weld}</span>`   : '',
-        it.steel  && it.steel !=='-' ? `<span style="background:#F3E8FF;color:#6D28D9;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">สล:${it.steel}</span>`  : '',
-        it.wire   && it.wire  !=='-' ? `<span style="background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">ลวด:${it.wire}</span>`   : '',
-        it.ba     && it.ba    !=='-' ? `<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">บ:${it.ba}</span>`     : '',
+        it.length && it.length!=='-' ? `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📐 ${it.length}</span>` : '',
+        it.weld   && it.weld  !=='-' ? `<span style="background:#FEF9C3;color:#854D0E;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔗 ${it.weld}</span>`   : '',
+        it.steel  && it.steel !=='-' ? `<span style="background:#F3E8FF;color:#6D28D9;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔩 ${it.steel}</span>`  : '',
+        it.wire   && it.wire  !=='-' ? `<span style="background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">〰 ${it.wire}</span>`   : '',
+        it.ba     && it.ba    !=='-' ? `<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔷 ${it.ba}</span>`     : '',
         it.extra  && it.extra !=='-' ? `<span style="background:#F1F5F9;color:#475569;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📝 ${it.extra}</span>`  : '',
       ]).filter(Boolean).join(' ');
       const btn = !canDo('log_production') ? '' : inProd
@@ -5805,11 +5794,11 @@ function renderProdLogHistory() {
     const standRowsData = l.standRows && l.standRows.length ? l.standRows : (l.standQty > 0 ? [{qty:l.standQty,size:l.standSize}] : []);
     const standParts = standRowsData.filter(r=>r.qty>0||r.size).map(r=>'<span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;">🪝 ลูกตั้ง '+r.qty+(r.size?' '+r.size:'')+'</span>');
     const specParts = [
-      l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">'+_fmtLen(l.length)+'</span>' : null,
-      l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:1px 6px;border-radius:4px;font-size:10px;">ช:'+l.weld  +'</span>' : null,
-      l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:1px 6px;border-radius:4px;font-size:10px;">สล:'+l.steel +'</span>' : null,
-      l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;">ลวด:'+l.wire  +'</span>' : null,
-      l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">บ:'+l.ba   +'</span>' : null,
+      l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">📐 '+l.length+'</span>' : null,
+      l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:1px 6px;border-radius:4px;font-size:10px;">🔗 '+l.weld  +'</span>' : null,
+      l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:1px 6px;border-radius:4px;font-size:10px;">🔩 '+l.steel +'</span>' : null,
+      l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;">〰 '+l.wire  +'</span>' : null,
+      l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">🔷 '+l.ba   +'</span>' : null,
       l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;">📝 '+l.extra +'</span>' : null,
     ].filter(Boolean);
     const prodParts = [
@@ -5903,11 +5892,11 @@ function openProdLogDetail(idx) {
   const orderDisp = isStock ? '📦 ผลิตเพิ่มสต็อก' : l.orderNum;
   const custFull  = isStock ? '' : (getOrders().find(o=>o.orderNum===l.orderNum)?.customer || '');
   const specParts = [
-    l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">'+_fmtLen(l.length)+'</span>' : null,
-    l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:2px 8px;border-radius:5px;font-size:11px;">ช:'+l.weld  +'</span>' : null,
-    l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:2px 8px;border-radius:5px;font-size:11px;">สล:'+l.steel +'</span>' : null,
-    l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;">ลวด:'+l.wire  +'</span>' : null,
-    l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">บ:'+l.ba   +'</span>' : null,
+    l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">📐 '+l.length+'</span>' : null,
+    l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:2px 8px;border-radius:5px;font-size:11px;">🔗 '+l.weld  +'</span>' : null,
+    l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:2px 8px;border-radius:5px;font-size:11px;">🔩 '+l.steel +'</span>' : null,
+    l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;">〰 '+l.wire  +'</span>' : null,
+    l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">🔷 '+l.ba   +'</span>' : null,
     l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;">📝 '+l.extra +'</span>' : null,
   ].filter(Boolean);
   const standRowsData = l.standRows && l.standRows.length ? l.standRows : (l.standQty > 0 ? [{qty:l.standQty,size:l.standSize}] : []);
@@ -6127,8 +6116,7 @@ function renderSummary() {
     <div class="sum-card green"><div class="sum-label">🏗️ ส่งแล้ว</div><div class="sum-val">${totDel}<span style="font-size:16px;font-weight:400;color:#64748B;"> / ${totalQty}</span></div><div class="sum-sub">ต้นเสาเข็ม</div></div>
     <div class="sum-card red"><div class="sum-label">🏭 ผลิต</div><div class="sum-val">${pErr}</div><div class="sum-sub">เสียหาย ${pDmg} ต้น</div></div>
     <div class="sum-card purple"><div class="sum-label">🚛 Error ขนส่ง</div><div class="sum-val">${sErr}</div><div class="sum-sub">เสียหาย ${sDmg} ต้น</div></div>
-    ${grandTotal > 0 ? `<div class="sum-card amber"><div class="sum-label">💰 มูลค่ารวม</div><div class="sum-val" style="font-size:22px;">${(grandTotal/1000).toFixed(0)}K</div><div class="sum-sub">${grandTotal.toLocaleString('th-TH')} บาท (รวมจบบิลแล้ว)</div></div>` : ''}
-    ${hist.length > 0 ? `<div class="sum-card" style="background:linear-gradient(135deg,#F0FDF4,#DCFCE7);border-color:#86EFAC;"><div class="sum-label">✅ จบบิลแล้ว</div><div class="sum-val" style="color:#15803D;">${hist.length}</div><div class="sum-sub">${histVal>0?histVal.toLocaleString('th-TH')+' ฿':''}</div></div>` : ''}
+    ${hist.length > 0 ? `<div class="sum-card" style="background:linear-gradient(135deg,#F0FDF4,#DCFCE7);border-color:#86EFAC;"><div class="sum-label">✅ จบบิลแล้ว</div><div class="sum-val" style="color:#15803D;">${hist.length}</div><div class="sum-sub">รายการ</div></div>` : ''}
     ${overdueCount > 0 ? `<div class="sum-card red"><div class="sum-label">⚠️ เกินกำหนด</div><div class="sum-val">${overdueCount}</div><div class="sum-sub">Order ที่ยังไม่ส่งครบ</div></div>` : ''}
   `;
   renderHistorySummary();
@@ -6256,11 +6244,11 @@ function renderHistorySummary() {
     const span = items.length;
     items.forEach((it, idx) => {
       const _sc=[
-        it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">'+_fmtLen(it.length)+'</span>':'',
-        it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">ช:'+it.weld+'</span>':'',
-        it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">สล:'+it.steel+'</span>':'',
-        it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#FAF5FF;color:#7E22CE;border:1px solid #D8B4FE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">ลวด:'+it.wire+'</span>':'',
-        it.ba&&it.ba!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">บ:'+it.ba+'</span>':'',
+        it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#128208; '+it.length+'</span>':'',
+        it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#128293; '+it.weld+'</span>':'',
+        it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#129525; '+it.steel+'</span>':'',
+        it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#FAF5FF;color:#7E22CE;border:1px solid #D8B4FE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#129526; '+it.wire+'</span>':'',
+        it.ba&&it.ba!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">🔷 '+it.ba+'</span>':'',
         it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">+ '+it.extra+'</span>':'',
       ].filter(Boolean).join(' ');
       const label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:nowrap;gap:3px;margin-top:3px;align-items:center;">'+_sc+'</div>':'');
@@ -6305,11 +6293,11 @@ function exportHistoryCSV() {
     const items = h.archivedItems || getOrderItems(h);
     items.forEach(it => {
       rows.push([h.orderNum, h.closedAt||'-', h.customer, h.tel||'-', h.sale||'-',
-        it.pileType, it.length||'-', it.qty, it.delivered||0, h.orderValue||0, h.note||'-']);
+        it.pileType, it.length||'-', it.qty, it.delivered||0, h.note||'-']);
     });
   });
   downloadCSV('order_history_' + new Date().toISOString().slice(0,10) + '.csv',
-    ['เลข Order','วันที่จบ','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','รายละเอียดเสา','จำนวน','ส่งแล้ว','มูลค่า','หมายเหตุ'], rows);
+    ['เลข Order','วันที่จบ','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','รายละเอียดเสา','จำนวน','ส่งแล้ว','หมายเหตุ'], rows);
   showToast('📥 Export ประวัติ Order เรียบร้อย!');
 }
 
@@ -6366,10 +6354,10 @@ function cpSpecChips(specStr) {
   if (!specStr || specStr === '-') return '<span style="color:#CBD5E1;">—</span>';
   const DEFS = [
     { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8' },
-    { icon:'ช:', bg:'#FEF9C3', tc:'#854D0E' },
-    { icon:'สล:', bg:'#F3E8FF', tc:'#6D28D9' },
-    { icon:'ลวด:', bg:'#DCFCE7', tc:'#166534' },
-    { icon:'บ:', bg:'#DBEAFE', tc:'#1D4ED8' },
+    { icon:'🔗', bg:'#FEF9C3', tc:'#854D0E' },
+    { icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9' },
+    { icon:'〰', bg:'#DCFCE7', tc:'#166534' },
+    { icon:'🔷', bg:'#DBEAFE', tc:'#1D4ED8' },
     { icon:'📝', bg:'#F1F5F9', tc:'#475569' },
   ];
   const parts = String(specStr).split('/').filter(Boolean);
@@ -6377,8 +6365,7 @@ function cpSpecChips(specStr) {
   return '<div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;">' +
     parts.map((v,i) => {
       const d = DEFS[i] || DEFS[4];
-      const disp = i === 0 ? escHtml(_fmtLen(v)) : d.icon + ' ' + escHtml(v);
-      return `<span style="background:${d.bg};color:${d.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">${disp}</span>`;
+      return `<span style="background:${d.bg};color:${d.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">${d.icon} ${escHtml(v)}</span>`;
     }).join('') + '</div>';
 }
 
@@ -6715,7 +6702,7 @@ function renderStockCards() {
         <span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:5px;">🔴 ${offline}</span>
       </div>`;
     }
-    const valHtml  = val > 0 ? `<div style="font-size:11px;color:#64748B;margin-bottom:4px;">💰 ${val.toLocaleString('th-TH')} ฿</div>` : '';
+    const valHtml  = '';
     const ts       = getLastStockTs(name);
     const tsHtml   = ts ? `<span class="stock-ts">อัปเดต: ${ts}</span>` : `<span class="stock-ts">ยังไม่มีประวัติ</span>`;
     const quickBtn = canDo('edit_stock') ? `<button class="stock-quick-btn" onclick="quickFillStock('${name.replace(/'/g,"\'")}')">+ รับเข้า</button>` : '';
@@ -6762,14 +6749,8 @@ function renderStockCards() {
       <div class="stock-card-footer">${gTsHtml}${gQuickBtn}</div>
     </div>`;
 
-  // Summary value row
-  const valueRow = totalValue > 0
-    ? `<div class="stock-card stock-ok" style="grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:14px 18px;">
-        <span style="font-size:14px;font-weight:700;color:#1E293B;">💰 มูลค่าสินค้าคงคลังรวม</span>
-        <span style="font-size:24px;font-weight:900;color:#166534;">${totalValue.toLocaleString('th-TH')} บาท</span>
-        <span style="font-size:11px;color:#64748B;">(คำนวณจากราคาต่อต้นที่ตั้งไว้)</span>
-      </div>`
-    : '';
+  // Summary value row — ซ่อนมูลค่าตามคำขอ
+  const valueRow = '';
   grid.innerHTML = cards.join('') + girderCard + valueRow;
 }
 
@@ -6928,7 +6909,7 @@ function showCustHistory(custName) {
   title.textContent = '📋 ประวัติการซื้อขาย — ' + custName;
   const tbody = document.getElementById('histBody');
   if (!hist.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="6">ยังไม่มีประวัติการซื้อขาย</td></tr>';
+    tbody.innerHTML = '<tr class="table-empty"><td colspan="5">ยังไม่มีประวัติการซื้อขาย</td></tr>';
   } else {
     tbody.innerHTML = hist.map(h => {
       const items = h.archivedItems || getOrderItems(h);
@@ -6941,7 +6922,6 @@ function showCustHistory(custName) {
         <td style="font-size:11px;color:#64748B;">${h.closedAt||'-'}</td>
         <td style="font-size:12px;">${itemsStr}</td>
         <td style="font-size:12px;font-weight:700;color:#166534;">${totalDel}/${totalQty} ต้น</td>
-        <td style="font-size:12px;color:#15803D;font-weight:700;">${val}</td>
         <td style="font-size:12px;">${h.sale||'-'}</td>
       </tr>`;
     }).join('');
@@ -6964,7 +6944,6 @@ function closeBill(orderNum) {
     '🔴 ยืนยันจบบิล — ' + orderNum + '\n\n' +
     'ลูกค้า: ' + o.customer + ' (' + (o.tel||'-') + ')\n' +
     'รายการ: ' + itemsStr + '\n' +
-    'มูลค่า: ' + (o.orderValue>0 ? val + ' ฿' : 'ไม่ระบุ') + '\n' +
     'Sale: ' + (o.sale||'-') + '\n\n' +
     '⚠️ Order นี้จะถูกเก็บในประวัติและนำออกจากรายการ active\n' +
     'ตกลง = จบบิล | ยกเลิก = ยังไม่จบ'
@@ -7010,7 +6989,7 @@ function renderCustomers() {
   const orders = getOrders();
   const tbody = document.getElementById('custBody');
   if (!custs.length) {
-    tbody.innerHTML = `<tr class="table-empty"><td colspan="6">${query ? 'ไม่พบลูกค้าที่ค้นหา' : 'ยังไม่มีข้อมูลลูกค้า · ส่ง Order แรกจะบันทึกอัตโนมัติ'}</td></tr>`; return;
+    tbody.innerHTML = `<tr class="table-empty"><td colspan="5">${query ? 'ไม่พบลูกค้าที่ค้นหา' : 'ยังไม่มีข้อมูลลูกค้า · ส่ง Order แรกจะบันทึกอัตโนมัติ'}</td></tr>`; return;
   }
   tbody.innerHTML = custs.map((c, i) => {
     const custOrders = orders.filter(o => o.customer === c.name);
@@ -7024,7 +7003,6 @@ function renderCustomers() {
       <td>${c.tel}</td>
       <td style="color:#64748B;font-size:12px;">${c.addr||'-'}</td>
       <td style="font-weight:700;color:#1E40AF;">${totalCount}<span style="font-size:10px;color:#94A3B8;font-weight:400;"> (${custOrders.length} active · ${custHist.length} จบแล้ว)</span></td>
-      <td style="font-size:12px;color:#166534;font-weight:700;">${totalVal>0?totalVal.toLocaleString('th-TH')+' ฿':'-'}</td>
       <td>
         ${custHist.length>0?`<button class="btn btn-ghost btn-sm" onclick="showCustHistory('${c.name}')" style="font-size:11px;padding:4px 8px;color:#1D4ED8;margin-right:4px;">📋 ประวัติ</button>`:''}
         ${canDo('delete_customers')?`<button class="btn btn-ghost btn-sm" onclick="deleteCustomer(${i})" style="font-size:11px;padding:4px 8px;color:#EF4444;">🗑</button>`:''}
@@ -7082,7 +7060,6 @@ function exportOrdersCSV() {
         it.length || o.length || '-',
         o.deliveryDate,
         o.status || 'รับ Order แล้ว',
-        it.value || (idx===0 ? (o.orderValue||0) : 0),
         o.site,
         o.note
       ]);
@@ -7090,7 +7067,7 @@ function exportOrdersCSV() {
   });
   downloadCSV(
     `orders_${new Date().toISOString().slice(0,10)}.csv`,
-    ['เลข Order','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','จำนวน (ต้น)','ส่งแล้ว (ต้น)','รายละเอียดเสา','วันต้องการ','สถานะ','มูลค่า (บาท)','ไซต์งาน','หมายเหตุ'],
+    ['เลข Order','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','จำนวน (ต้น)','ส่งแล้ว (ต้น)','รายละเอียดเสา','วันต้องการ','สถานะ','ไซต์งาน','หมายเหตุ'],
     rows
   );
   showToast('📥 Export Orders เรียบร้อย!');
@@ -7783,10 +7760,10 @@ function renderSpecGrid() {
   const total = specs.reduce((s,v) => s+(v.qty||0), 0);
   const TAG_DEFS = [
     { key:'length', icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8' },
-    { key:'weld',   icon:'ช:', bg:'#FEF9C3', tc:'#854D0E' },
-    { key:'steel',  icon:'สล:', bg:'#F3E8FF', tc:'#6D28D9' },
-    { key:'wire',   icon:'ลวด:', bg:'#DCFCE7', tc:'#166534' },
-    { key:'ba',     icon:'บ:', bg:'#DBEAFE', tc:'#1D4ED8' },
+    { key:'weld',   icon:'🔗', bg:'#FEF9C3', tc:'#854D0E' },
+    { key:'steel',  icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9' },
+    { key:'wire',   icon:'〰', bg:'#DCFCE7', tc:'#166534' },
+    { key:'ba',     icon:'🔷', bg:'#DBEAFE', tc:'#1D4ED8' },
   ];
   grid.innerHTML = specs.map(v => {
     const pct   = total > 0 ? Math.round((v.qty||0)/total*100) : 0;
@@ -7802,29 +7779,28 @@ function renderSpecGrid() {
       // format ใหม่: มี field แยก
       const parts = [
         v.spec   && v.spec  !=='-' ? { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8', val:v.spec  } : null,
-        v.weld   && v.weld  !=='-' ? { icon:'ช:', bg:'#FEF9C3', tc:'#854D0E', val:v.weld  } : null,
-        v.steel  && v.steel !=='-' ? { icon:'สล:', bg:'#F3E8FF', tc:'#6D28D9', val:v.steel } : null,
-        v.wire   && v.wire  !=='-' ? { icon:'ลวด:', bg:'#DCFCE7', tc:'#166634', val:v.wire  } : null,
-        v.ba     && v.ba    !=='-' ? { icon:'บ:', bg:'#DBEAFE', tc:'#1D4ED8', val:v.ba    } : null,
+        v.weld   && v.weld  !=='-' ? { icon:'🔗', bg:'#FEF9C3', tc:'#854D0E', val:v.weld  } : null,
+        v.steel  && v.steel !=='-' ? { icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9', val:v.steel } : null,
+        v.wire   && v.wire  !=='-' ? { icon:'〰', bg:'#DCFCE7', tc:'#166634', val:v.wire  } : null,
+        v.ba     && v.ba    !=='-' ? { icon:'🔷', bg:'#DBEAFE', tc:'#1D4ED8', val:v.ba    } : null,
       ].filter(Boolean);
-      tagsHtml = parts.map(p => { const dv = p.icon==='📐' ? escHtml(_fmtLen(p.val)) : p.icon+' '+escHtml(p.val); return `<span style="background:${p.bg};color:${p.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${dv}</span>`; }).join(' ');
+      tagsHtml = parts.map(p => `<span style="background:${p.bg};color:${p.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${p.icon} ${escHtml(p.val)}</span>`).join(' ');
     } else if (String(v.spec||'').includes('/')) {
       // format เก่า: "10.00/10/4db12/4" → parse ตาม position
       const parts = String(v.spec).split('/');
       const defs  = [
         { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8' },
-        { icon:'ช:', bg:'#FEF9C3', tc:'#854D0E' },
-        { icon:'สล:', bg:'#F3E8FF', tc:'#6D28D9' },
-        { icon:'ลวด:', bg:'#DCFCE7', tc:'#166534' },
+        { icon:'🔗', bg:'#FEF9C3', tc:'#854D0E' },
+        { icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9' },
+        { icon:'〰', bg:'#DCFCE7', tc:'#166534' },
         { icon:'📝', bg:'#F1F5F9', tc:'#475569' },
       ];
       tagsHtml = parts.map((p,i) => {
         const d = defs[i] || defs[4];
-        const dv = i === 0 ? escHtml(_fmtLen(p.trim())) : d.icon + ' ' + escHtml(p.trim());
-        return `<span style="background:${d.bg};color:${d.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${dv}</span>`;
+        return `<span style="background:${d.bg};color:${d.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${d.icon} ${escHtml(p.trim())}</span>`;
       }).join(' ');
     } else {
-      tagsHtml = `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${escHtml(_fmtLen(v.spec))}</span>`;
+      tagsHtml = `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">📐 ${escHtml(v.spec)}</span>`;
     }
     return `<div style="padding:10px 12px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0;display:flex;flex-direction:column;gap:6px;">
       <div style="display:flex;flex-wrap:wrap;gap:4px;">${tagsHtml}</div>
@@ -8226,7 +8202,6 @@ function renderEditItemsTable() {
       <td>${fld('wire','ลวด')}</td>
       <td>${fld('ba','บ่า')}</td>
       <td>${fld('extra','เพิ่มเติม')}</td>
-      <td style="color:#166534;font-size:12px;font-weight:600;">${valDisp}</td>
       <td>${delCell}</td>
     </tr>`;
   }).join('');
@@ -8243,9 +8218,7 @@ function renderEditItemsTable() {
     const _eTotUnit = _eUnits.size === 1 ? [..._eUnits][0] : 'ต้น';
     box.className = 'order-value-box has-value';
     box.setAttribute('data-unit-lock', '');
-    box.textContent = totalVal > 0
-      ? 'รวม ' + totalQty + ' ' + _eTotUnit + ' · มูลค่า ' + totalVal.toLocaleString('th-TH') + ' บาท'
-      : 'รวม ' + totalQty + ' ' + _eTotUnit;
+    box.textContent = 'รวม ' + totalQty + ' ' + _eTotUnit;
   }
 }
 
@@ -8263,9 +8236,7 @@ function editItemChangeQty(i, val) {
     const _eTotUnit = _eUnits.size === 1 ? [..._eUnits][0] : 'ต้น';
     box.className   = 'order-value-box has-value';
     box.setAttribute('data-unit-lock', '');
-    box.textContent = totalVal > 0
-      ? 'รวม ' + totalQty + ' ' + _eTotUnit + ' · มูลค่า ' + totalVal.toLocaleString('th-TH') + ' บาท'
-      : 'รวม ' + totalQty + ' ' + _eTotUnit;
+    box.textContent = 'รวม ' + totalQty + ' ' + _eTotUnit;
   }
 }
 
@@ -8416,7 +8387,7 @@ function xlsxStyleHeader(ws, range, bgColor, fontColor) {
 
 function buildOrdersSheet() {
   const orders = getOrders();
-  const headers = ['เลข Order','วันที่สร้าง','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','จำนวน (ต้น)','ส่งแล้ว (ต้น)','รายละเอียดเสา','วันต้องการ','สถานะ','มูลค่า (บาท)','ไซต์งาน','หมายเหตุ'];
+  const headers = ['เลข Order','วันที่สร้าง','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','จำนวน (ต้น)','ส่งแล้ว (ต้น)','รายละเอียดเสา','วันต้องการ','สถานะ','ไซต์งาน','หมายเหตุ'];
   const data = [headers];
   orders.forEach(o => {
     const items = getOrderItems(o);
@@ -8433,7 +8404,6 @@ function buildOrdersSheet() {
         it.length || o.length || '-',
         o.deliveryDate || '-',
         o.status || 'รับ Order แล้ว',
-        idx === 0 ? (o.orderValue || 0) : '',
         o.site || '-',
         o.note || '-',
       ]);
@@ -8442,14 +8412,14 @@ function buildOrdersSheet() {
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [
     {wch:16},{wch:14},{wch:22},{wch:14},{wch:12},{wch:20},
-    {wch:12},{wch:12},{wch:10},{wch:12},{wch:16},{wch:14},{wch:24},{wch:24}
+    {wch:12},{wch:12},{wch:10},{wch:12},{wch:16},{wch:24},{wch:24}
   ];
   return ws;
 }
 
 function buildHistorySheet() {
   const hist = getHistory();
-  const headers = ['เลข Order','วันที่จบ','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','รายละเอียดเสา','จำนวน (ต้น)','ส่งแล้ว','มูลค่า (บาท)','หมายเหตุ'];
+  const headers = ['เลข Order','วันที่จบ','ลูกค้า','เบอร์โทร','Sale','ชนิดเสา','รายละเอียดเสา','จำนวน (ต้น)','ส่งแล้ว','หมายเหตุ'];
   const data = [headers];
   hist.forEach(h => {
     const items = h.archivedItems || getOrderItems(h);
@@ -8457,13 +8427,13 @@ function buildHistorySheet() {
       data.push([
         h.orderNum, h.closedAt || '-', h.customer, h.tel || '-', h.sale || '-',
         it.pileType, it.length || '-', it.qty, it.delivered || 0,
-        h.orderValue || 0, h.note || '-',
+        h.note || '-',
       ]);
     });
   });
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [
-    {wch:16},{wch:14},{wch:22},{wch:14},{wch:12},{wch:20},{wch:10},{wch:12},{wch:12},{wch:14},{wch:24}
+    {wch:16},{wch:14},{wch:22},{wch:14},{wch:12},{wch:20},{wch:10},{wch:12},{wch:12},{wch:24}
   ];
   return ws;
 }
@@ -8485,7 +8455,7 @@ function buildStockSummarySheet() {
   const reserved = getReservedStock();
   const cfg      = getConfig();
   const prices   = cfg.pilePrices || {};
-  const headers  = ['ชนิดเสา','สต็อกรวม (ต้น)','จองแล้ว (ต้น)','คงเหลือจริง','ราคา/ต้น (บาท)','มูลค่ารวม (บาท)','สถานะ'];
+  const headers  = ['ชนิดเสา','สต็อกรวม (ต้น)','จองแล้ว (ต้น)','คงเหลือจริง','ราคา/ต้น (บาท)','สถานะ'];
   const data = [headers];
   cfg.pileTypes.forEach(name => {
     const qty   = stock[name] || 0;
@@ -8494,10 +8464,10 @@ function buildStockSummarySheet() {
     const price = prices[name] || 0;
     const val   = price > 0 ? qty * price : 0;
     const status = avail < cfg.stockLow ? '🚨 ต่ำมาก' : avail < cfg.stockWarn ? '⚠️ ใกล้หมด' : '✅ ปกติ';
-    data.push([name, qty, res, avail, price || '-', val || '-', status]);
+    data.push([name, qty, res, avail, price || '-', status]);
   });
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{wch:24},{wch:14},{wch:14},{wch:14},{wch:16},{wch:16},{wch:12}];
+  ws['!cols'] = [{wch:24},{wch:14},{wch:14},{wch:14},{wch:16},{wch:12}];
   return ws;
 }
 
@@ -8576,7 +8546,6 @@ function renderDashboard() {
     { label:'Orders ทั้งหมด', val:total, sub:'ช่วง '+days+' วัน', color:'blue',   icon:'📋' },
     { label:'ส่งสำเร็จ',      val:done,  sub:total>0?Math.round(done/total*100)+'%':'', color:'green',  icon:'✅' },
     { label:'ค้างอยู่',        val:active, sub:'orders ที่ยังเปิดอยู่', color:'amber',  icon:'⏳' },
-    { label:'มูลค่ารวม',      val:'฿'+totalV.toLocaleString('th-TH'), sub:'', color:'purple', icon:'💰' },
     { label:'Error ผลิต',     val:prodErrs, sub:'รายการที่มีปัญหา', color:prodErrs>0?'red':'teal', icon:'🏭' },
     { label:'สต็อกต่ำ',       val:lowStock, sub:'ประเภทที่ใกล้หมด', color:lowStock>0?'red':'teal', icon:'📦' },
   ];
@@ -8652,8 +8621,8 @@ function renderDashboard() {
   const topCust = Object.entries(custMap).sort((a,b)=>b[1].count-a[1].count).slice(0,6);
   const custEl = document.getElementById('dbTopCustomers');
   if (custEl) custEl.innerHTML = topCust.length
-    ? topCust.map(([name,d],i)=>`<tr><td style="color:#94A3B8;font-weight:700;">${i+1}</td><td style="font-weight:600;">${_esc(name)}</td><td style="text-align:center;">${d.count}</td><td>฿${d.val.toLocaleString('th-TH')}</td></tr>`).join('')
-    : '<tr><td colspan="4" class="db-empty">ยังไม่มีข้อมูล</td></tr>';
+    ? topCust.map(([name,d],i)=>`<tr><td style="color:#94A3B8;font-weight:700;">${i+1}</td><td style="font-weight:600;">${_esc(name)}</td><td style="text-align:center;">${d.count}</td></tr>`).join('')
+    : '<tr><td colspan="3" class="db-empty">ยังไม่มีข้อมูล</td></tr>';
 
   // Top pile types
   const pileMap = {};
