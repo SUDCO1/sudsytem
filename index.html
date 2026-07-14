@@ -547,35 +547,37 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   #sec-status .toolbar{flex-direction:column;gap:8px;}
   .desk-only-btn{display:none !important;}
   .toolbar-mob-row{display:flex;gap:8px;width:100%;}
-  /* Order Cards */
-  .mob-oc{background:#fff;border-radius:10px;border:1px solid #E2E8F0;margin-bottom:7px;overflow:hidden;}
-  .mob-oc.new-oc{border-left:4px solid #3B82F6;}
-  .mob-oc.err-oc{border-left:4px solid #EF4444;background:#FFFBFB;}
-  .mob-oc-top{display:flex;align-items:center;justify-content:space-between;padding:7px 12px 3px;}
-  .mob-oc-num{font-size:13px;font-weight:900;color:#1E40AF;}
-  .mob-oc-status{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;}
-  .mob-oc-cust{padding:0 12px 5px;font-size:13px;font-weight:700;color:#1E293B;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
-  .mob-oc-tel{font-size:11px;color:#64748B;font-weight:400;}
-  .mob-oc-div{height:1px;background:#F1F5F9;margin:0 12px;}
-  .mob-oc-mid{display:flex;align-items:stretch;padding:6px 12px 8px;gap:10px;}
-  .mob-oc-pile{background:#EFF6FF;border-radius:8px;padding:6px 9px;flex-shrink:0;text-align:center;min-width:52px;align-self:flex-start;}
-  .mob-oc-pile-type{font-size:15px;font-weight:900;color:#1E40AF;}
-  .mob-oc-pile-qty{font-size:11px;color:#3B82F6;font-weight:700;}
-  .mob-oc-info{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0;}
+  /* Order Cards — จัดกลุ่มตามชนิดเสา (mirror desktop) */
+  .mob-psec{margin-bottom:12px;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;background:#fff;}
+  .mob-psec-head{display:flex;align-items:center;gap:8px;padding:8px 12px;}
+  .mob-psec-l{flex:1;min-width:0;}
+  .mob-psec-title{font-size:15px;font-weight:900;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .mob-psec-badge{font-size:9px;font-weight:700;padding:1px 7px;border-radius:99px;}
+  .mob-psec-sub{font-size:10px;color:#64748B;font-weight:600;margin-top:2px;}
+  .mob-psec-stock{text-align:right;font-size:11px;flex-shrink:0;line-height:1.3;}
+  .mob-oe{border-top:1px solid #EEF2F7;padding:5px 0 7px;}
+  .mob-oe.err{background:#FFFBFB;}
+  .mob-oe-top{display:flex;align-items:center;justify-content:space-between;padding:4px 12px 2px;}
+  .mob-oe-num{font-size:13px;font-weight:900;color:#fff;background:#1E40AF;padding:2px 10px;border-radius:6px;display:inline-block;letter-spacing:.3px;}
+  .mob-oe-cust{padding:0 12px 4px;font-size:12px;font-weight:700;color:#1E293B;display:flex;align-items:baseline;gap:4px;flex-wrap:wrap;}
+  .mob-oe-site{font-size:10px;color:#475569;padding:0 12px 4px;word-break:break-word;}
+  .mob-oe-item{padding:3px 12px;}
+  .mob-oe-item + .mob-oe-item{border-top:1px dashed #E5E7EB;margin-top:3px;padding-top:6px;}
+  .mob-oe-spec{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:#334155;font-weight:600;margin-bottom:4px;}
+  .mob-oe-idx{font-size:10px;font-weight:800;color:#1E40AF;background:#EFF6FF;padding:1px 6px;border-radius:5px;flex-shrink:0;}
+  .mob-oe-qty{margin-left:auto;font-size:11px;font-weight:800;color:#1E40AF;background:#EFF6FF;padding:1px 8px;border-radius:6px;flex-shrink:0;}
+  .mob-oe-prog{display:flex;flex-direction:column;gap:2px;}
+  .mob-oe-del{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;}
+  .mob-oe-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:3px 12px 0;}
+  .mob-oc-status{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;}
+  .mob-oc-tel{font-size:10px;color:#64748B;font-weight:400;}
   .mob-oc-prog-lbl{display:flex;justify-content:space-between;align-items:center;}
-  .mob-oc-prog-txt{font-size:12px;color:#374151;font-weight:600;}
-  .mob-oc-bar{height:6px;background:#E2E8F0;border-radius:4px;overflow:hidden;}
-  .mob-oc-fill{height:100%;border-radius:4px;}
-  .mob-oc-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
-  .mob-oc-date{font-size:11px;color:#64748B;background:#F8FAFC;padding:2px 7px;border-radius:6px;}
-  .mob-oc-site{font-size:11px;color:#475569;margin:0 12px 5px;word-break:break-word;line-height:1.35;}
-  .mob-oc-item + .mob-oc-item{border-top:1px dashed #E2E8F0;}
-  .mob-oc-item-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 12px 0;}
-  .mob-oc-item-idx{font-size:11px;font-weight:800;color:#1E40AF;background:#EFF6FF;padding:1px 7px;border-radius:6px;flex-shrink:0;}
-  .mob-oc-item-spec{font-size:12px;color:#334155;font-weight:600;word-break:break-word;flex:1;min-width:0;}
-  .mob-oc-metafoot{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:4px 12px 0;}
-  .mob-oc-bottom{padding:5px 12px;border-top:1px solid #F1F5F9;display:flex;gap:8px;align-items:center;}
-  .mob-oc-note{flex:1;font-size:11px;color:#475569;min-width:0;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .mob-oc-prog-txt{font-size:11px;color:#374151;font-weight:600;}
+  .mob-oc-bar{height:5px;background:#E2E8F0;border-radius:3px;overflow:hidden;}
+  .mob-oc-fill{height:100%;border-radius:3px;}
+  .mob-oc-date{font-size:10px;color:#64748B;background:#F8FAFC;padding:2px 7px;border-radius:6px;}
+  .mob-oc-bottom{padding:5px 12px 0;display:flex;gap:8px;align-items:center;}
+  .mob-oc-note{flex:1;font-size:10px;color:#475569;min-width:0;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .mob-oc-note[onclick]{cursor:pointer;}
   .mob-oc-note-empty{color:#CBD5E1;font-style:italic;}
   /* Prod Log Cards */
@@ -3134,8 +3136,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <input type="date" id="edit_date" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#F9FAFB;"/>
         </div>
         <div class="field full-col">
-          <label class="field-label">📝 หมายเหตุ / ข้อมูลเพิ่มเติม</label>
-          <textarea id="edit_note" rows="2" placeholder="โน๊ตอะไรก็ได้ เช่น นัดส่งเช้า, รอเคลียร์ยอด, ลูกค้าขอด่วน… (จะไปแสดงท้ายการ์ดออเดอร์)" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#F9FAFB;resize:vertical;"></textarea>
+          <label class="field-label">หมายเหตุ</label>
+          <textarea id="edit_note" rows="2" style="padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#F9FAFB;resize:vertical;"></textarea>
         </div>
       </div>
     </div>
@@ -4790,7 +4792,7 @@ function renderOrders() {
     }
   }
 
-  // ─── Mobile: existing card layout ───────────────────────────
+  // ─── Mobile: จัดกลุ่มตามชนิดเสา (mirror desktop) ───────────────
   const _mobOrd = document.getElementById('ordersMobile');
   if (!_mobOrd) return;
   if (!orders.length) {
@@ -4798,105 +4800,130 @@ function renderOrders() {
     return;
   }
 
+  // จัดกลุ่มรายการตามชนิดเสา (เหมือน desktop)
+  const mPileGroups = {};
+  const mPileArr    = [];
+  orders.forEach(o => {
+    getOrderItems(o).forEach((it, idx) => {
+      const pile = it.pileType || o.pileType || '(ไม่ระบุ)';
+      if (!mPileGroups[pile]) { mPileGroups[pile] = []; mPileArr.push(pile); }
+      mPileGroups[pile].push({ o, it, idx });
+    });
+  });
+  const mCfgPiles = (_cfg.pileTypes || []);
+  mPileArr.sort((a,b) => {
+    const ai = mCfgPiles.indexOf(a), bi = mCfgPiles.indexOf(b);
+    return (ai===-1?99:ai) - (bi===-1?99:bi);
+  });
 
-  // สเปคเสา/คาน แบบย่อ สำหรับการ์ดมือถือ
+  // สเปคย่อสำหรับการ์ดมือถือ
   const _mobSpecOf = (it) => {
     if (it.productType === 'girder') {
       const _dim = [it.height, it.width, it.length].filter(v=>v&&v!=='-').join(' × ');
-      return [
-        _dim || null,
-        it.rebar && it.rebar!=='-' ? '🔩 '+it.rebar : null,
-        it.pipe  && it.pipe!=='-'  ? '🕳 '+it.pipe  : null,
-      ].filter(Boolean).join(' · ');
+      return [ _dim||null, it.rebar&&it.rebar!=='-'?'🔩 '+it.rebar:null, it.pipe&&it.pipe!=='-'?'🕳 '+it.pipe:null ].filter(Boolean).join(' · ');
     }
-    return [
-      it.length && it.length!=='-' ? it.length : null,
-      it.weld   && it.weld!=='-'   ? '🔗 '+it.weld  : null,
-      it.steel  && it.steel!=='-'  ? '🔩 '+it.steel : null,
-      it.wire   && it.wire!=='-'   ? '〰 '+it.wire  : null,
-      it.ba     && it.ba!=='-'     ? '🔷 '+it.ba    : null,
-      it.extra  && it.extra!=='-'  ? '📝 '+it.extra : null,
-    ].filter(Boolean).join(' · ');
+    return [ it.length&&it.length!=='-'?it.length:null, it.weld&&it.weld!=='-'?'🔗 '+it.weld:null, it.steel&&it.steel!=='-'?'🔩 '+it.steel:null, it.wire&&it.wire!=='-'?'〰 '+it.wire:null, it.ba&&it.ba!=='-'?'🔷 '+it.ba:null, it.extra&&it.extra!=='-'?'📝 '+it.extra:null ].filter(Boolean).join(' · ');
   };
   const _emptySpec = '<span style="color:#CBD5E1;">—</span>';
+  const _canEditB  = canDo('edit_order');
 
-  const cards = [];
-  orders.forEach((o, oi) => {
-    const items       = getOrderItems(o);
-    const isMultiItem = items.length > 1;
-    const tq          = getOrderTotalQty(o);
-    const totalDel    = getOrderDelivered(o);
-    const pctAll      = tq > 0 ? Math.round(totalDel/tq*100) : 0;
-    const relErr      = prodErrs.filter(e => _orderMatch(e.order, o.orderNum));
-    const hasErr      = relErr.length > 0;
-    const errNote     = hasErr
-      ? '⚠️ '+relErr[relErr.length-1].errorType+(relErr.length>1?' (+' + (relErr.length-1) + ')':'')
-      : '';
-    const _canEditB   = canDo('edit_order');
-    const dlBadge  = deadlineBadge(o.deliveryDateISO, pctAll);
-    const cardCls  = hasErr ? 'mob-oc err-oc' : (oi===0&&!query&&!statusF ? 'mob-oc new-oc' : 'mob-oc');
-    const stCls    = statusClass(o.status||'รับ Order แล้ว');
-    const stLabel  = o.status||'รับ Order แล้ว';
-    const valDisp  = o.orderValue > 0 ? '฿'+o.orderValue.toLocaleString('th-TH') : '';
+  const sections = [];
+  mPileArr.forEach((pile, pi) => {
+    const pal  = PILE_PALETTE[pi % PILE_PALETTE.length];
+    const isG  = (pile === 'Girder');
+    const u    = isG ? 'ตัว' : 'ต้น';
+    const entries    = mPileGroups[pile];
+    const totalQty   = entries.reduce((s,{it}) => s+(it.qty||0), 0);
+    const totalDel   = entries.reduce((s,{it}) => s+(it.delivered||0), 0);
+    const stockTotal = _stock[pile] || 0;
+    const reserved   = _res[pile]  || 0;
+    const avail      = stockTotal - reserved;
+    const availColor = avail < 0 ? '#991B1B' : avail < (_cfg.stockLow||15) ? '#854D0E' : '#166534';
 
-    // แต่ละชนิด = แถวย่อย "ในการ์ดใบเดียว" (มัดรวมตามเลขออเดอร์)
-    const itemsHtml = items.map((it, idx) => {
-      const pile   = it.pileType || o.pileType || '-';
-      const isG    = it.productType === 'girder';
-      const u      = isG ? 'ตัว' : 'ต้น';
-      const iqty   = it.qty || 0;
-      const del    = isMultiItem ? (it.delivered || 0) : (it.delivered !== undefined ? it.delivered : (o.delivered||0));
-      const over   = del > iqty ? del - iqty : 0;
-      const delLbl = over > 0 ? `${iqty}(+${over})` : `${del}`;
-      const iPct   = iqty>0 ? Math.round(del/iqty*100) : 0;
-      const iPctBar = Math.min(iPct, 100);
-      const iBarC  = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
-      const produced   = getTotalProduced(o.orderNum, pile, idx);
-      const prodPct    = iqty>0 ? Math.round(produced/iqty*100) : 0;
-      const prodPctBar = Math.min(prodPct, 100);
-      const prodBarC   = prodPct>=100?'#22C55E':prodPct>=50?'#F59E0B':'#F97316';
-      const _typeBadge = isG
-        ? '<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:99px;background:#F3E8FF;color:#7C3AED;">🌉 คาน</span>'
-        : '<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:99px;background:#E0F2FE;color:#0369A1;">🏗️ เสาเข็ม</span>';
-      const s = _mobSpecOf(it);
-      return `<div class="mob-oc-item">
-        <div class="mob-oc-item-head">${isMultiItem?`<span class="mob-oc-item-idx">${idx+1}/${items.length}</span>`:''}<span class="mob-oc-item-spec">📋 ${s?_esc(s):_emptySpec}</span></div>
-        <div class="mob-oc-mid">
-          <div class="mob-oc-pile"><div class="mob-oc-pile-type">${pile}<div style="margin-top:3px;">${_typeBadge}</div></div><div class="mob-oc-pile-qty">${iqty} ${u}</div></div>
-          <div class="mob-oc-info">
-            <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt" style="color:#9A3412;">🏭 ผลิต ${produced}/${iqty} ${u}</span><span style="font-size:12px;font-weight:700;color:${prodPct>=100?'#166534':'#9A3412'};">${prodPctBar}%</span></div>
+    // มัดรายการตามเลขออเดอร์ (ชนิดเดียวกันอยู่ด้วยกัน แยกด้วยเลขออเดอร์)
+    const byOrder  = {};
+    const orderArr = [];
+    entries.forEach(e => {
+      if (!byOrder[e.o.orderNum]) { byOrder[e.o.orderNum] = []; orderArr.push(e.o.orderNum); }
+      byOrder[e.o.orderNum].push(e);
+    });
+
+    const orderCards = orderArr.map(onum => {
+      const es = byOrder[onum];
+      const o  = es[0].o;
+      const isMultiItem = o.items && o.items.length > 1;
+      const relErr = prodErrs.filter(e => _orderMatch(e.order, o.orderNum));
+      const hasErr = relErr.length > 0;
+      const stCls  = statusClass(o.status||'รับ Order แล้ว');
+      const stLabel = o.status||'รับ Order แล้ว';
+      const valDisp = o.orderValue > 0 ? '฿'+o.orderValue.toLocaleString('th-TH') : '';
+
+      const oPileQty = es.reduce((s,{it}) => s+(it.qty||0), 0);
+      const oPileDel = es.reduce((s,{it}) => s + (isMultiItem ? (it.delivered||0) : (it.delivered!==undefined?it.delivered:(o.delivered||0))), 0);
+      const oPct     = oPileQty>0 ? Math.round(oPileDel/oPileQty*100) : 0;
+      const dlBadge  = deadlineBadge(o.deliveryDateISO, oPct);
+
+      const itemsHtml = es.map(({it, idx}) => {
+        const iqty = it.qty || 0;
+        const iu   = (it.productType==='girder') ? 'ตัว' : 'ต้น';
+        const del  = isMultiItem ? (it.delivered||0) : (it.delivered!==undefined ? it.delivered : (o.delivered||0));
+        const over = del > iqty ? del - iqty : 0;
+        const delLbl = over > 0 ? `${iqty}(+${over})` : `${del}`;
+        const iPct   = iqty>0 ? Math.round(del/iqty*100) : 0;
+        const iPctBar = Math.min(iPct, 100);
+        const iBarC  = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
+        const produced   = getTotalProduced(o.orderNum, pile, idx);
+        const prodPct    = iqty>0 ? Math.round(produced/iqty*100) : 0;
+        const prodPctBar = Math.min(prodPct, 100);
+        const prodBarC   = prodPct>=100?'#22C55E':prodPct>=50?'#F59E0B':'#F97316';
+        const idxBadge   = isMultiItem ? `<span class="mob-oe-idx">${idx+1}/${o.items.length}</span>` : '';
+        const editCall   = isMultiItem ? `editItemDelivered('${o.orderNum}',${idx})` : `editDelivered('${o.orderNum}')`;
+        const s = _mobSpecOf(it);
+        return `<div class="mob-oe-item">
+          <div class="mob-oe-spec">${idxBadge}<span>📋 ${s?_esc(s):_emptySpec}</span><span class="mob-oe-qty">${iqty} ${iu}</span></div>
+          <div class="mob-oe-prog">
+            <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt" style="color:#9A3412;">🏭 ผลิต ${produced}/${iqty}</span><span style="font-size:11px;font-weight:700;color:${prodPct>=100?'#166534':'#9A3412'};">${prodPctBar}%</span></div>
             <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div>
-            <div class="mob-oc-prog-lbl" style="margin-top:6px;"><span class="mob-oc-prog-txt" style="color:#1D4ED8;">🚚 ส่ง ${delLbl}/${iqty} ${u}</span><span style="font-size:12px;font-weight:700;">${iPctBar}%</span></div>
+            <div class="mob-oc-prog-lbl" style="margin-top:3px;"><span class="mob-oc-prog-txt ${_canEditB?'mob-oe-del':''}" ${_canEditB?`onclick="${editCall}"`:''} style="color:#1D4ED8;">🚚 ส่ง ${delLbl}/${iqty}</span><span style="font-size:11px;font-weight:700;">${iPctBar}%</span></div>
             <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div>
           </div>
-        </div>
+        </div>`;
+      }).join('');
+
+      const noteBottom = hasErr
+        ? `<span class="mob-oc-note" style="color:#B91C1C;font-weight:700;">⚠️ ${_esc(relErr[relErr.length-1].errorType)}${relErr.length>1?' (+'+(relErr.length-1)+')':''}</span>`
+        : (o.note && o.note!=='-'
+            ? `<span class="mob-oc-note"${_canEditB?` onclick="openEditOrder('${o.orderNum}')"`:''}>📝 ${_esc(o.note)}</span>`
+            : (_canEditB
+                ? `<span class="mob-oc-note mob-oc-note-empty" onclick="openEditOrder('${o.orderNum}')">📝 แตะเพื่อเพิ่มโน๊ต…</span>`
+                : `<span class="mob-oc-note mob-oc-note-empty">—</span>`));
+
+      let btns = '';
+      if (canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='รับ Order แล้ว') btns += `<button onclick="acceptOrder('${o.orderNum}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🏭 รับ</button>`;
+      if (canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='ส่งครบ') btns += `<button onclick="closeBill('${o.orderNum}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>`;
+      if (_canEditB) btns += `<button onclick="openEditOrder('${o.orderNum}')" style="padding:4px 9px;font-size:11px;background:#EFF6FF;color:#1E40AF;border:none;border-radius:8px;cursor:pointer;">✏️</button>`;
+
+      const multiBadge = es.length > 1 ? ` <span style="font-size:10px;color:#64748B;font-weight:700;">· ${es.length} รายการ</span>` : '';
+      return `<div class="mob-oe${hasErr?' err':''}">
+        <div class="mob-oe-top"><span><span class="mob-oe-num">${_esc(o.orderNum)}</span>${multiBadge}</span><span class="mob-oc-status status-sel ${stCls}">${stLabel}</span></div>
+        <div class="mob-oe-cust">${_esc(o.customer)}${o.tel?`<span class="mob-oc-tel"> · ${_esc(o.tel)}</span>`:''}${valDisp?`<span style="margin-left:auto;font-size:11px;color:#166534;font-weight:700;">${valDisp}</span>`:''}</div>
+        ${o.site && o.site!=='-' ? `<div class="mob-oe-site">📍 ${_esc(o.site)}</div>` : ''}
+        ${itemsHtml}
+        <div class="mob-oe-meta"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
+        <div class="mob-oc-bottom">${noteBottom}${btns}</div>
       </div>`;
     }).join('');
 
-    let btns = '';
-    if (canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='รับ Order แล้ว') btns += `<button onclick="acceptOrder('${o.orderNum}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🏭 รับ</button>`;
-    if (canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='ส่งครบ') btns += `<button onclick="closeBill('${o.orderNum}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>`;
-    if (canDo('edit_order')) btns += `<button onclick="openEditOrder('${o.orderNum}')" style="padding:5px 10px;font-size:12px;background:#EFF6FF;color:#1E40AF;border:none;border-radius:8px;cursor:pointer;">✏️</button>`;
-
-    cards.push(`<div class="${cardCls}">
-      <div class="mob-oc-top"><span class="mob-oc-num">${_esc(o.orderNum)}${isMultiItem?` <span style="font-size:11px;color:#64748B;font-weight:700;">· ${items.length} ชนิด</span>`:''}</span><span class="mob-oc-status status-sel ${stCls}">${stLabel}</span></div>
-      <div class="mob-oc-cust">${_esc(o.customer)}<span class="mob-oc-tel">${o.tel?' · '+_esc(o.tel):''}</span>${valDisp?'<span style="margin-left:auto;font-size:12px;color:#166534;font-weight:700;">'+valDisp+'</span>':''}</div>
-      ${o.site && o.site!=='-' ? `<div class="mob-oc-site">📍 ${_esc(o.site)}</div>` : ''}
-      <div class="mob-oc-div"></div>
-      ${itemsHtml}
-      <div class="mob-oc-metafoot"><span class="mob-oc-date">📅 ${o.deliveryDate}</span>${dlBadge}</div>
-      <div class="mob-oc-bottom">${
-        hasErr
-          ? `<span class="mob-oc-note" style="color:#B91C1C;font-weight:700;">${_esc(errNote)}</span>`
-          : (o.note && o.note!=='-'
-              ? `<span class="mob-oc-note"${_canEditB?` onclick="openEditOrder('${o.orderNum}')"`:''}>📝 ${_esc(o.note)}</span>`
-              : (_canEditB
-                  ? `<span class="mob-oc-note mob-oc-note-empty" onclick="openEditOrder('${o.orderNum}')">📝 แตะเพื่อเพิ่มโน๊ต…</span>`
-                  : `<span class="mob-oc-note mob-oc-note-empty">—</span>`))
-      }${btns}</div>
+    sections.push(`<div class="mob-psec">
+      <div class="mob-psec-head" style="background:${pal.bg};border-left:4px solid ${pal.border};">
+        <div class="mob-psec-l">
+          <div class="mob-psec-title" style="color:${pal.text};">${pile} <span class="mob-psec-badge" style="${isG?'background:#F3E8FF;color:#7C3AED;':'background:#E0F2FE;color:#0369A1;'}">${isG?'🌉 คาน':'🏗️ เสาเข็ม'}</span></div>
+        </div>
+      </div>
+      ${orderCards}
     </div>`);
   });
-  _mobOrd.innerHTML = cards.join('');
+  _mobOrd.innerHTML = sections.join('');
 }
 
 function setSumStatus(orderNum, selectEl) {
