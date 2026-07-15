@@ -1777,7 +1777,7 @@ function tcCloseEntryDetail() {
   document.body.style.overflow = '';
 }
 
-// คีย์เวลารถกลับ (timeIn) จากหน้ารายละเอียดได้เลย — ไม่ต้องเข้าแก้ไข
+// คีย์เวลารถกลับ (timeIn) จากหน้ารายละเอียดได้เลย — คีย์แค่วัน เดือน/ปีล็อกตามวันที่ส่ง
 function tcQuickSaveTimeIn(id) {
   if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกเวลาขนส่ง'); return; }
   const arr = tcGetEvents();
@@ -3789,6 +3789,14 @@ function _auditFmtTime(ts) {
 function _esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// ความยาวเสาเข็ม: ตัดหน่วยเดิมท้ายค่า (m/ม/เมตร) แล้วเติม "ม." ต่อท้าย เช่น 6.00 -> 6.00ม.
+function _fmtLen(v) {
+  if (v == null) return '';
+  var s = String(v).trim();
+  if (!s || s === '-') return '';
+  s = s.replace(/\s*(?:เมตร|ม\.?|m\.?)\s*$/i, '').trim();
+  return s ? s + 'ม.' : '';
+}
 // จับคู่เลข Order กับ error แบบทั้งคำ (กัน ORD-1 ไปชนกับ ORD-10)
 function _orderMatch(errOrder, orderNum) {
   if (!errOrder || !orderNum) return false;
@@ -4814,11 +4822,11 @@ function renderOrders() {
             lenDisp = rows ? `<div style="display:flex;flex-direction:column;gap:3px;background:#F8FAFC;border:1px solid #EEF2F7;border-radius:8px;padding:6px 9px;">${rows}</div>` : '<span style="color:#CBD5E1;">—</span>';
           } else {
             const specParts = [
-              it.length && it.length!=='-' ? it.length : null,
-              it.weld   && it.weld!=='-'   ? '🔗 '+it.weld   : null,
-              it.steel  && it.steel!=='-'  ? '🔩 '+it.steel  : null,
-              it.wire   && it.wire!=='-'   ? '〰 '+it.wire   : null,
-              it.ba     && it.ba!=='-'     ? '🔷 '+it.ba     : null,
+              it.length && it.length!=='-' ? _fmtLen(it.length) : null,
+              it.weld   && it.weld!=='-'   ? 'ช:'+it.weld   : null,
+              it.steel  && it.steel!=='-'  ? 'สล:'+it.steel  : null,
+              it.wire   && it.wire!=='-'   ? 'ลวด:'+it.wire   : null,
+              it.ba     && it.ba!=='-'     ? 'บ:'+it.ba     : null,
               it.extra  && it.extra!=='-'  ? '📝 '+it.extra  : null,
             ].filter(Boolean);
             lenDisp = specParts.length ? '<span>'+specParts.join(' · ')+'</span>' : '<span style="color:#CBD5E1;">—</span>';
@@ -4880,7 +4888,7 @@ function renderOrders() {
       const _dim = [it.height, it.width, it.length].filter(v=>v&&v!=='-').join(' × ');
       return [ _dim||null, it.rebar&&it.rebar!=='-'?'🔩 '+it.rebar:null, it.pipe&&it.pipe!=='-'?'🕳 '+it.pipe:null ].filter(Boolean).join(' · ');
     }
-    return [ it.length&&it.length!=='-'?it.length:null, it.weld&&it.weld!=='-'?'🔗 '+it.weld:null, it.steel&&it.steel!=='-'?'🔩 '+it.steel:null, it.wire&&it.wire!=='-'?'〰 '+it.wire:null, it.ba&&it.ba!=='-'?'🔷 '+it.ba:null, it.extra&&it.extra!=='-'?'📝 '+it.extra:null ].filter(Boolean).join(' · ');
+    return [ it.length&&it.length!=='-'?_fmtLen(it.length):null, it.weld&&it.weld!=='-'?'ช:'+it.weld:null, it.steel&&it.steel!=='-'?'สล:'+it.steel:null, it.wire&&it.wire!=='-'?'ลวด:'+it.wire:null, it.ba&&it.ba!=='-'?'บ:'+it.ba:null, it.extra&&it.extra!=='-'?'📝 '+it.extra:null ].filter(Boolean).join(' · ');
   };
   const _emptySpec = '<span style="color:#CBD5E1;">—</span>';
   const _canEditB  = canDo('edit_order');
@@ -4938,7 +4946,7 @@ function renderOrders() {
         const editCall   = isMultiItem ? `editItemDelivered('${o.orderNum}',${idx})` : `editDelivered('${o.orderNum}')`;
         const s = _mobSpecOf(it);
         return `<div class="mob-oe-item">
-          <div class="mob-oe-spec">${idxBadge}<span>📋 ${s?_esc(s):_emptySpec}</span><span class="mob-oe-qty">${iqty} ${iu}</span></div>
+          <div class="mob-oe-spec">${idxBadge}<span>${s?_esc(s):_emptySpec}</span><span class="mob-oe-qty">${iqty} ${iu}</span></div>
           <div class="mob-oe-prog">
             <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt" style="color:#9A3412;">🏭 ผลิต ${produced}/${iqty}</span><span style="font-size:11px;font-weight:700;color:${prodPct>=100?'#166534':'#9A3412'};">${prodPctBar}%</span></div>
             <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div>
@@ -5179,11 +5187,11 @@ function renderProdSection() {
         it.pipe   && it.pipe !=='-'  ? `<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🕳 ${it.pipe}</span>`   : '',
         it.position && it.position!=='-' ? `<span style="background:#F1F5F9;color:#475569;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📍 ${it.position}</span>` : '',
       ] : [
-        it.length && it.length!=='-' ? `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📐 ${it.length}</span>` : '',
-        it.weld   && it.weld  !=='-' ? `<span style="background:#FEF9C3;color:#854D0E;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔗 ${it.weld}</span>`   : '',
-        it.steel  && it.steel !=='-' ? `<span style="background:#F3E8FF;color:#6D28D9;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔩 ${it.steel}</span>`  : '',
-        it.wire   && it.wire  !=='-' ? `<span style="background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">〰 ${it.wire}</span>`   : '',
-        it.ba     && it.ba    !=='-' ? `<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">🔷 ${it.ba}</span>`     : '',
+        it.length && it.length!=='-' ? `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">${_fmtLen(it.length)}</span>` : '',
+        it.weld   && it.weld  !=='-' ? `<span style="background:#FEF9C3;color:#854D0E;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">ช:${it.weld}</span>`   : '',
+        it.steel  && it.steel !=='-' ? `<span style="background:#F3E8FF;color:#6D28D9;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">สล:${it.steel}</span>`  : '',
+        it.wire   && it.wire  !=='-' ? `<span style="background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">ลวด:${it.wire}</span>`   : '',
+        it.ba     && it.ba    !=='-' ? `<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">บ:${it.ba}</span>`     : '',
         it.extra  && it.extra !=='-' ? `<span style="background:#F1F5F9;color:#475569;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">📝 ${it.extra}</span>`  : '',
       ]).filter(Boolean).join(' ');
       const btn = !canDo('log_production') ? '' : inProd
@@ -5855,11 +5863,11 @@ function renderProdLogHistory() {
     const standRowsData = l.standRows && l.standRows.length ? l.standRows : (l.standQty > 0 ? [{qty:l.standQty,size:l.standSize}] : []);
     const standParts = standRowsData.filter(r=>r.qty>0||r.size).map(r=>'<span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;">🪝 ลูกตั้ง '+r.qty+(r.size?' '+r.size:'')+'</span>');
     const specParts = [
-      l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">📐 '+l.length+'</span>' : null,
-      l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:1px 6px;border-radius:4px;font-size:10px;">🔗 '+l.weld  +'</span>' : null,
-      l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:1px 6px;border-radius:4px;font-size:10px;">🔩 '+l.steel +'</span>' : null,
-      l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;">〰 '+l.wire  +'</span>' : null,
-      l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">🔷 '+l.ba   +'</span>' : null,
+      l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">'+_fmtLen(l.length)+'</span>' : null,
+      l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:1px 6px;border-radius:4px;font-size:10px;">ช:'+l.weld  +'</span>' : null,
+      l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:1px 6px;border-radius:4px;font-size:10px;">สล:'+l.steel +'</span>' : null,
+      l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;">ลวด:'+l.wire  +'</span>' : null,
+      l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">บ:'+l.ba   +'</span>' : null,
       l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;">📝 '+l.extra +'</span>' : null,
     ].filter(Boolean);
     const prodParts = [
@@ -5953,11 +5961,11 @@ function openProdLogDetail(idx) {
   const orderDisp = isStock ? '📦 ผลิตเพิ่มสต็อก' : l.orderNum;
   const custFull  = isStock ? '' : (getOrders().find(o=>o.orderNum===l.orderNum)?.customer || '');
   const specParts = [
-    l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">📐 '+l.length+'</span>' : null,
-    l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:2px 8px;border-radius:5px;font-size:11px;">🔗 '+l.weld  +'</span>' : null,
-    l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:2px 8px;border-radius:5px;font-size:11px;">🔩 '+l.steel +'</span>' : null,
-    l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;">〰 '+l.wire  +'</span>' : null,
-    l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">🔷 '+l.ba   +'</span>' : null,
+    l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">'+_fmtLen(l.length)+'</span>' : null,
+    l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:2px 8px;border-radius:5px;font-size:11px;">ช:'+l.weld  +'</span>' : null,
+    l.steel  && l.steel !=='-' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:2px 8px;border-radius:5px;font-size:11px;">สล:'+l.steel +'</span>' : null,
+    l.wire   && l.wire  !=='-' ? '<span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;">ลวด:'+l.wire  +'</span>' : null,
+    l.ba     && l.ba    !=='-' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">บ:'+l.ba   +'</span>' : null,
     l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;">📝 '+l.extra +'</span>' : null,
   ].filter(Boolean);
   const standRowsData = l.standRows && l.standRows.length ? l.standRows : (l.standQty > 0 ? [{qty:l.standQty,size:l.standSize}] : []);
@@ -6305,11 +6313,11 @@ function renderHistorySummary() {
     const span = items.length;
     items.forEach((it, idx) => {
       const _sc=[
-        it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#128208; '+it.length+'</span>':'',
-        it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#128293; '+it.weld+'</span>':'',
-        it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#129525; '+it.steel+'</span>':'',
-        it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#FAF5FF;color:#7E22CE;border:1px solid #D8B4FE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">&#129526; '+it.wire+'</span>':'',
-        it.ba&&it.ba!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">🔷 '+it.ba+'</span>':'',
+        it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">'+_fmtLen(it.length)+'</span>':'',
+        it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">ช:'+it.weld+'</span>':'',
+        it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">สล:'+it.steel+'</span>':'',
+        it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#FAF5FF;color:#7E22CE;border:1px solid #D8B4FE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">ลวด:'+it.wire+'</span>':'',
+        it.ba&&it.ba!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">บ:'+it.ba+'</span>':'',
         it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">+ '+it.extra+'</span>':'',
       ].filter(Boolean).join(' ');
       const label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:nowrap;gap:3px;margin-top:3px;align-items:center;">'+_sc+'</div>':'');
@@ -6415,10 +6423,10 @@ function cpSpecChips(specStr) {
   if (!specStr || specStr === '-') return '<span style="color:#CBD5E1;">—</span>';
   const DEFS = [
     { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8' },
-    { icon:'🔗', bg:'#FEF9C3', tc:'#854D0E' },
-    { icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9' },
-    { icon:'〰', bg:'#DCFCE7', tc:'#166534' },
-    { icon:'🔷', bg:'#DBEAFE', tc:'#1D4ED8' },
+    { icon:'ช:', bg:'#FEF9C3', tc:'#854D0E' },
+    { icon:'สล:', bg:'#F3E8FF', tc:'#6D28D9' },
+    { icon:'ลวด:', bg:'#DCFCE7', tc:'#166534' },
+    { icon:'บ:', bg:'#DBEAFE', tc:'#1D4ED8' },
     { icon:'📝', bg:'#F1F5F9', tc:'#475569' },
   ];
   const parts = String(specStr).split('/').filter(Boolean);
@@ -6426,7 +6434,8 @@ function cpSpecChips(specStr) {
   return '<div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;">' +
     parts.map((v,i) => {
       const d = DEFS[i] || DEFS[4];
-      return `<span style="background:${d.bg};color:${d.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">${d.icon} ${escHtml(v)}</span>`;
+      const disp = i === 0 ? escHtml(_fmtLen(v)) : d.icon + ' ' + escHtml(v);
+      return `<span style="background:${d.bg};color:${d.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">${disp}</span>`;
     }).join('') + '</div>';
 }
 
@@ -7821,10 +7830,10 @@ function renderSpecGrid() {
   const total = specs.reduce((s,v) => s+(v.qty||0), 0);
   const TAG_DEFS = [
     { key:'length', icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8' },
-    { key:'weld',   icon:'🔗', bg:'#FEF9C3', tc:'#854D0E' },
-    { key:'steel',  icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9' },
-    { key:'wire',   icon:'〰', bg:'#DCFCE7', tc:'#166534' },
-    { key:'ba',     icon:'🔷', bg:'#DBEAFE', tc:'#1D4ED8' },
+    { key:'weld',   icon:'ช:', bg:'#FEF9C3', tc:'#854D0E' },
+    { key:'steel',  icon:'สล:', bg:'#F3E8FF', tc:'#6D28D9' },
+    { key:'wire',   icon:'ลวด:', bg:'#DCFCE7', tc:'#166534' },
+    { key:'ba',     icon:'บ:', bg:'#DBEAFE', tc:'#1D4ED8' },
   ];
   grid.innerHTML = specs.map(v => {
     const pct   = total > 0 ? Math.round((v.qty||0)/total*100) : 0;
@@ -7840,28 +7849,29 @@ function renderSpecGrid() {
       // format ใหม่: มี field แยก
       const parts = [
         v.spec   && v.spec  !=='-' ? { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8', val:v.spec  } : null,
-        v.weld   && v.weld  !=='-' ? { icon:'🔗', bg:'#FEF9C3', tc:'#854D0E', val:v.weld  } : null,
-        v.steel  && v.steel !=='-' ? { icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9', val:v.steel } : null,
-        v.wire   && v.wire  !=='-' ? { icon:'〰', bg:'#DCFCE7', tc:'#166634', val:v.wire  } : null,
-        v.ba     && v.ba    !=='-' ? { icon:'🔷', bg:'#DBEAFE', tc:'#1D4ED8', val:v.ba    } : null,
+        v.weld   && v.weld  !=='-' ? { icon:'ช:', bg:'#FEF9C3', tc:'#854D0E', val:v.weld  } : null,
+        v.steel  && v.steel !=='-' ? { icon:'สล:', bg:'#F3E8FF', tc:'#6D28D9', val:v.steel } : null,
+        v.wire   && v.wire  !=='-' ? { icon:'ลวด:', bg:'#DCFCE7', tc:'#166634', val:v.wire  } : null,
+        v.ba     && v.ba    !=='-' ? { icon:'บ:', bg:'#DBEAFE', tc:'#1D4ED8', val:v.ba    } : null,
       ].filter(Boolean);
-      tagsHtml = parts.map(p => `<span style="background:${p.bg};color:${p.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${p.icon} ${escHtml(p.val)}</span>`).join(' ');
+      tagsHtml = parts.map(p => { const dv = p.icon==='📐' ? escHtml(_fmtLen(p.val)) : p.icon+' '+escHtml(p.val); return `<span style="background:${p.bg};color:${p.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${dv}</span>`; }).join(' ');
     } else if (String(v.spec||'').includes('/')) {
       // format เก่า: "10.00/10/4db12/4" → parse ตาม position
       const parts = String(v.spec).split('/');
       const defs  = [
         { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8' },
-        { icon:'🔗', bg:'#FEF9C3', tc:'#854D0E' },
-        { icon:'🔩', bg:'#F3E8FF', tc:'#6D28D9' },
-        { icon:'〰', bg:'#DCFCE7', tc:'#166534' },
+        { icon:'ช:', bg:'#FEF9C3', tc:'#854D0E' },
+        { icon:'สล:', bg:'#F3E8FF', tc:'#6D28D9' },
+        { icon:'ลวด:', bg:'#DCFCE7', tc:'#166534' },
         { icon:'📝', bg:'#F1F5F9', tc:'#475569' },
       ];
       tagsHtml = parts.map((p,i) => {
         const d = defs[i] || defs[4];
-        return `<span style="background:${d.bg};color:${d.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${d.icon} ${escHtml(p.trim())}</span>`;
+        const dv = i === 0 ? escHtml(_fmtLen(p.trim())) : d.icon + ' ' + escHtml(p.trim());
+        return `<span style="background:${d.bg};color:${d.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${dv}</span>`;
       }).join(' ');
     } else {
-      tagsHtml = `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">📐 ${escHtml(v.spec)}</span>`;
+      tagsHtml = `<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">${escHtml(_fmtLen(v.spec))}</span>`;
     }
     return `<div style="padding:10px 12px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0;display:flex;flex-direction:column;gap:6px;">
       <div style="display:flex;flex-wrap:wrap;gap:4px;">${tagsHtml}</div>
