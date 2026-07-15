@@ -174,20 +174,21 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 @media(max-width:700px){.err-grid{grid-template-columns:1fr;}}
 
 /* ============================================================ SUMMARY ============================================================ */
-.sum-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:20px;}
-.sum-card{background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;border-left:4px solid;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
-.sum-card.blue{border-left-color:#3B82F6;}
-.sum-card.green{border-left-color:#22C55E;}
-.sum-card.red{border-left-color:#EF4444;}
-.sum-card.purple{border-left-color:#A855F7;}
-.sum-card.amber{border-left-color:#F59E0B;}
-.sum-label{font-size:11px;font-weight:700;color:#64748B;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;}
-.sum-val{font-size:32px;font-weight:900;color:#1E293B;line-height:1;}
-.sum-sub{font-size:12px;color:#64748B;margin-top:6px;}
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+.sum-card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:16px 18px;border-top:5px solid;box-shadow:0 2px 8px rgba(15,23,42,0.06);}
+.sum-card.blue{border-top-color:#3B82F6;background:linear-gradient(180deg,#EFF6FF,#fff 55%);}
+.sum-card.green{border-top-color:#22C55E;background:linear-gradient(180deg,#F0FDF4,#fff 55%);}
+.sum-card.red{border-top-color:#EF4444;background:linear-gradient(180deg,#FEF2F2,#fff 55%);}
+.sum-card.purple{border-top-color:#A855F7;background:linear-gradient(180deg,#FAF5FF,#fff 55%);}
+.sum-card.amber{border-top-color:#F59E0B;background:linear-gradient(180deg,#FFFBEB,#fff 55%);}
+.sum-label{font-size:11px;font-weight:800;color:#475569;letter-spacing:0.03em;margin-bottom:6px;}
+.sum-val{font-size:38px;font-weight:900;color:#0F172A;line-height:1;letter-spacing:-0.5px;}
+.sum-sub{font-size:11px;color:#64748B;margin-top:6px;font-weight:600;}
+@media(max-width:480px){.sum-val{font-size:32px;}}
 .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 @media(max-width:700px){.chart-row{grid-template-columns:1fr;}}
-.chart-card{background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px 18px;}
-.chart-title{font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;}
+.chart-card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:18px 20px;box-shadow:0 2px 8px rgba(15,23,42,0.06);}
+.chart-title{font-size:15px;font-weight:800;color:#1E293B;margin-bottom:14px;}
 
 /* ============================================================ STOCK ============================================================ */
 .stock-cards-wrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
@@ -536,6 +537,8 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   .card{border-radius:12px;}
   #ordersGrouped{display:none !important;}
   #ordersMobile{display:block !important;}
+  #histSummaryTableWrap{display:none !important;}
+  #histSummaryCards{display:flex !important;}
   #prodOrdersTableWrap{display:none !important;}
   #prodOrdersMobile{display:block !important;}
   #prodLogTableWrap{display:none !important;}
@@ -2546,12 +2549,13 @@ document.addEventListener('DOMContentLoaded', () => {
         <button onclick="document.getElementById('sumSearch').value='';document.getElementById('sumStatusFilter').value='';renderHistorySummary();"
           style="padding:8px 14px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:12px;background:#F8FAFC;cursor:pointer;color:#64748B;font-family:inherit;">ล้าง</button>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap" id="histSummaryTableWrap">
         <table class="data-table">
           <thead><tr><th>เลข Order</th><th>วันที่</th><th>ชื่อ / เบอร์</th><th>รายการ</th><th>จำนวน</th><th>ผลิตแล้ว / ต้น</th><th>จัดส่งแล้ว / ต้น</th><th>สถานะ</th></tr></thead>
           <tbody id="histSummaryBody"></tbody>
         </table>
       </div>
+      <div id="histSummaryCards" style="padding:12px;display:none;flex-direction:column;gap:12px;"></div>
     </div>
   </div>
 </div>
@@ -6215,8 +6219,9 @@ function renderHistorySummary() {
   const active  = getOrders();
   const hist    = getHistory().map(h => ({ ...h, _done: true }));
   const allOrders = [...active, ...hist];
+  const box = document.getElementById('histSummaryCards');
   const tbody = document.getElementById('histSummaryBody');
-  if (!tbody) return;
+  if (!box) return;
   const sub = document.getElementById('histSummarySub');
 
   function autoSumStatus(o, items) {
@@ -6254,12 +6259,14 @@ function renderHistorySummary() {
   });
 
   if (!allOrders.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="8">ยังไม่มีออเดอร์ · เพิ่มออเดอร์ที่แท็บสถานะ Order</td></tr>';
+    box.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;font-size:13px;">ยังไม่มีออเดอร์ · เพิ่มออเดอร์ที่แท็บสถานะ Order</div>';
+    if (tbody) tbody.innerHTML = '<tr class="table-empty"><td colspan="8">ยังไม่มีออเดอร์ · เพิ่มออเดอร์ที่แท็บสถานะ Order</td></tr>';
     if (sub) sub.textContent = 'ยังไม่มีรายการ';
     return;
   }
   if (!orders.length) {
-    tbody.innerHTML = '<tr class="table-empty"><td colspan="8">ไม่พบรายการที่ตรงกับการค้นหา</td></tr>';
+    box.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;font-size:13px;">ไม่พบรายการที่ตรงกับการค้นหา</div>';
+    if (tbody) tbody.innerHTML = '<tr class="table-empty"><td colspan="8">ไม่พบรายการที่ตรงกับการค้นหา</td></tr>';
     if (sub) sub.textContent = 'ไม่พบรายการ';
     return;
   }
@@ -6305,53 +6312,105 @@ function renderHistorySummary() {
       <span style="color:#94A3B8;font-size:11px;">/ ${qty} ต้น</span>
     </div>`;
   }
-  const rows = [];
+  const _specBadges = (it) => [
+    it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">'+_fmtLen(it.length)+'</span>':'',
+    it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">ช:'+it.weld+'</span>':'',
+    it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">สล:'+it.steel+'</span>':'',
+    it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#FAF5FF;color:#7E22CE;border:1px solid #D8B4FE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">ลวด:'+it.wire+'</span>':'',
+    it.ba&&it.ba!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">บ:'+it.ba+'</span>':'',
+    it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">+ '+it.extra+'</span>':'',
+  ].filter(Boolean).join(' ');
+
+  const cards = [];
   orders.forEach(o => {
     const items = (o._done && o.archivedItems) ? o.archivedItems : getOrderItems(o);
     const dateStr = o.orderDate || (o.orderDateISO ? isoToThai(o.orderDateISO) : '') || o.closedAt || '-';
-    const rowBg = o._done ? 'background:#F0FDF4;' : '';
-    const span = items.length;
-    items.forEach((it, idx) => {
-      const _sc=[
-        it.length&&it.length!=='-'?'<span style="font-size:10px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">'+_fmtLen(it.length)+'</span>':'',
-        it.weld&&it.weld!=='-'?'<span style="font-size:10px;background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">ช:'+it.weld+'</span>':'',
-        it.steel&&it.steel!=='-'?'<span style="font-size:10px;background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">สล:'+it.steel+'</span>':'',
-        it.wire&&it.wire!=='-'?'<span style="font-size:10px;background:#FAF5FF;color:#7E22CE;border:1px solid #D8B4FE;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">ลวด:'+it.wire+'</span>':'',
-        it.ba&&it.ba!=='-'?'<span style="font-size:10px;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">บ:'+it.ba+'</span>':'',
-        it.extra&&it.extra!=='-'?'<span style="font-size:10px;background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">+ '+it.extra+'</span>':'',
-      ].filter(Boolean).join(' ');
-      const label='<div style="font-size:12px;font-weight:700;">'+it.pileType+'</div>'+(_sc?'<div style="display:flex;flex-wrap:nowrap;gap:3px;margin-top:3px;align-items:center;">'+_sc+'</div>':'');
+    const doneStyle = o._done ? 'background:#F0FDF4;border-color:#86EFAC;' : 'background:#fff;border-color:#E2E8F0;';
+    const multiBadge = items.length > 1 ? `<span style="font-size:10px;color:#64748B;font-weight:700;">· ${items.length} รายการ</span>` : '';
+
+    const itemsHtml = items.map((it, idx) => {
+      const _sc = _specBadges(it);
       const del = it.delivered || 0;
       const qty = it.qty || 0;
       const prod = getTotalProduced(o.orderNum, it.pileType, idx);
       const stockDel = it.stockDelivered || 0;
-      const prodColor = (prod + stockDel) >= qty ? '#15803D' : prod > 0 ? '#C2410C' : '#94A3B8';
-      const stockTag = stockDel > 0
-        ? `<span style="font-size:10px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">(+${stockDel})</span>`
-        : '';
-      const prodCell = `<span style="font-weight:700;color:${prodColor};">${prod}</span>${stockTag}<span style="color:#94A3B8;font-size:11px;"> / ${qty} ต้น</span>`;
-      if (idx === 0) {
-        rows.push(`<tr style="border-top:2px solid #E2E8F0;${rowBg}">
-          <td rowspan="${span}" style="${rowBg}vertical-align:middle;"><span class="order-id">${o.orderNum}</span></td>
-          <td rowspan="${span}" style="font-size:11px;color:#64748B;vertical-align:middle;">${dateStr}</td>
-          <td rowspan="${span}" style="vertical-align:middle;"><strong>${o.customer||'-'}</strong><br><span style="font-size:11px;color:#64748B;">${o.tel||''}</span></td>
-          <td style="font-size:12px;">${label}</td>
-          <td style="font-weight:700;">${qty} ต้น</td>
-          <td>${prodCell}</td>
-          <td>${deliveredBar(del, qty)}</td>
-          <td rowspan="${span}" style="vertical-align:middle;">${statusBadge(o)}</td>
-        </tr>`);
-      } else {
-        rows.push(`<tr style="${rowBg}">
-          <td style="font-size:12px;">${label}</td>
-          <td style="font-weight:700;">${qty} ต้น</td>
-          <td>${prodCell}</td>
-          <td>${deliveredBar(del, qty)}</td>
-        </tr>`);
-      }
-    });
+      const effProd = prod + stockDel;
+      const prodPct = qty>0 ? Math.min(Math.round(effProd/qty*100),100) : 0;
+      const prodBarC = prodPct>=100?'#22C55E':prodPct>=50?'#F59E0B':'#F97316';
+      const delPct = qty>0 ? Math.min(Math.round(del/qty*100),100) : 0;
+      const delBarC = delPct>=100?'#16A34A':delPct>0?'#2563EB':'#CBD5E1';
+      const stockTag = stockDel>0 ? `<span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:0 4px;font-weight:700;">+${stockDel}</span>` : '';
+      return `<div style="padding:8px 0;${idx>0?'border-top:1px dashed #E5E7EB;':''}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:800;color:#1E293B;">${it.pileType}</span>${_sc}</div>
+          <span style="font-size:12px;font-weight:800;color:#0F172A;white-space:nowrap;">${qty} ต้น</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;margin-bottom:2px;">
+          <span style="color:#9A3412;">🏭 ผลิต ${effProd}/${qty} ${stockTag}</span><span style="color:${prodPct>=100?'#166534':'#9A3412'};">${prodPct}%</span>
+        </div>
+        <div style="height:6px;background:#E2E8F0;border-radius:3px;overflow:hidden;margin-bottom:6px;"><div style="height:100%;border-radius:3px;width:${prodPct}%;background:${prodBarC};"></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;margin-bottom:2px;">
+          <span style="color:#1D4ED8;">🚚 ส่ง ${del}/${qty}</span><span style="color:${delPct>=100?'#16A34A':'#1D4ED8'};">${delPct}%</span>
+        </div>
+        <div style="height:6px;background:#E2E8F0;border-radius:3px;overflow:hidden;"><div style="height:100%;border-radius:3px;width:${delPct}%;background:${delBarC};"></div></div>
+      </div>`;
+    }).join('');
+
+    cards.push(`<div style="border:1.5px solid;border-radius:12px;overflow:hidden;${doneStyle}box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px 6px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:900;color:#fff;background:#1E40AF;padding:3px 10px;border-radius:6px;letter-spacing:.3px;">${o.orderNum}</span>${multiBadge}</div>
+        ${statusBadge(o)}
+      </div>
+      <div style="padding:0 12px 2px;font-size:12px;font-weight:700;color:#1E293B;">${o.customer||'-'}${o.tel?`<span style="color:#94A3B8;font-weight:600;"> · ${o.tel}</span>`:''}</div>
+      <div style="padding:0 12px 6px;font-size:11px;color:#64748B;">📅 ${dateStr}</div>
+      <div style="padding:0 12px 10px;">${itemsHtml}</div>
+    </div>`);
   });
-  tbody.innerHTML = rows.join('');
+  box.innerHTML = cards.join('');
+
+  // ── เวอร์ชันคอม: ตารางเหมือนเดิม ──
+  if (tbody) {
+    const rows = [];
+    orders.forEach(o => {
+      const items = (o._done && o.archivedItems) ? o.archivedItems : getOrderItems(o);
+      const dateStr = o.orderDate || (o.orderDateISO ? isoToThai(o.orderDateISO) : '') || o.closedAt || '-';
+      const rowBg = o._done ? 'background:#F0FDF4;' : '';
+      const span = items.length;
+      items.forEach((it, idx) => {
+        const _sc = _specBadges(it);
+        const label = '<div style="font-size:12px;font-weight:700;">' + it.pileType + '</div>' + (_sc ? '<div style="display:flex;flex-wrap:nowrap;gap:3px;margin-top:3px;align-items:center;">' + _sc + '</div>' : '');
+        const del = it.delivered || 0;
+        const qty = it.qty || 0;
+        const prod = getTotalProduced(o.orderNum, it.pileType, idx);
+        const stockDel = it.stockDelivered || 0;
+        const prodColor = (prod + stockDel) >= qty ? '#15803D' : prod > 0 ? '#C2410C' : '#94A3B8';
+        const stockTag = stockDel > 0
+          ? `<span style="font-size:10px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">(+${stockDel})</span>`
+          : '';
+        const prodCell = `<span style="font-weight:700;color:${prodColor};">${prod}</span>${stockTag}<span style="color:#94A3B8;font-size:11px;"> / ${qty} ต้น</span>`;
+        if (idx === 0) {
+          rows.push(`<tr style="border-top:2px solid #E2E8F0;${rowBg}">
+            <td rowspan="${span}" style="${rowBg}vertical-align:middle;"><span class="order-id">${o.orderNum}</span></td>
+            <td rowspan="${span}" style="font-size:11px;color:#64748B;vertical-align:middle;">${dateStr}</td>
+            <td rowspan="${span}" style="vertical-align:middle;"><strong>${o.customer||'-'}</strong><br><span style="font-size:11px;color:#64748B;">${o.tel||''}</span></td>
+            <td style="font-size:12px;">${label}</td>
+            <td style="font-weight:700;">${qty} ต้น</td>
+            <td>${prodCell}</td>
+            <td>${deliveredBar(del, qty)}</td>
+            <td rowspan="${span}" style="vertical-align:middle;">${statusBadge(o)}</td>
+          </tr>`);
+        } else {
+          rows.push(`<tr style="${rowBg}">
+            <td style="font-size:12px;">${label}</td>
+            <td style="font-weight:700;">${qty} ต้น</td>
+            <td>${prodCell}</td>
+            <td>${deliveredBar(del, qty)}</td>
+          </tr>`);
+        }
+      });
+    });
+    tbody.innerHTML = rows.join('');
+  }
 }
 
 function exportHistoryCSV() {
