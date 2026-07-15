@@ -1699,13 +1699,36 @@ function tcShowEntryDetail(id) {
       <span style="font-size:11px;font-weight:700;background:${st.bg};color:${st.color};border:1px solid ${st.border};border-radius:20px;padding:3px 12px;">${st.label}</span>
       ${stockBadge}
     </div>`;
+  // ช่องคีย์เวลารถกลับแบบเร็ว — คีย์แค่ "วัน" กับ "เวลา" ส่วนเดือน/ปีล็อกตามวันที่ส่ง
+  const _nowHM = (()=>{ const n=new Date(); return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'); })();
+  const _thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const _bp = (e.date||'').split('-');
+  const _moLabel = (_bp[0]&&_bp[1]) ? (_thMonths[(+_bp[1])-1] + ' ' + ((+_bp[0])+543)) : '—';
+  let _tiDayVal = _bp[2]||'', _tiTimeVal = _nowHM;
+  if (e.timeIn && e.timeIn.includes('T')) { const _pp = e.timeIn.split('T'); const _pd = _pp[0].split('-'); _tiDayVal = _pd[2]||_tiDayVal; _tiTimeVal = (_pp[1]||'').slice(0,5); }
+  const _quickInRow = canDo('log_shipping')
+    ? `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9;align-items:flex-start;">
+        <span style="font-size:16px;width:24px;text-align:center;flex-shrink:0;">🏁</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;color:#94A3B8;font-weight:600;margin-bottom:6px;">กลับ (คีย์แค่วันกับเวลา)</div>
+          ${e.timeIn?`<div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:8px;">✅ ${fmtDT(e.timeIn)}</div>`:''}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <input type="number" min="1" max="31" id="tcQuickInDay" value="${_tiDayVal}" placeholder="วัน" inputmode="numeric" style="width:60px;text-align:center;padding:7px 9px;border:1.5px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;">
+            <span style="padding:7px 10px;background:#F1F5F9;border:1.5px solid #E2E8F0;border-radius:8px;font-size:12px;font-weight:700;color:#475569;white-space:nowrap;">${_moLabel}</span>
+            <input type="time" id="tcQuickInTime" value="${_tiTimeVal}" style="padding:7px 9px;border:1.5px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;">
+            <button onclick="tcQuickSaveTimeIn(${e._id})" style="padding:8px 14px;background:linear-gradient(135deg,#1E40AF,#3B82F6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">💾 บันทึกเวลากลับ</button>
+            ${e.timeIn?`<button onclick="tcQuickClearTimeIn(${e._id})" style="padding:8px 12px;background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">ล้าง</button>`:''}
+          </div>
+        </div>
+      </div>`
+    : row('🏁','กลับ',fmtDT(e.timeIn));
   document.getElementById('tcEntryDetailBody').innerHTML =
     `<div style="font-size:16px;font-weight:800;color:#1E293B;margin-bottom:4px;">🚛 ${e.cust||'-'}</div>
     ${e.tel?`<div style="font-size:13px;color:#64748B;margin-bottom:14px;">📞 ${e.tel}</div>`:' <div style="margin-bottom:14px;"></div>'}
     ${row('📋','เลข Order',e.order)}
     ${row('📅','วันที่ส่ง',e.date)}
     ${row('🚀','ออก',fmtDT(e.timeOut))}
-    ${row('🏁','กลับ',fmtDT(e.timeIn))}
+    ${_quickInRow}
     ${row('🧑‍✈️','คนขับ',e.driver)}
     ${row('🚚','ทะเบียน',e.vehicle)}
     ${e.locationUrl ? `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9;align-items:flex-start;"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0;">📍</span><div><div style="font-size:11px;color:#94A3B8;font-weight:600;margin-bottom:2px;">ลิ้งค์พิกัด</div><a href="${e.locationUrl}" target="_blank" rel="noopener" style="font-size:13px;font-weight:700;color:#1E40AF;word-break:break-all;">เปิดแผนที่ →</a></div></div>` : ''}
@@ -1752,6 +1775,44 @@ function tcCloseEntryDetail() {
   const m = document.getElementById('tcEntryDetailModal');
   if (m) m.style.display = 'none';
   document.body.style.overflow = '';
+}
+
+// คีย์เวลารถกลับ (timeIn) จากหน้ารายละเอียดได้เลย — ไม่ต้องเข้าแก้ไข
+function tcQuickSaveTimeIn(id) {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกเวลาขนส่ง'); return; }
+  const arr = tcGetEvents();
+  const entry = arr.find(e => e._id === id);
+  if (!entry) return;
+  const dayEl = document.getElementById('tcQuickInDay');
+  const tEl = document.getElementById('tcQuickInTime');
+  const day = dayEl ? parseInt(dayEl.value, 10) : 0;
+  const t = tEl ? tEl.value : '';
+  if (!day || day < 1 || day > 31 || !t) { showToast('⚠️ กรุณาคีย์วัน (1-31) และเวลารถกลับ'); return; }
+  const bp = (entry.date || '').split('-');
+  if (!bp[0] || !bp[1]) { showToast('⚠️ รายการนี้ยังไม่มีเดือน/ปี กรุณาแก้ไขวันที่ส่งก่อน'); return; }
+  const d = bp[0] + '-' + bp[1] + '-' + String(day).padStart(2,'0');
+  entry.timeIn = d + 'T' + t;
+  const saved = arr.map(e => e._id === id ? entry : e);
+  tcSaveEvents(saved);
+  logAudit('บันทึกเวลารถกลับ', entry.order || entry.cust || '-', (entry.cust||'') + ' · กลับ ' + d + ' ' + t);
+  tcRender();
+  showToast('🏁 บันทึกเวลารถกลับแล้ว');
+  tcShowEntryDetail(id);
+}
+function tcQuickClearTimeIn(id) {
+  if (!canDo('log_shipping')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกเวลาขนส่ง'); return; }
+  const arr = tcGetEvents();
+  const entry = arr.find(e => e._id === id);
+  if (!entry) return;
+  if (entry._stocked) { showToast('⛔ ส่งจบ/ตัดสต็อกแล้ว ล้างเวลากลับไม่ได้'); return; }
+  if (!confirm('ล้างเวลารถกลับของรายการนี้?')) return;
+  entry.timeIn = '';
+  const saved = arr.map(e => e._id === id ? entry : e);
+  tcSaveEvents(saved);
+  logAudit('ล้างเวลารถกลับ', entry.order || entry.cust || '-', (entry.cust||''));
+  tcRender();
+  showToast('🧹 ล้างเวลารถกลับแล้ว');
+  tcShowEntryDetail(id);
 }
 
 function tcRenderAllDays() {
