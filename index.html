@@ -3128,6 +3128,31 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
+<!-- ================================================================ EDIT CUST-POLE (เสาค้างสต็อก) MODAL ================================================================ -->
+<div id="cpEditModal" style="display:none;position:fixed;inset:0;z-index:9150;background:rgba(0,0,0,.45);align-items:center;justify-content:center;" onclick="if(event.target===this)closeCpEditModal()">
+  <div style="background:#fff;border-radius:16px;padding:28px;width:min(460px,94vw);box-shadow:0 8px 40px rgba(0,0,0,.22);max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div id="cpeTitle" style="font-size:16px;font-weight:800;color:#1E293B;">✏️ แก้ไขเสาค้างสต็อก</div>
+      <button onclick="closeCpEditModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#94A3B8;">✕</button>
+    </div>
+    <div style="font-size:11.5px;color:#64748B;margin-bottom:16px;">แก้สเปคให้เข้าหมวดที่ถูกต้อง · แต่ละช่องคือคนละหมวด</div>
+    <div style="display:grid;gap:12px;">
+      <div class="field"><label class="field-label">ความยาว / สเปคหลัก</label><input type="text" id="cpe_base" placeholder="เช่น 6.00ม, 8.00ม"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field"><label class="field-label">เชื่อม</label><input type="text" id="cpe_weld" placeholder="เช่น 1ช, มี, ไม่มี"/></div>
+        <div class="field"><label class="field-label">เหล็กเสริม</label><input type="text" id="cpe_steel" placeholder="เช่น 4012x1"/></div>
+        <div class="field"><label class="field-label">ลวด</label><input type="text" id="cpe_wire" placeholder="เช่น 6เส้น4, 4mm"/></div>
+        <div class="field"><label class="field-label">บ่า</label><input type="text" id="cpe_ba" placeholder="เช่น มี, ไม่มี"/></div>
+      </div>
+      <div class="field"><label class="field-label">จำนวน (ต้น) <span class="req">*</span></label><input type="number" id="cpe_qty" min="1" placeholder="0"/></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeCpEditModal()">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="submitCpEdit()">💾 บันทึกการแก้ไข</button>
+    </div>
+  </div>
+</div>
+
 <!-- ================================================================ ASSIGN ORDER MODAL ================================================================ -->
 <div id="assignOrderModal" style="display:none;position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,.45);align-items:center;justify-content:center;" onclick="if(event.target===this)closeAssignOrderModal()">
   <div style="background:#fff;border-radius:16px;padding:28px;width:min(460px,94vw);box-shadow:0 8px 40px rgba(0,0,0,.22);max-height:80vh;overflow-y:auto;">
@@ -6585,6 +6610,7 @@ function renderSdCustPoles() {
           <div style="font-size:18px;font-weight:900;color:#991B1B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span></div>
           <div style="display:flex;gap:4px;margin-top:2px;">
             ${canDo('edit_stock') ? `<button onclick="openAssignOrderModal(${idsJson},'${(pileName||'').replace(/'/g,"\\'")}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>` : ''}
+            ${canDo('edit_stock') ? `<button onclick="openCpEditModal(${idsJson},'${(pileName||'').replace(/'/g,"\\'")}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:5px;cursor:pointer;">✏️ แก้ไข</button>` : ''}
             ${canDo('delete_stock') ? `<button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>` : ''}
           </div>
         </div>`;
@@ -6800,6 +6826,99 @@ function deleteCpAll(ids) {
   ids.forEach(id => deleteCustPole(id));
   if (_sdCurrentPile) renderSdCustPoles();
   showToast('🗑 ลบแล้ว ' + ids.length + ' รายการ');
+}
+
+// ── แก้ไขเสาค้างสต็อก (custPole offline) ───────────────────────
+let _cpEditIds = [], _cpEditPile = '', _cpEditOldQty = 0;
+
+function openCpEditModal(ids, pileName) {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
+  _cpEditIds = ids || []; _cpEditPile = pileName || '';
+  const all   = getCustPoles();
+  const items = _cpEditIds.map(id => all.find(x => x.id === id)).filter(Boolean);
+  if (!items.length) { showToast('⚠️ ไม่พบรายการที่จะแก้ไข'); return; }
+  const first    = items[0];
+  _cpEditOldQty  = items.reduce((s,x) => s + (x.qty||0), 0);
+
+  // ดึงค่าฟิลด์: ถ้ามี field แยก (format ใหม่) ใช้เลย · ถ้าไม่มี (record เก่า) แยกจากสตริงตามตำแหน่ง
+  let base = first.base, weld = first.weld, steel = first.steel, wire = first.wire, ba = first.ba;
+  const hasStruct = [base, weld, steel, wire, ba].some(v => v && v !== '-');
+  if (!hasStruct) {
+    const parts = String(first.spec || '').split('/').map(s => s.trim());
+    base = parts[0] || ''; weld = parts[1] || ''; steel = parts[2] || ''; wire = parts[3] || ''; ba = parts[4] || '';
+  }
+  const val = v => (v && v !== '-') ? v : '';
+  document.getElementById('cpe_base').value  = val(base);
+  document.getElementById('cpe_weld').value  = val(weld);
+  document.getElementById('cpe_steel').value = val(steel);
+  document.getElementById('cpe_wire').value  = val(wire);
+  document.getElementById('cpe_ba').value    = val(ba);
+  document.getElementById('cpe_qty').value   = _cpEditOldQty;
+  document.getElementById('cpeTitle').textContent = '✏️ แก้ไข ' + (pileName || 'เสาค้างสต็อก');
+  document.getElementById('cpEditModal').style.display = 'flex';
+}
+
+function closeCpEditModal() {
+  document.getElementById('cpEditModal').style.display = 'none';
+  _cpEditIds = []; _cpEditPile = ''; _cpEditOldQty = 0;
+}
+
+function submitCpEdit() {
+  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
+  if (!_cpEditIds.length) { closeCpEditModal(); return; }
+  const base  = document.getElementById('cpe_base').value.trim();
+  const weld  = document.getElementById('cpe_weld').value.trim()  || '-';
+  const steel = document.getElementById('cpe_steel').value.trim() || '-';
+  const wire  = document.getElementById('cpe_wire').value.trim()  || '-';
+  const ba    = document.getElementById('cpe_ba').value.trim()    || '-';
+  const qty   = parseInt(document.getElementById('cpe_qty').value) || 0;
+  if (qty <= 0) { alert('กรุณากรอกจำนวนให้มากกว่า 0'); return; }
+
+  // สร้างสตริงสเปคใหม่ (รูปแบบเดียวกับตอนรับเข้า)
+  const specLabel = [
+    base  && base  !== '-' ? base  : null,
+    weld  !== '-' ? weld  : null,
+    steel !== '-' ? steel : null,
+    wire  !== '-' ? wire  : null,
+  ].filter(Boolean).join('/') || (base || '-');
+
+  // ลบ record เก่าทั้งกลุ่ม แล้วสร้าง record เดียวที่มีฟิลด์แยกถูกหมวด
+  _cpEditIds.forEach(id => deleteCustPole(id));
+  saveSingleCustPole({
+    id: 'cp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+    orderNum: '', pileType: _cpEditPile,
+    spec: specLabel, qty, online: false,
+    base: (base && base !== '-') ? base : '-',
+    weld, steel, wire, ba,
+    createdAt: Date.now(),
+    note: 'แก้ไขสเปค'
+  });
+
+  // ปรับสต็อกรวมให้ตรงกับผลรวมการ์ด (ถ้าจำนวนเปลี่ยน) + บันทึกประวัติ
+  const delta = qty - _cpEditOldQty;
+  if (delta !== 0) {
+    const stock = getStock();
+    stock[_cpEditPile] = Math.max(0, (stock[_cpEditPile] || 0) + delta);
+    saveStock(stock);
+    const log = getStockLog() || [];
+    log.unshift({
+      ts: nowTs(),
+      typeVal: '🔧 ปรับแก้ (แก้ไขเสาค้างสต็อก)',
+      name: _cpEditPile,
+      qty: Math.abs(delta),
+      qtyDisplay: (delta > 0 ? '+' : '') + delta,
+      newStock: stock[_cpEditPile],
+      ref: '-',
+      staff: (_currentUser && _currentUser.email) || '-',
+      note: '✏️ แก้ไขสเปค → [' + specLabel + ']'
+    });
+    saveStockLog(log);
+  }
+
+  closeCpEditModal();
+  if (_sdCurrentPile) { renderSdCustPoles(); openStockDetail(_sdCurrentPile); }
+  renderStockCards();
+  showToast('✅ แก้ไขสเปคเรียบร้อย');
 }
 
 
