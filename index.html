@@ -756,7 +756,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
           </div>
           <div class="field">
             <label class="field-label">Sale ผู้รับ Order <span class="req">*</span></label>
-            <select id="f_sale"><option value="">— เลือก —</option></select>
+            <input type="text" id="f_sale" readonly title="บันทึกอัตโนมัติจากบัญชีที่ล็อกอิน" style="background:#F1F5F9;color:#334155;font-weight:600;cursor:not-allowed;" placeholder="—"/>
           </div>
           <div class="field">
             <label class="field-label">ที่อยู่ / หมายเหตุลูกค้า</label>
@@ -3071,7 +3071,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="field">
             <label class="field-label">ผู้บันทึก <span class="req">*</span></label>
-            <select id="sd_logstaff"><option value="">— เลือก —</option></select>
+            <input type="text" id="sd_logstaff" readonly title="บันทึกอัตโนมัติจากบัญชีที่ล็อกอิน" style="background:#F1F5F9;color:#334155;font-weight:600;cursor:not-allowed;" placeholder="—"/>
           </div>
           <div class="field">
             <label class="field-label">เชื่อม <span style="font-weight:400;color:#94A3B8;">(ไม่บังคับ)</span></label>
@@ -4144,9 +4144,17 @@ function populateSelect(id, arr, emptyLabel = '— เลือก —') {
   el.innerHTML = `<option value="">${emptyLabel}</option>` +
     arr.map(v => `<option${v===cur?' selected':''}>${v}</option>`).join('');
 }
+// เติมอีเมลของบัญชีที่ล็อกอินอยู่ลงในช่อง "ผู้บันทึก / Sale ผู้รับ Order" อัตโนมัติ
+function fillLoggedInUser() {
+  const email = (_currentUser && _currentUser.email) || '';
+  ['f_sale','sd_logstaff'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = email;
+  });
+}
 function populateAllDropdowns() {
   const cfg = getConfig();
-  populateSelect('f_sale',   cfg.saleStaff);
+  fillLoggedInUser();
   populateSelect('f_type',   cfg.pileTypes);
   populateSelect('pe_staff', cfg.prodStaff);
   populateSelect('se_staff', cfg.shipStaff);
@@ -4595,7 +4603,8 @@ function autoSaveCustomer(name, tel, addr) {
 
 function resetFormOnly() {
   ['f_customer','f_tel','f_qty','f_length','f_weld','f_steel','f_wire','f_cust_addr','f_order_num','g_height','g_length','g_qty','g_rebar','g_wire_top','g_wire_mid','g_wire_bot','g_pipe'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  ['f_sale','f_type','f_cust_lookup'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
+  ['f_type','f_cust_lookup'].forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
+  fillLoggedInUser();
   var gPosDefault = document.querySelector('input[name="g_position"][value="ตัวกลาง"]'); if (gPosDefault) gPosDefault.checked = true;
   orderItemsDraft = [];
   renderOrderItemsDraft();
@@ -6478,7 +6487,19 @@ function quickFillStock(name) {
 
 
 // ── CustPoles helpers ─────────────────────────────────────────
-function cpSpecChips(specStr) {
+function cpSpecChips(specStr, fields) {
+  // format ใหม่: ถ้ามีฟิลด์แยก ให้แสดงชิปตามหมวดที่ถูกต้อง (กันตำแหน่งเลื่อน)
+  const _has = v => v && v !== '-';
+  if (fields && (_has(fields.base) || _has(fields.weld) || _has(fields.steel) || _has(fields.wire) || _has(fields.ba))) {
+    const chips = [];
+    if (_has(fields.base))  chips.push({ bg:'#EFF6FF', tc:'#1D4ED8', disp: escHtml(_fmtLen(fields.base)) });
+    if (_has(fields.weld))  chips.push({ bg:'#FEF9C3', tc:'#854D0E', disp: 'ช: '  + escHtml(fields.weld)  });
+    if (_has(fields.steel)) chips.push({ bg:'#F3E8FF', tc:'#6D28D9', disp: 'สล: ' + escHtml(fields.steel) });
+    if (_has(fields.wire))  chips.push({ bg:'#DCFCE7', tc:'#166534', disp: 'ลวด: '+ escHtml(fields.wire)  });
+    if (_has(fields.ba))    chips.push({ bg:'#DBEAFE', tc:'#1D4ED8', disp: 'บ: '  + escHtml(fields.ba)    });
+    if (chips.length) return '<div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;">' +
+      chips.map(c => `<span style="background:${c.bg};color:${c.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">${c.disp}</span>`).join('') + '</div>';
+  }
   if (!specStr || specStr === '-') return '<span style="color:#CBD5E1;">—</span>';
   const DEFS = [
     { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8' },
@@ -6519,7 +6540,7 @@ function renderSdCustPoles() {
     const mergedOn = {};
     online.forEach(p => {
       const key = (p.orderNum||'ไม่ระบุ') + '|||' + (p.spec||'');
-      if (!mergedOn[key]) mergedOn[key] = { orderNum: p.orderNum||'ไม่ระบุ', spec: p.spec||'', qty: 0, fromStockQty: 0, ids: [] };
+      if (!mergedOn[key]) mergedOn[key] = { orderNum: p.orderNum||'ไม่ระบุ', spec: p.spec||'', qty: 0, fromStockQty: 0, ids: [], base: p.base, weld: p.weld, steel: p.steel, wire: p.wire, ba: p.ba };
       mergedOn[key].qty += (p.qty||0);
       if (p.fromStock) mergedOn[key].fromStockQty += (p.qty||0);
       mergedOn[key].ids.push(p.id);
@@ -6532,7 +6553,7 @@ function renderSdCustPoles() {
         return `
         <div style="background:#fff;border:1.5px solid #BFDBFE;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
           <div style="font-size:10px;font-weight:700;color:#1E40AF;">📋 ${escHtml(m.orderNum)}</div>
-          <div>${cpSpecChips(m.spec)}</div>
+          <div>${cpSpecChips(m.spec, m)}</div>
           <div style="font-size:18px;font-weight:900;color:#1E293B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span>${m.fromStockQty > 0 ? ` <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">สต็อกเก่า ${m.fromStockQty}</span>` : ''}</div>
           <div style="display:flex;gap:4px;margin-top:2px;">
             ${canDo('edit_stock') ? `<button onclick="shipCpToOrder('${orderEsc}','${pileEsc}',${m.qty},${idsJson})" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:5px;cursor:pointer;">🚚 ส่ง</button>
@@ -6551,7 +6572,7 @@ function renderSdCustPoles() {
     const merged = {};
     offline.forEach(p => {
       const key = (p.spec||'ไม่ระบุ').trim();
-      if (!merged[key]) merged[key] = { spec: key, qty: 0, ids: [] };
+      if (!merged[key]) merged[key] = { spec: key, qty: 0, ids: [], base: p.base, weld: p.weld, steel: p.steel, wire: p.wire, ba: p.ba };
       merged[key].qty += (p.qty||0);
       merged[key].ids.push(p.id);
     });
@@ -6560,7 +6581,7 @@ function renderSdCustPoles() {
         const idsJson = JSON.stringify(m.ids).replace(/"/g,"'");
         return `
         <div style="background:#FFF5F5;border:1.5px solid #FECACA;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
-          <div>${cpSpecChips(m.spec)}</div>
+          <div>${cpSpecChips(m.spec, m)}</div>
           <div style="font-size:18px;font-weight:900;color:#991B1B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span></div>
           <div style="display:flex;gap:4px;margin-top:2px;">
             ${canDo('edit_stock') ? `<button onclick="openAssignOrderModal(${idsJson},'${(pileName||'').replace(/'/g,"\\'")}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>` : ''}
@@ -8072,13 +8093,9 @@ function deductSpecsAndLog(pileName, delta, matched, orderNum, customer, sale, l
 
 // ── Modal inline stock-log (spec-aware) ───────────────────────
 function sdPopulateStaff() {
-  const cfg = getConfig();
-  const all = [...new Set([...cfg.stockStaff, ...cfg.prodStaff, ...cfg.saleStaff])];
-  const sel = document.getElementById('sd_logstaff');
-  if (!sel) return;
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">— เลือก —</option>' +
-    all.map(s => `<option${s===cur?' selected':''}>${s}</option>`).join('');
+  // ผู้บันทึก = อีเมลบัญชีที่ล็อกอินอยู่ (อัตโนมัติ ไม่ต้องเลือก)
+  const el = document.getElementById('sd_logstaff');
+  if (el) el.value = (_currentUser && _currentUser.email) || '';
 }
 
 function sdPreview() {
@@ -8208,6 +8225,9 @@ function submitSdLog() {
       id: 'cp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
       orderNum: '', pileType: name,
       spec: _specLabel, qty, online: false,
+      // เก็บฟิลด์แยกไว้ด้วย เพื่อให้แสดงชิปตามหมวดได้ถูกต้อง (ไม่ให้ตำแหน่งเลื่อน)
+      base: (spec && spec !== '-') ? spec : '-',
+      weld, steel, wire, ba,
       createdAt: Date.now(),
       note: note !== '-' ? note : 'รับเข้าสต็อก'
     });
@@ -8224,7 +8244,7 @@ function submitSdLog() {
 function clearSdLog() {
   ['sd_logqty','sd_lognote','sd_logspec','sd_logweld','sd_logsteel','sd_logwire','sd_logba'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   const t=document.getElementById('sd_logtype'); if(t) t.selectedIndex=0;
-  const s=document.getElementById('sd_logstaff'); if(s) s.selectedIndex=0;
+  const s=document.getElementById('sd_logstaff'); if(s) s.value=(_currentUser && _currentUser.email) || '';
   const p=document.getElementById('sdLogPreview');
   if(p){ p.textContent='👆 เลือกประเภท กรอกสเปค และจำนวน'; p.style.cssText='margin-top:10px;padding:10px 14px;border-radius:8px;background:#EFF6FF;color:#1D4ED8;font-size:12.5px;font-weight:600;'; }
 }
