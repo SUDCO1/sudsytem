@@ -4716,6 +4716,7 @@ function editItemDelivered(orderNum, itemIdx) {
       deductSpecsAndLog(item.pileType, delta, check.matched, o.orderNum, o.customer, o.sale, item.length || '');
     }
   }
+  try { logAudit('อัปเดตจำนวนส่ง (รายรายการ)', orderNum, (o.customer||'') + ' · ' + item.pileType + ' ส่งแล้ว ' + item.delivered + '/' + item.qty + ' ต้น' + (delta ? ' (' + (delta>0?'+':'') + delta + ')' : '')); } catch(e){}
   renderOrders(); renderSummary();
   showToast('✅ ' + orderNum + ' · ' + item.pileType + ': ส่งแล้ว ' + item.delivered + '/' + item.qty + ' ต้น');
 }
@@ -4728,6 +4729,7 @@ function editLength(orderNum) {
   if (newVal === null) return;
   o.length = newVal.trim() || '-';
   saveOrders(orders); renderOrders();
+  try { logAudit('แก้ไขรายละเอียดเสา', orderNum, (o.customer||'') + ' · รายละเอียดเสา → ' + (o.length === '-' ? 'ไม่ระบุ' : o.length)); } catch(e){}
   showToast('✅ ' + orderNum + ': รายละเอียดเสา ' + (o.length === '-' ? 'ไม่ระบุ' : o.length + ''));
 }
 
@@ -5350,6 +5352,7 @@ function saveEditActiveProd() {
     a.extra  = document.getElementById('eap_extra').value.trim()  || '-';
   }
   saveProdActive(list);
+  try { logAudit('แก้ไขรายการในราง', a.isStockProd ? 'STOCK' : (a.orderNum || '-'), (a.pileType||'') + ' · ' + (a.qtyCasting||0) + ' ต้น' + (a.lane ? ' · เลน ' + a.lane : '')); } catch(e){}
   closeEditActiveProd();
   renderActiveProd();
   showToast('✅ แก้ไขรายการในรางเรียบร้อยแล้ว');
@@ -5518,6 +5521,7 @@ function submitFreeProd() {
   }
   list.push(entry);
   saveProdActive(list);
+  try { logAudit('เพิ่มการผลิต (อิสระ/สต็อก)', 'STOCK', pileType + ' · ' + qty + ' ' + u + (length && length !== '-' ? ' · ' + length : '') + (lane ? ' · เลน ' + lane : '')); } catch(e){}
   closeFreeProdForm();
   showToast('🏭 เริ่มเทแล้ว — ' + pileType + ' · ' + qty + ' ' + u + ' (สต็อก)');
   renderActiveProd(); renderProdSection();
@@ -6648,6 +6652,7 @@ function submitCustPole() {
   if (!orderNum || !pileType || qty <= 0) { alert('กรุณากรอกเลข Order, ชนิดเสา, และจำนวนให้ครบ'); return; }
   const item = { id: 'cp_'+Date.now(), orderNum, pileType, spec, qty, note, online: true, createdAt: Date.now() };
   saveSingleCustPole(item);
+  try { logAudit('เพิ่มเสาลูกค้า', pileType, 'Order ' + orderNum + ' · ' + qty + ' ต้น' + (spec ? ' · ' + spec : '')); } catch(e){}
   closeCpModal();
   if (_sdCurrentPile) renderSdCustPoles();
   showToast('✅ เพิ่มเสาลูกค้า ' + pileType + ' ' + qty + ' ต้น (Order ' + orderNum + ')');
@@ -6659,9 +6664,11 @@ function toggleCpOffline(id) {
   const item = arr.find(x => x.id === id);
   if (!item) return;
   if (!confirm('ยืนยันย้าย "' + item.pileType + '" (' + item.qty + ' ต้น) จาก Order ' + item.orderNum + '\nไปยังเสาค้างสต็อก?\n\nเลข Order จะถูกลบออก เหลือแค่รายละเอียดเสา')) return;
+  const _prevOrder = item.orderNum;
   item.online = false;
   item.orderNum = '';
   saveSingleCustPole(item);
+  try { logAudit('ย้ายไปเสาค้างสต็อก', item.pileType, (item.qty||0) + ' ต้น' + (_prevOrder ? ' · จาก Order ' + _prevOrder : '')); } catch(e){}
   if (_sdCurrentPile) renderSdCustPoles();
   showToast('📦 ย้ายไปเสาค้างสต็อกแล้ว');
 }
@@ -6673,7 +6680,9 @@ function toggleCpOfflineAll(ids) {
   if (!items.length) return;
   const first = items[0];
   if (!confirm('ยืนยันย้าย "' + first.pileType + '" ' + ids.length + ' รายการ (Order ' + first.orderNum + ')\nไปยังเสาค้างสต็อก?\n\nเลข Order จะถูกลบออก เหลือแค่รายละเอียดเสา')) return;
+  const _prevOrder = first.orderNum, _sumQty = items.reduce((s,x)=>s+(x.qty||0),0);
   items.forEach(item => { item.online = false; item.orderNum = ''; saveSingleCustPole(item); });
+  try { logAudit('ย้ายไปเสาค้างสต็อก (กลุ่ม)', first.pileType, ids.length + ' รายการ · ' + _sumQty + ' ต้น' + (_prevOrder ? ' · จาก Order ' + _prevOrder : '')); } catch(e){}
   if (_sdCurrentPile) { renderSdCustPoles(); openStockDetail(_sdCurrentPile); }
   showToast('📦 ย้ายไปเสาค้างสต็อกแล้ว (' + ids.length + ' รายการ)');
 }
@@ -6735,6 +6744,7 @@ function shipCpToOrder(orderNum, pileType, maxQty, ids) {
   item.stockDelivered = (item.stockDelivered || 0) + fromStockSent;
   saveOrders(orders);
 
+  try { logAudit('ส่งเสาเข้าออเดอร์', orderNum, pileType + ' · ' + sendQty + ' ต้น · ส่งแล้ว ' + item.delivered + '/' + item.qty + (o.customer ? ' · ' + o.customer : '')); } catch(e){}
   if (_sdCurrentPile) openStockDetail(_sdCurrentPile);
   renderOrders(); renderStockCards(); renderStockLog(true);
   showToast('🚚 ส่ง ' + pileType + ' ' + sendQty + ' ต้น → Order ' + orderNum + ' · ส่งแล้ว ' + item.delivered + '/' + item.qty);
@@ -6789,6 +6799,7 @@ function confirmAssignOrder(orderNum, ids) {
     const item = arr.find(x => x.id === id);
     if (item) { item.online = true; item.orderNum = orderNum; item.fromStock = true; saveSingleCustPole(item); }
   });
+  try { logAudit('ผูกเสาเข้าออเดอร์', orderNum, (_assignOrderPile || '-') + ' · ' + ids.length + ' รายการ'); } catch(e){}
   closeAssignOrderModal();
   if (_sdCurrentPile) openStockDetail(_sdCurrentPile);
   showToast('🟢 ย้ายไปเสาลูกค้า Order ' + orderNum + ' (' + ids.length + ' รายการ)');
@@ -6801,6 +6812,7 @@ function toggleCpOnline(id) {
   if (!item) return;
   item.online = true;
   saveSingleCustPole(item);
+  try { logAudit('ย้ายกลับเสาลูกค้า', item.pileType, (item.orderNum ? 'Order ' + item.orderNum + ' · ' : '') + (item.qty||0) + ' ต้น'); } catch(e){}
   if (_sdCurrentPile) renderSdCustPoles();
   showToast('🟢 ย้ายกลับเป็นเสาลูกค้าแล้ว');
 }
@@ -6808,27 +6820,61 @@ function toggleCpOnline(id) {
 function toggleCpOnlineAll(ids) {
   if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const arr = getCustPoles();
+  let _pile = '-', _sum = 0;
   ids.forEach(id => {
     const item = arr.find(x => x.id === id);
-    if (item) { item.online = true; saveSingleCustPole(item); }
+    if (item) { _pile = item.pileType || _pile; _sum += (item.qty||0); item.online = true; saveSingleCustPole(item); }
   });
+  try { logAudit('ย้ายกลับเสาลูกค้า (กลุ่ม)', _pile, ids.length + ' รายการ · ' + _sum + ' ต้น'); } catch(e){}
   if (_sdCurrentPile) renderSdCustPoles();
   showToast('🟢 ย้ายกลับเสาลูกค้าแล้ว (' + ids.length + ' รายการ)');
+}
+
+// BugFix: ลบเสาค้างสต็อก (offline) ต้องหักยอดรวม stock[name] จริงด้วย
+// ไม่งั้นตัวเลขในการ์ดจะเด้งกลับเป็นยอดเดิมเมื่อ custPole หมด (การ์ด fallback ไป stock[name])
+// หมายเหตุ: หักเฉพาะ pole ออฟไลน์ (เสาค้างสต็อก) เท่านั้น · ไม่แตะ specs[] (คนละคีย์กับ custPole.spec)
+function _deductStockOnDeleteCp(items) {
+  const offline = (items||[]).filter(x => x && x.online === false);
+  if (!offline.length) return;
+  const stock = getStock();
+  const log   = getStockLog() || [];
+  const byPile = {};
+  offline.forEach(x => { if (x.pileType) byPile[x.pileType] = (byPile[x.pileType]||0) + (x.qty||0); });
+  Object.keys(byPile).forEach(pile => {
+    const d = byPile[pile];
+    if (!d) return;
+    stock[pile] = Math.max(0, (stock[pile]||0) - d);
+    log.unshift({ ts:nowTs(), typeVal:'🗑 ลบเสาค้างสต็อก (เบิกออก)', name:pile, qty:d,
+      newStock:stock[pile], qtyDisplay:'-'+d, ref:'-',
+      staff:(_currentUser && _currentUser.email) || '-', note:'ลบเสาค้างสต็อก' });
+  });
+  saveStock(stock); saveStockLog(log);
 }
 
 function deleteCpEntry(id) {
   if (!canDo('delete_stock')) { showToast('⛔ คุณไม่มีสิทธิ์ลบสต็อก'); return; }
   if (!confirm('ยืนยันลบรายการนี้?')) return;
+  const _it = getCustPoles().find(x => x.id === id);
   deleteCustPole(id);
+  _deductStockOnDeleteCp(_it ? [_it] : []);
+  try { logAudit('ลบเสา', _it ? (_it.pileType||'-') : '-', _it ? ((_it.qty||0) + ' ต้น' + (_it.orderNum ? ' · Order ' + _it.orderNum : '') + (_it.spec ? ' · ' + _it.spec : '')) : ''); } catch(e){}
   if (_sdCurrentPile) renderSdCustPoles();
+  renderStockCards(); renderStockLog(true);
   showToast('🗑 ลบแล้ว');
 }
 
 function deleteCpAll(ids) {
   if (!canDo('delete_stock')) { showToast('⛔ คุณไม่มีสิทธิ์ลบสต็อก'); return; }
   if (!confirm('ยืนยันลบทั้งหมด ' + ids.length + ' รายการ?')) return;
+  const _all = getCustPoles();
+  const _its = ids.map(id => _all.find(x => x.id === id)).filter(Boolean);
+  const _pile = _its.length ? (_its[0].pileType||'-') : '-';
+  const _sum  = _its.reduce((s,x)=>s+(x.qty||0),0);
   ids.forEach(id => deleteCustPole(id));
+  _deductStockOnDeleteCp(_its);
+  try { logAudit('ลบเสา (กลุ่ม)', _pile, ids.length + ' รายการ · ' + _sum + ' ต้น'); } catch(e){}
   if (_sdCurrentPile) renderSdCustPoles();
+  renderStockCards(); renderStockLog(true);
   showToast('🗑 ลบแล้ว ' + ids.length + ' รายการ');
 }
 
@@ -6919,6 +6965,7 @@ function submitCpEdit() {
     saveStockLog(log);
   }
 
+  try { logAudit('แก้ไขเสาค้างสต็อก', _cpEditPile, '[' + specLabel + '] ' + qty + ' ต้น' + (delta !== 0 ? ' · สต็อก ' + (delta>0?'+':'') + delta : '')); } catch(e){}
   closeCpEditModal();
   if (_sdCurrentPile) { renderSdCustPoles(); openStockDetail(_sdCurrentPile); }
   renderStockCards();
@@ -8111,6 +8158,7 @@ function deleteSpec(vid) {
   if (deduct > 0) log.unshift({ ts:nowTs(), typeVal:'🗑 ลบสเปค (เบิกออก)', name:_sdCurrentPile, qty:deduct, // BugFix#7: ปรับ log type ให้ถูกต้อง
     newStock:stock[_sdCurrentPile], qtyDisplay:'-'+deduct, ref:'-', staff:'-', note:'ลบสเปค: '+target.spec });
   saveStock(stock); saveStockLog(log);
+  try { logAudit('ลบสเปค', _sdCurrentPile, '[' + target.spec + '] หักออก ' + deduct + ' ต้น · คงเหลือ ' + stock[_sdCurrentPile]); } catch(e){}
   openStockDetail(_sdCurrentPile);
   renderStockCards(); populateLogPileFilter(); renderStockLog(true);
   showToast('🗑 ลบสเปค: ' + target.spec);
@@ -8221,10 +8269,24 @@ function sdPopulateStaff() {
   if (el) el.value = (_currentUser && _currentUser.email) || '';
 }
 
+// BugFix (บ่า): จับคู่สเปคด้วย spec + เชื่อม/เหล็ก/ลวด + บ่า (ไม่ใช่ spec อย่างเดียว)
+// ทำให้สเปคที่ต่างกันแค่ "บ่า" ไม่ถูกนำไปรวมกัน
+function _sdNorm(v){ v = String(v==null?'':v).trim(); return (v===''||v==='-') ? '' : v; }
+function _sdSpecMatch(entry, spec, weld, steel, wire, ba){
+  return _sdNorm(entry.spec)  === _sdNorm(spec)
+      && _sdNorm(entry.weld)  === _sdNorm(weld)
+      && _sdNorm(entry.steel) === _sdNorm(steel)
+      && _sdNorm(entry.wire)  === _sdNorm(wire)
+      && _sdNorm(entry.ba)    === _sdNorm(ba);
+}
 function sdPreview() {
   const typeVal = document.getElementById('sd_logtype')?.value;
   const spec    = (document.getElementById('sd_logspec')?.value||'').trim();
   const qty     = parseInt(document.getElementById('sd_logqty')?.value)||0;
+  const weld    = (document.getElementById('sd_logweld')?.value||'').trim()||'-';
+  const steel   = (document.getElementById('sd_logsteel')?.value||'').trim()||'-';
+  const wire    = (document.getElementById('sd_logwire')?.value||'').trim()||'-';
+  const ba      = (document.getElementById('sd_logba')?.value||'').trim()||'-';
   const prev    = document.getElementById('sdLogPreview');
   if (!prev) return;
   if (!typeVal || !qty) {
@@ -8233,7 +8295,7 @@ function sdPreview() {
     return;
   }
   const specs    = getSpecs(_sdCurrentPile);
-  const existing = specs.find(v => v.spec === spec);
+  const existing = specs.find(v => _sdSpecMatch(v, spec, weld, steel, wire, ba));
   const mainCur  = getStock()[_sdCurrentPile]||0;
   let msg = '', bgColor = '#F0FDF4', txColor = '#166534';
 
@@ -8287,7 +8349,7 @@ function submitSdLog() {
 
   const name     = _sdCurrentPile;
   const specs    = getSpecs(name);
-  const existing = specs.find(v => v.spec === spec);
+  const existing = specs.find(v => _sdSpecMatch(v, spec, weld, steel, wire, ba));
   const stock    = getStock();
   const log      = getStockLog()||[];
   let   newMain  = stock[name]||0;
@@ -8334,6 +8396,14 @@ function submitSdLog() {
   saveSpecs(name, specs);
   saveStock(stock);
   saveStockLog(log);
+
+  // BugFix: บันทึกลง Audit Log ด้วย (เดิมลงเฉพาะ "ประวัติการเคลื่อนไหวสต็อก" จึงไม่โผล่ในหน้า "บันทึกการใช้งาน")
+  try {
+    const _auditAct = (typeVal === 'in')  ? 'รับเข้าสต็อก'
+                    : (typeVal === 'out') ? 'เบิกออกสต็อก'
+                    : 'ปรับสต็อก';
+    logAudit(_auditAct, name, '[' + spec + '] ' + qtyDisplay + ' ต้น · คงเหลือ ' + newMain + (note !== '-' ? ' · ' + note : ''));
+  } catch(e) { /* ไม่ให้ audit ทำให้งานหลักล้ม */ }
 
   // Auto: รับเข้า → สร้าง entry เสาค้างสต็อก
   if (typeVal === 'in') {
