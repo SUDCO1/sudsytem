@@ -6564,7 +6564,8 @@ function renderSdCustPoles() {
   } else {
     const mergedOn = {};
     online.forEach(p => {
-      const key = (p.orderNum||'ไม่ระบุ') + '|||' + (p.spec||'');
+      // BugFix: แยกกลุ่มตาม บ่า(ba) + ฟิลด์ย่อยด้วย ไม่งั้นสเปคที่ต่างกันแค่บ่าจะถูกรวมเข้าด้วยกัน
+      const key = (p.orderNum||'ไม่ระบุ') + '|||' + (p.spec||'') + '|||' + String(p.base||'').trim() + '|||' + String(p.weld||'').trim() + '|||' + String(p.steel||'').trim() + '|||' + String(p.wire||'').trim() + '|||' + String(p.ba||'').trim();
       if (!mergedOn[key]) mergedOn[key] = { orderNum: p.orderNum||'ไม่ระบุ', spec: p.spec||'', qty: 0, fromStockQty: 0, ids: [], base: p.base, weld: p.weld, steel: p.steel, wire: p.wire, ba: p.ba };
       mergedOn[key].qty += (p.qty||0);
       if (p.fromStock) mergedOn[key].fromStockQty += (p.qty||0);
@@ -6596,8 +6597,11 @@ function renderSdCustPoles() {
   } else {
     const merged = {};
     offline.forEach(p => {
-      const key = (p.spec||'ไม่ระบุ').trim();
-      if (!merged[key]) merged[key] = { spec: key, qty: 0, ids: [], base: p.base, weld: p.weld, steel: p.steel, wire: p.wire, ba: p.ba };
+      // BugFix: เดิม key ใช้แค่ spec ทำให้เสาที่ต่างกันแค่ "บ่า" (ba) ถูกรวมสต็อกเข้าด้วยกัน
+      // แก้เป็นรวม ba + ฟิลด์ย่อยทั้งหมดในคีย์ เพื่อให้แต่ละบ่าแยกใบกัน
+      const key = [(p.spec||'ไม่ระบุ'), p.base, p.weld, p.steel, p.wire, p.ba]
+        .map(v => String(v==null?'':v).trim()).join('|||');
+      if (!merged[key]) merged[key] = { spec: (p.spec||'ไม่ระบุ').trim(), qty: 0, ids: [], base: p.base, weld: p.weld, steel: p.steel, wire: p.wire, ba: p.ba };
       merged[key].qty += (p.qty||0);
       merged[key].ids.push(p.id);
     });
