@@ -3037,6 +3037,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       <!-- เสาลูกค้า / เสาค้างสต็อก inside modal -->
       <div class="sd-section">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <input type="text" id="sdCpSearch" oninput="onSdCpSearch(this.value)" placeholder="🔍 ค้นหา: ยาว / สเปค / ช / สล / ลวด / บ / Order" autocomplete="off" style="flex:1;padding:8px 12px;border:1.5px solid #CBD5E1;border-radius:8px;font-size:12.5px;outline:none;font-family:inherit;"/>
+          <button type="button" onclick="clearSdCpSearch()" style="padding:8px 12px;font-size:11px;font-weight:700;background:#F1F5F9;color:#475569;border:1px solid #CBD5E1;border-radius:8px;cursor:pointer;white-space:nowrap;">ล้าง</button>
+        </div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <div style="font-size:12px;font-weight:800;color:#1E40AF;letter-spacing:.5px;">🟢 เสาลูกค้า (Online)</div>
           <button id="sdAddCustPoleBtn" onclick="openAddCustPoleModalFor(_sdCurrentPile)" style="padding:3px 10px;font-size:11px;font-weight:700;background:#3B82F6;color:#fff;border:none;border-radius:6px;cursor:pointer;">➕ เพิ่ม</button>
@@ -7317,6 +7321,108 @@ function cpSpecChips(specStr, fields) {
     }).join('') + '</div>';
 }
 
+// ── ค้นหา (search) เสาลูกค้า + เสาค้างสต็อก ─────────────────────
+let _sdCpSearch = '';
+function onSdCpSearch(v) { _sdCpSearch = (v||'').trim().toLowerCase(); renderSdCustPoles(); }
+function clearSdCpSearch() {
+  _sdCpSearch = '';
+  const el = document.getElementById('sdCpSearch');
+  if (el) el.value = '';
+  renderSdCustPoles();
+}
+// รวมข้อความทุกฟิลด์ของการ์ดเป็นสตริงเดียวเพื่อใช้ค้นหา
+function _cpSearchText(m) {
+  const lenTxt = (typeof _fmtLen === 'function') ? _fmtLen(m.base) : (m.base||'');
+  return [m.spec, m.base, lenTxt, m.weld, m.steel, m.wire, m.ba, m.orderNum, m.qty]
+    .map(v => String(v==null?'':v)).join(' ').toLowerCase();
+}
+function _cpMatchesSearch(m) { return !_sdCpSearch || _cpSearchText(m).includes(_sdCpSearch); }
+
+// ── จัดเรียงการ์ด (ลากสลับตำแหน่ง) + จำลำดับไว้ต่อเสา/ต่อกลุ่ม ─────
+function _cpOrderStoreKey(pile, panel) { return 'cpord::' + pile + '::' + panel; }
+function _getCpOrder(pile, panel) {
+  try { return JSON.parse(localStorage.getItem(_cpOrderStoreKey(pile, panel)) || '[]'); }
+  catch(e) { return []; }
+}
+function _setCpOrder(pile, panel, arr) {
+  try { localStorage.setItem(_cpOrderStoreKey(pile, panel), JSON.stringify(arr)); } catch(e) {}
+}
+// เรียง list ตามลำดับที่ผู้ใช้บันทึกไว้ · คีย์ใหม่ที่ยังไม่เคยเรียงให้ต่อท้าย (เสถียร)
+function _sortByCpOrder(list, pile, panel) {
+  const order = _getCpOrder(pile, panel);
+  if (!order.length) return list;
+  const idx = k => { const i = order.indexOf(k); return i < 0 ? 1e9 : i; };
+  return list.map((m, i) => [m, i]).sort((a, b) => {
+    const d = idx(a[0].__key) - idx(b[0].__key);
+    return d !== 0 ? d : a[1] - b[1];
+  }).map(x => x[0]);
+}
+
+// คีย์การ์ด (merge key) ต่อพาเนล — ต้องตรงกับที่ใช้ตอน render เป๊ะ
+function _cpCardKey(p, panel) {
+  return panel === 'online'
+    ? (p.orderNum||'ไม่ระบุ')+'|||'+(p.spec||'')+'|||'+String(p.base||'').trim()+'|||'+String(p.weld||'').trim()+'|||'+String(p.steel||'').trim()+'|||'+String(p.wire||'').trim()+'|||'+String(p.ba||'').trim()
+    : [(p.spec||'ไม่ระบุ'), p.base, p.weld, p.steel, p.wire, p.ba].map(v=>String(v==null?'':v).trim()).join('|||');
+}
+// ลำดับคีย์การ์ดที่กำลังแสดงอยู่ตอนนี้ (เคารพลำดับที่ผู้ใช้ลากไว้)
+function _cpCurrentDisplayKeys(pile, panel) {
+  const all = getCustPoles().filter(x => x.pileType === pile);
+  const arr = panel === 'online' ? all.filter(x=>x.online!==false) : all.filter(x=>x.online===false);
+  const seen = [], set = new Set();
+  arr.forEach(p => { const k = _cpCardKey(p, panel); if (!set.has(k)) { set.add(k); seen.push({ __key:k }); } });
+  return _sortByCpOrder(seen, pile, panel).map(x => x.__key);
+}
+// ตรึงตำแหน่งการ์ดไว้ที่เดิม: แทนคีย์เก่าด้วยคีย์ใหม่ในลำดับ (แก้ไขสเปค/จำนวนแล้วไม่เด้งไปล่างสุด)
+// baseOrder = ลำดับที่ snapshot ไว้ "ก่อน" แก้ไข (ตอนที่ยังมีคีย์เก่าอยู่)
+function _cpPreservePosition(pile, panel, oldKey, newKey, baseOrder) {
+  let order = _getCpOrder(pile, panel);
+  if (!order.length) order = (baseOrder && baseOrder.length) ? baseOrder.slice() : _cpCurrentDisplayKeys(pile, panel);
+  const i = order.indexOf(oldKey);
+  if (i >= 0) order[i] = newKey;
+  else if (order.indexOf(newKey) < 0) order.push(newKey);
+  order = order.filter((k, idx) => order.indexOf(k) === idx); // กันคีย์ซ้ำ
+  _setCpOrder(pile, panel, order);
+}
+
+let _cpDragKey = null, _cpDragPanel = null;
+function cpDragStart(ev, el) {
+  _cpDragKey = el.dataset.cpkey; _cpDragPanel = el.dataset.cppanel;
+  try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', _cpDragKey); } catch(e) {}
+  el.style.opacity = '0.45';
+}
+function cpDragEnd(ev, el) {
+  if (el) el.style.opacity = '';
+  _cpDragKey = null; _cpDragPanel = null;
+  document.querySelectorAll('[data-cpkey]').forEach(n => n.style.outline = '');
+}
+function cpDragOver(ev, el) {
+  if (!_cpDragKey || el.dataset.cppanel !== _cpDragPanel) return;
+  ev.preventDefault();
+  try { ev.dataTransfer.dropEffect = 'move'; } catch(e) {}
+  if (el.dataset.cpkey !== _cpDragKey) el.style.outline = '2px dashed #6366F1';
+}
+function cpDragLeave(ev, el) { el.style.outline = ''; }
+function cpDrop(ev, el) {
+  ev.preventDefault(); el.style.outline = '';
+  const panel = el.dataset.cppanel, targetKey = el.dataset.cpkey;
+  if (!_cpDragKey || panel !== _cpDragPanel || _cpDragKey === targetKey) return;
+  const cont = el.parentElement;
+  const keys = [...cont.querySelectorAll('[data-cpkey]')].map(n => n.dataset.cpkey);
+  const from = keys.indexOf(_cpDragKey), to = keys.indexOf(targetKey);
+  if (from < 0 || to < 0) return;
+  keys.splice(to, 0, keys.splice(from, 1)[0]);
+  _setCpOrder(_sdCurrentPile, panel, keys);
+  _cpDragKey = null; _cpDragPanel = null;
+  renderSdCustPoles();
+}
+// attribute ที่ทำให้การ์ดลากได้
+function _cpDragAttrs(key, panel) {
+  return 'draggable="true" data-cpkey="' + escHtml(key) + '" data-cppanel="' + panel + '" '
+    + 'ondragstart="cpDragStart(event,this)" ondragend="cpDragEnd(event,this)" '
+    + 'ondragover="cpDragOver(event,this)" ondragleave="cpDragLeave(event,this)" ondrop="cpDrop(event,this)" '
+    + 'title="ลากเพื่อจัดเรียงตำแหน่ง"';
+}
+
 function renderSdCustPoles() {
   const pileName = _sdCurrentPile;
   if (!pileName) return;
@@ -7330,6 +7436,8 @@ function renderSdCustPoles() {
 
   // ── compact card style (same as spec cards) ──
   const CARD_WRAP = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;';
+  const NO_MATCH  = '<div style="text-align:center;padding:16px;color:#94A3B8;font-size:12px;">🔍 ไม่พบผลลัพธ์ตามคำค้นหา</div>';
+  const GRAB      = 'cursor:grab;';
 
   // Online — merge by orderNum + spec
   if (!online.length) {
@@ -7339,19 +7447,20 @@ function renderSdCustPoles() {
     online.forEach(p => {
       // BugFix: แยกกลุ่มตาม บ่า(ba) + ฟิลด์ย่อยด้วย ไม่งั้นสเปคที่ต่างกันแค่บ่าจะถูกรวมเข้าด้วยกัน
       const key = (p.orderNum||'ไม่ระบุ') + '|||' + (p.spec||'') + '|||' + String(p.base||'').trim() + '|||' + String(p.weld||'').trim() + '|||' + String(p.steel||'').trim() + '|||' + String(p.wire||'').trim() + '|||' + String(p.ba||'').trim();
-      if (!mergedOn[key]) mergedOn[key] = { orderNum: p.orderNum||'ไม่ระบุ', spec: p.spec||'', qty: 0, fromStockQty: 0, ids: [], base: p.base, weld: p.weld, steel: p.steel, wire: p.wire, ba: p.ba };
+      if (!mergedOn[key]) mergedOn[key] = { __key: key, orderNum: p.orderNum||'ไม่ระบุ', spec: p.spec||'', qty: 0, fromStockQty: 0, ids: [], base: p.base, weld: p.weld, steel: p.steel, wire: p.wire, ba: p.ba };
       mergedOn[key].qty += (p.qty||0);
       if (p.fromStock) mergedOn[key].fromStockQty += (p.qty||0);
       mergedOn[key].ids.push(p.id);
     });
-    onPanel.innerHTML = '<div style="' + CARD_WRAP + '">' +
-      Object.values(mergedOn).map(m => {
+    const onList = _sortByCpOrder(Object.values(mergedOn).filter(_cpMatchesSearch), pileName, 'online');
+    onPanel.innerHTML = !onList.length ? NO_MATCH : '<div style="' + CARD_WRAP + '">' +
+      onList.map(m => {
         const idsJson   = JSON.stringify(m.ids).replace(/"/g,"'");
         const orderEsc  = escHtml(m.orderNum).replace(/'/g,"\\'");
         const pileEsc   = escHtml(pileName).replace(/'/g,"\\'");
         return `
-        <div style="background:#fff;border:1.5px solid #BFDBFE;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
-          <div style="font-size:10px;font-weight:700;color:#1E40AF;">📋 ${escHtml(m.orderNum)}</div>
+        <div ${_cpDragAttrs(m.__key,'online')} style="background:#fff;border:1.5px solid #BFDBFE;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;${GRAB}">
+          <div style="font-size:10px;font-weight:700;color:#1E40AF;">⠿ 📋 ${escHtml(m.orderNum)}</div>
           <div>${cpSpecChips(m.spec, m)}</div>
           <div style="font-size:18px;font-weight:900;color:#1E293B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span>${m.fromStockQty > 0 ? ` <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">สต็อกเก่า ${m.fromStockQty}</span>` : ''}</div>
           <div style="display:flex;gap:4px;margin-top:2px;">
@@ -7374,20 +7483,23 @@ function renderSdCustPoles() {
       // แก้เป็นรวม ba + ฟิลด์ย่อยทั้งหมดในคีย์ เพื่อให้แต่ละบ่าแยกใบกัน
       const key = [(p.spec||'ไม่ระบุ'), p.base, p.weld, p.steel, p.wire, p.ba]
         .map(v => String(v==null?'':v).trim()).join('|||');
-      if (!merged[key]) merged[key] = { spec: (p.spec||'ไม่ระบุ').trim(), qty: 0, ids: [], base: p.base, weld: p.weld, steel: p.steel, wire: p.wire, ba: p.ba };
+      if (!merged[key]) merged[key] = { __key: key, spec: (p.spec||'ไม่ระบุ').trim(), qty: 0, ids: [], base: p.base, weld: p.weld, steel: p.steel, wire: p.wire, ba: p.ba };
       merged[key].qty += (p.qty||0);
       merged[key].ids.push(p.id);
     });
-    offPanel.innerHTML = '<div style="' + CARD_WRAP + '">' +
-      Object.values(merged).map(m => {
+    const offList = _sortByCpOrder(Object.values(merged).filter(_cpMatchesSearch), pileName, 'offline');
+    offPanel.innerHTML = !offList.length ? NO_MATCH : '<div style="' + CARD_WRAP + '">' +
+      offList.map(m => {
         const idsJson = JSON.stringify(m.ids).replace(/"/g,"'");
+        const pileEsc = (pileName||'').replace(/'/g,"\\'");
         return `
-        <div style="background:#FFF5F5;border:1.5px solid #FECACA;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+        <div ${_cpDragAttrs(m.__key,'offline')} style="background:#FFF5F5;border:1.5px solid #FECACA;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;${GRAB}">
+          <div style="font-size:10px;color:#CBD5E1;line-height:1;margin-bottom:-2px;">⠿</div>
           <div>${cpSpecChips(m.spec, m)}</div>
           <div style="font-size:18px;font-weight:900;color:#991B1B;line-height:1;">${m.qty} <span style="font-size:11px;color:#64748B;font-weight:500;">ต้น</span></div>
           <div style="display:flex;gap:4px;margin-top:2px;">
-            ${canDo('edit_stock') ? `<button onclick="openAssignOrderModal(${idsJson},'${(pileName||'').replace(/'/g,"\\'")}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>` : ''}
-            ${canDo('edit_stock') ? `<button onclick="openCpEditModal(${idsJson},'${(pileName||'').replace(/'/g,"\\'")}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:5px;cursor:pointer;">✏️ แก้ไข</button>` : ''}
+            ${canDo('edit_stock') ? `<button onclick="openAssignOrderModal(${idsJson},'${pileEsc}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">↩ ย้ายกลับ</button>` : ''}
+            ${canDo('edit_stock') ? `<button onclick="openCpEditModal(${idsJson},'${pileEsc}')" style="flex:1;padding:4px 6px;font-size:10px;font-weight:700;background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:5px;cursor:pointer;">✏️ แก้ไข</button>` : ''}
             ${canDo('delete_stock') ? `<button onclick="deleteCpAll(${idsJson})" style="padding:4px 6px;font-size:10px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:5px;cursor:pointer;">🗑</button>` : ''}
           </div>
         </div>`;
@@ -7701,6 +7813,14 @@ function submitCpEdit() {
     wire  !== '-' ? wire  : null,
   ].filter(Boolean).join('/') || (base || '-');
 
+  // จับตำแหน่งการ์ดเดิมไว้ก่อนแก้ เพื่อไม่ให้การ์ดกระโดดไปล่างสุดหลังบันทึก
+  let _oldKey = null, _baseOrder = [];
+  try {
+    const _prevItem = getCustPoles().find(x => x.id === _cpEditIds[0]);
+    if (_prevItem) _oldKey = _cpCardKey(_prevItem, 'offline');
+    _baseOrder = _cpCurrentDisplayKeys(_cpEditPile, 'offline');
+  } catch(e){}
+
   // ลบ record เก่าทั้งกลุ่ม แล้วสร้าง record เดียวที่มีฟิลด์แยกถูกหมวด
   _cpEditIds.forEach(id => deleteCustPole(id));
   saveSingleCustPole({
@@ -7712,6 +7832,16 @@ function submitCpEdit() {
     createdAt: Date.now(),
     note: 'แก้ไขสเปค'
   });
+
+  // คงตำแหน่งการ์ดเดิม: สลับ key เก่า→ใหม่ ที่ตำแหน่งเดิมในลำดับการแสดงผล
+  try {
+    const _newKey = _cpCardKey({
+      spec: specLabel,
+      base: (base && base !== '-') ? base : '-',
+      weld, steel, wire, ba
+    }, 'offline');
+    if (_oldKey) _cpPreservePosition(_cpEditPile, 'offline', _oldKey, _newKey, _baseOrder);
+  } catch(e){}
 
   // ปรับสต็อกรวมให้ตรงกับผลรวมการ์ด (ถ้าจำนวนเปลี่ยน) + บันทึกประวัติ
   const delta = qty - _cpEditOldQty;
@@ -8791,6 +8921,11 @@ function openStockDetail(name) {
   _sdCurrentPile = name;
   const cfg   = getConfig();
   const price = (cfg.pilePrices||{})[name] || 0;
+
+  // reset ช่องค้นหาการ์ดทุกครั้งที่เปิดรายละเอียดสต็อก
+  _sdCpSearch = '';
+  const _cpSearchEl = document.getElementById('sdCpSearch');
+  if (_cpSearchEl) _cpSearchEl.value = '';
 
   document.getElementById('sdTitle').textContent = name;
   document.getElementById('sdSub').textContent   = 'จัดการสต็อกแบบละเอียด · แยกตามสเปค';
