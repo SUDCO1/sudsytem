@@ -1833,19 +1833,20 @@ function tcBuildDeliveryNoteDoc(e){
   }).join('');
   const SUDCO_MOK="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgOTkuMDY1IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIj48cGF0aCBkPSJNNDIuNjQwIDg3LjMyNSA0My40NTggODguMjU5IDQ0LjY4NSA4OC4wODQgNDQuNTA5IDg3LjU1OCA0My40MDAgODYuOTE2WiBNMzUuMjIyIDg2LjkxNiAzNC42OTYgODcuMzI1IDM0LjU3OSA4OC4xNDMgMzUuMzk3IDg4Ljg0MyAzNS45ODEgODguNDM1IDM2LjIxNSA4Ny43MzRaIE02Mi42MTcgODMuNjQ1IDYyLjc5MiA4NC4xMTIgNjMuMzc2IDg0LjM0NiA2NC44MzYgODQuMjg3IDY1LjE4NyA4My45OTUgNjQuNzc4IDgzLjM1MyA2NC4xMzYgODMuMTE5IDYzLjA4NCA4My4yMzZaIE0xNi4xMjEgODIuMTg1IDE1LjQyMSA4MS45NTEgMTQuNTQ0IDgyLjg4NiAxNC41NDQgODcuMjA4IDEzLjg0MyA4OC4wMjYgMTMuMDg0IDg3Ljc5MiAxMi4yMDggODYuOTc0IDExLjYyNCA4Mi45NDQgMTAuMDQ3IDgyLjE4NSA4LjkzNyA4Mi43NjkgOC41MjggODMuOTk1IDEwLjA0NyA4Ni4yMTUgOS4xNzEgODkuMTk0IDkuNTIxIDkwLjEyOSAxMC44MDYgOTAuNDIxIDEyLjAzMyA4OC43MjcgMTIuNjc1IDg4Ljc4NSAxNC44OTUgOTAuMTI5IDE1LjUzNyA4OS44MzYgMTYuMTgwIDg4LjQ5MyAxNi4zNTUgODIuNTkzWiBNMjIuNDMwIDgxLjMwOCAxOS45NzcgODEuNjAwIDE4LjIyNCA4My4xMTkgMTguNjkyIDg4LjQ5MyAxOS4zMzQgODkuMTM2IDIwLjU2MSA4OS42MDMgMjEuOTA0IDg5LjU0NCAyMC42MTkgODguNTUxIDIwLjAzNSA4Ny41MDAgMjAuNTYxIDg1Ljg2NCAyMS4wODYgODUuMzk3IDIyLjE5NiA4NS4xMDUgMjIuNzIyIDg1LjU3MiAyMy4yNDggODguNzI3IDIzLjcxNSA4OC42NjggMjQuMjk5IDg3Ljk2NyAyNC4yNDEgODMuMjM2IDIzLjc3MyA4Mi4zNjBaIE0yMC4wOTMgODIuNjUyIDIxLjE0NSA4Mi4zNjAgMjIuMDIxIDgyLjcxMCAyMi43ODAgODMuNTg2IDIyLjcyMiA4NC4zNDYgMjIuMjU1IDg0LjU3OSAyMC4zMjcgODMuMTc4WiBNMzAuODQxIDgwLjg0MSAyOC4zMjkgODAuOTAwIDI3LjUxMiA4MS4zNjcgMjYuNjM2IDgyLjU5MyAyNi41MTkgODQuMDU0IDI3LjA0NCA4OC4wODQgMjcuNDUzIDg4LjcyNyAyOC4wMzcgODguNjY4IDI4LjUwNSA4Ny45NjcgMjguNTYzIDg0Ljc1NSAyOS4xNDcgODMuODIwIDI4LjU2MyA4Mi41MzUgMjkuMDMwIDgyLjEyNiAzMC4xOTkgODIuMzYwIDMxLjEzMyA4My43NjIgMzEuMzA4IDg4LjE0MyAzMi4wMDkgODguMzE4IDMyLjY1MiA4Ny42MTcgMzIuOTQ0IDg2Ljc5OSAzMi43MTAgODIuNjUyIDMxLjcxNyA4MS4zNjdaIE00NC44NjAgNzkuMzIyIDQzLjk4NCA4MC4xOTkgNDUuMzI3IDgxLjU0MiA0NC45NzcgODMuNjQ1IDQ2LjQ5NSA4NS4yODAgNDcuMTM4IDg2LjY4MiA0Ny42MDUgODYuMzMyIDQ3LjcyMiA4My43MDMgNDcuMTk2IDgyLjcxMCA0Ny42NjQgODEuNDI1IDQ3LjY2NCA4MC4yNTcgNDYuNDk1IDc5LjMyMlogTTQ5LjEyNCA4MC43MjQgNDkuMDY1IDgyLjc2OSA1MC4xMTcgODMuOTM3IDUxLjc1MiA4NS4wNDcgNTIuMTYxIDg2LjM5MCA1Mi44NjIgODYuMDk4IDU0LjE0NyA4NC4zNDYgNTQuODQ4IDgzLjkzNyA1NS41NDkgODQuNTIxIDU2LjE5MiA4Ni4wOTggNTcuNzEwIDg2Ljg1NyA1OC4wMDIgODYuMzMyIDU3LjY1MiA4My4zNTMgNTguMTE5IDgyLjgyNyA1OS4yODcgODMuODIwIDU5Ljc1NSA4Ni4zMzIgNjAuMTY0IDg2LjM5MCA2MS4wOTggODUuMTA1IDYxLjE1NyA4My43NjIgNjAuNjMxIDgyLjcxMCA1OC40NzAgODAuOTAwIDU4LjkzNyA3OS42NzMgNTguNjQ1IDc5LjI2NCA1Ny42NTIgNzkuNjczIDU1LjI1NyA4Mi43NjkgNTQuNjczIDgyLjM2MCA1NC42MTQgODAuNTQ5IDUyLjkyMSA3OC45NzIgNTAuOTM1IDc4Ljk3MiA1MC4xMTcgNzkuNDM5WiBNNTEuNjk0IDc5LjYxNCA1Mi4yNzggNzkuOTY1IDUyLjgwNCA4MS4wMTYgNTIuOTIxIDgyLjY1MiA1Mi4zMzYgODMuNTI4IDUxLjUxOSA4Mi45NDQgNTAuOTkzIDgxLjgzNCA1MC44NzYgODAuNTQ5WiBNNjguNTE2IDc3Ljc0NSA2Ny44NzQgNzguNzM4IDY5LjMzNCA3OS41NTYgNjkuOTc3IDgwLjg0MSA2OS4xMDAgODMuMTE5IDY3LjExNCA4NS4zMzkgNjcuMTE0IDg1Ljk4MSA2Ny42NDAgODYuMzMyIDcwLjMyNyA4Ni4yNzMgNzIuMzEzIDg1LjA0NyA3NC4yOTkgODUuOTIzIDc1LjY0MyA4NS43NDggNzUuNzAxIDg1LjEwNSA3NC4zNTcgODQuNTIxIDcxLjk2MyA4NC4xMTIgNjkuODYwIDg0LjUyMSA2OS40NTEgODQuMTcxIDY5LjYyNiA4My4wMDIgNzAuOTcwIDgxLjQyNSA3MS4zNzkgNzkuMjA2IDcwLjAzNSA3Ny42ODcgNjguOTg0IDc3LjUxMlogTTc0Ljc2NiA3Ny4yMjAgNzMuODMyIDc4LjAzNyA3My45NDkgNzkuMjY0IDczLjQ4MSA4MC4zMTUgNzMuNzczIDgxLjMwOCA3NC4yNDEgODEuNzc2IDc1Ljk5MyA4Mi4zMDEgNzcuMzk1IDgzLjM1MyA3Ny44MDQgODIuNDE4IDc3LjUxMiA4MS4yNTAgNzYuNzUyIDgwLjQzMiA3NS4yMzQgNzkuODQ4IDc0Ljg4MyA3OS4yNjQgNzUuMjM0IDc4LjkxNCA3Ny4xNjEgNzguNDQ2IDc3Ljg2MiA3Ny42MjkgNzcuMjIwIDc3LjEwM1ogTTgzLjAwMiA3Ni45ODYgODEuNzE3IDc4LjQ0NiA4Mi4yNDMgODAuMzE1IDgyLjE4NSA4MS42MDAgODEuNjU5IDgyLjEyNiA4MS4wNzUgODIuMTg1IDgwLjA4MiA4MS4zNjcgNzkuNTU2IDgyLjAwOSA3OS40OTggODIuNzY5IDgwLjA4MiA4My40MTEgODEuNzc2IDgzLjcwMyA4My4zNTMgODQuOTMwIDg0LjQ2MyA4My4yOTQgODQuNTIxIDgyLjMwMSA4NC4wNTQgODAuODQxIDgzLjkzNyA3Ny44MDQgODMuNDExIDc3LjA0NFogTTg5LjI1MiA3Ni4yMjcgODguNjEwIDc2LjYzNiA4OS42MDMgNzguNTA1IDg5LjYwMyA3OS45NjUgODkuMjUyIDgwLjQ5MSA4OC42NjggODAuNDkxIDg3Ljg1MCA3OS40MzkgODcuOTY3IDc3LjA0NCA4Ny43MzQgNzYuNzUyIDg2LjY4MiA3Ny4xNjEgODUuOTgxIDc4LjQ0NiA4Ni4wOTggNzkuNzkwIDg3LjA5MSA4MS4wNzUgODguNjY4IDgyLjI0MyA4OS4wMTkgODMuNTI4IDkwLjQ3OSA4Mi4yNDMgOTEuNDcyIDc5Ljg0OCA5MS4wMDUgNzcuODA0WiBNMTYuNDcyIDM5LjMxMSAxNS4zNjIgNDAuNTk2IDE1LjQ3OSA0MS41ODkgMjAuODUzIDQ2LjY3MSAyMi4zNzEgNDYuMTQ1IDI0LjQxNiA0Ni40MzcgMjQuNzY2IDQ3LjA3OSAyMy44OTAgNDguMjQ4IDIzLjgzMiA0OS4yNDEgMjQuNjUwIDUwLjU4NCAzOS4xMzYgNjQuMzExIDQwLjEyOSA2NS4wMTIgNDAuNzcxIDY0Ljk1MyA0MS41MzAgNjQuMDE5IDQxLjk5OCA2Mi4wMzMgNDEuOTk4IDU2LjU0MiA0MS42NDcgNTUuNTQ5IDQxLjIzOCA1NS4xOTkgMzkuNzIwIDU1LjQ5MSAzOC4wMjYgNTQuNjczIDMzLjc2MiA1MC43MDEgMzMuMTE5IDQ5LjY1MCAzMy4xMTkgNDguMzY0IDMyLjU5MyA0Ny43MjIgMjguNTA1IDQ3LjE5NiAyNy43NDUgNDYuOTA0IDI3LjU3MCA0Ni40OTUgMjguOTE0IDQ1LjkxMSAzMi42NTIgNDUuMzI3IDQwLjgyOSA0NS4yNjkgNDEuNTMwIDQzLjY5MiA0MS40NzIgMzcuMzI1IDQwLjU5NiAzNi43NDEgMzkuMTM2IDM2LjU2NSAyMy43MTUgMzcuMzI1IDIxLjQ5NSAzNi4wOTggMjAuMTUyIDM2LjY4MlogTTc0LjAwNyAzNC4yMjkgNzIuNzgwIDM0LjE3MSA3MC43MzYgMzUuOTIzIDU1LjYwNyAzNi42MjQgNTQuMjA2IDM3LjAzMyA1My43OTcgMzguMzE4IDU0LjA4OSA0My41NzUgNTQuNzMxIDQ0LjY4NSA2My4yNTkgNDQuOTc3IDYzLjY2OCA0NS41MDIgNjMuMDI2IDQ2LjY3MSA1NS40MzIgNTMuNjgwIDU0LjA4OSA1My44NTUgNTMuNjIxIDU0LjMyMiA1NC4xNDcgNjEuMjczIDU1Ljc4MyA2NC4wMTkgNTcuMDY4IDYzLjkwMiA2OS4xMDAgNTEuNTc3IDcwLjk3MCA0OS4yOTkgNzkuNzMxIDQwLjgyOSA3OS44NDggNDAuMTg3IDc4Ljk3MiAzOS4wMTlaIE0zOS43MjAgMTcuNjk5IDM4LjA4NCAxNy43NTcgMjYuMjg1IDI5LjM4MSAyMy43MTUgMzIuNDc3IDIzLjU5OCAzMy4wMDIgMjQuMTI0IDMzLjc2MiAyNC43NjYgMzQuMTEyIDMwLjQzMiAzMy45OTUgMzEuNzc2IDMyLjA2OCAzNy4zMjUgMjYuNzUyIDM4LjQzNSAyNi41NzcgMzkuNDI4IDI2Ljk4NiA0MC4wNzAgMjYuNTE5IDQwLjEyOSAxOC4yMjRaIE01NC41NTYgMTYuODgxIDUzLjczOCAxOC41NzUgNTQuMjY0IDI1LjU4NCA1Ni4xOTIgMjYuNjk0IDYyLjA5MSAzMi4yNDMgNjEuOTc0IDMzLjc2MiA2Mi4yNjYgMzQuMTEyIDY4LjYzMyAzMy45MzcgNzAuNTAyIDMxLjgzNCA2OS45NzcgMzAuNDMyIDY1LjEyOSAyNS45OTMgNTguMTE5IDE4LjgwOCA1NS42NjYgMTYuOTM5WiBNNDcuNjY0IDguNzYyIDQyLjkzMiAxNC4wMTkgNDIuMzQ4IDE1LjQ3OSA0Mi45OTEgMTcuMDU2IDQzLjA0OSAyNC42NTAgNDMuMzQxIDI2LjY5NCA0My4wNDkgMzIuMzAxIDQzLjM0MSAzNi4zOTAgNDMuNDU4IDY1LjMwNCA0My4yMjQgNjYuMTIxIDQyLjUyMyA2Ni43MDYgNDEuNzA2IDY2LjgyMiA0MS41MzAgNjcuMzQ4IDQ2LjY3MSA3MS45NjMgNDcuOTU2IDcyLjcyMiA0OC43MTUgNzIuMzEzIDU0LjE0NyA2Ni43MDYgNTMuOTcyIDY2LjIzOCA1Mi44MDQgNjUuNTM3IDUyLjI3OCA2My43ODUgNTIuMjc4IDQ2LjA4NiA1MS45MjggNDQuODYwIDUyLjIyMCAzMy44NzkgNTEuODY5IDI2LjQwMiA1MS44NjkgMTYuNTg5IDUyLjQ1MyAxNS44ODggNTMuOTcyIDE1Ljg4OCA1NC4xNDcgMTUuMzYyIDQ4Ljc3MyA5LjI4N1oiIGZpbGw9IiMwMDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvc3ZnPg==";
   const mokHTML='<div style=\"position:absolute;left:90.063%;top:5.339%;width:5.658%;height:7.866%;background:#fff;\"></div><img src=\"'+SUDCO_MOK+'\" alt=\"มอก.\" style=\"position:absolute;left:90.349%;top:5.721%;width:5.087%;height:7.151%;\">';
-  return '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8">'
+  return '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
     +'<title>ใบส่งสินค้า '+_dnEsc(e.order||'')+'</title>'
     +'<style>'
     +'@import url("https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap");'
-    +'*{box-sizing:border-box;margin:0;padding:0;}'
+    +'*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
     +'html,body{background:#525659;}'
     +'.wrap{padding:14px;display:flex;justify-content:center;}'
-    +'.sheet{position:relative;width:210mm;height:148mm;background:#fff url("'+SUDCO_DN_BG+'") no-repeat center/100% 100%;box-shadow:0 3px 18px rgba(0,0,0,.4);}'
+    +'.sheet{position:relative;width:210mm;height:148mm;background:#fff;box-shadow:0 3px 18px rgba(0,0,0,.4);}'
+    +'.dnbg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:fill;z-index:0;pointer-events:none;}'
     +'.fld{color:#000;font-family:"Sarabun","Noto Sans Thai",sans-serif;font-size:3.15mm;font-weight:600;line-height:1;}'
     +'.fld:focus{outline:0;background:#FEF9C3;}'
     +'@page{size:A5 landscape;margin:0;}'
     +'@media print{html,body{background:#fff;}.wrap{padding:0;}.sheet{box-shadow:none;}.fld:focus{background:transparent;}}'
-    +'</style></head><body><div class="wrap"><div class="sheet">'+fieldHTML+mokHTML+'</div></div></body></html>';
+    +'</style></head><body><div class="wrap"><div class="sheet"><img class="dnbg" alt="" src="'+SUDCO_DN_BG+'">'+fieldHTML+mokHTML+'</div></div></body></html>';
 }
 
 function tcPrintDeliveryNote(id){
@@ -1862,7 +1863,7 @@ function tcPrintDeliveryNote(id){
     +'<span style="font-size:14px;font-weight:700;">🧾 ใบส่งสินค้า</span>'
     +'<span style="font-size:11px;color:#94A3B8;">แก้ไขข้อมูลในเอกสารได้ก่อนพิมพ์ (แตะที่ช่องแล้วพิมพ์ทับ)</span>'
     +'<div style="margin-left:auto;display:flex;gap:8px;">'
-      +'<button onclick="document.getElementById(\'tcDNFrame\').contentWindow.focus();document.getElementById(\'tcDNFrame\').contentWindow.print();" style="padding:8px 18px;background:linear-gradient(135deg,#0F766E,#14B8A6);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">🖨️ พิมพ์ / บันทึก PDF</button>'
+      +'<button onclick="tcDoPrintDN();" style="padding:8px 18px;background:linear-gradient(135deg,#0F766E,#14B8A6);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">🖨️ พิมพ์ / บันทึก PDF</button>'
       +'<button onclick="tcCloseDeliveryNote()" style="padding:8px 16px;background:#334155;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">✕ ปิด</button>'
     +'</div></div>'
     +'<iframe id="tcDNFrame" style="flex:1;width:100%;border:0;background:#525659;"></iframe>';
@@ -1871,6 +1872,35 @@ function tcPrintDeliveryNote(id){
   const ifr=document.getElementById('tcDNFrame');
   ifr.srcdoc=doc;
 }
+function tcDoPrintDN(){
+  const ifr=document.getElementById('tcDNFrame');
+  if(!ifr){ return; }
+  let html=null;
+  try{
+    const d=ifr.contentDocument||ifr.contentWindow.document;
+    if(d&&d.documentElement) html='<!DOCTYPE html>'+d.documentElement.outerHTML;
+  }catch(err){ html=null; }
+  const isMobile=/Mobi|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent||'');
+  if(isMobile && html){
+    const inj='<scr'+'ipt>window.onload=function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},500);};window.onafterprint=function(){setTimeout(function(){try{window.close();}catch(e){}},300);};</scr'+'ipt>';
+    html = html.indexOf('</body>')>-1 ? html.replace('</body>',inj+'</body>') : html+inj;
+    let w=null;
+    try{ w=window.open('','_blank'); }catch(e){ w=null; }
+    if(!w){ if(typeof showToast==='function') showToast('⚠️ กรุณาอนุญาต Pop-up เพื่อพิมพ์'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    return;
+  }
+  try{
+    if(ifr.contentWindow){ ifr.contentWindow.focus(); ifr.contentWindow.print(); return; }
+  }catch(err){}
+  if(html){
+    const inj='<scr'+'ipt>window.onload=function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},400);};</scr'+'ipt>';
+    html = html.indexOf('</body>')>-1 ? html.replace('</body>',inj+'</body>') : html+inj;
+    const w=window.open('','_blank');
+    if(w){ w.document.open(); w.document.write(html); w.document.close(); }
+  }
+}
+
 function tcCloseDeliveryNote(){
   const ov=document.getElementById('tcDNOverlay');
   if(ov) ov.remove();
