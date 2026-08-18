@@ -4271,6 +4271,41 @@ function _fmtLen(v) {
   s = s.replace(/\s*(?:เมตร|ม\.?|m\.?)\s*$/i, '').trim();
   return s ? s + 'ม.' : '';
 }
+// ── [FIX] สร้างข้อความสเปคแบบเต็ม สำหรับใช้ใน Log ทุกที่ ────────────────
+// เดิม log บันทึกแค่ "[11.00]" (ความยาว) ทำให้ย้อนดูไม่รู้ว่าเป็นสเปคไหน
+// ใหม่: "11.00ม. · ช:1 · สล:4012x1 · ลวด:4 · บ:1995"
+function _specFullLabel(spec, weld, steel, wire, ba) {
+  const ok = v => { v = String(v == null ? '' : v).trim(); return (v === '' || v === '-') ? null : v; };
+  const L = _fmtLen(spec) || ok(spec);
+  const parts = [
+    L,
+    ok(weld)  ? 'ช:'   + ok(weld)  : null,
+    ok(steel) ? 'สล:'  + ok(steel) : null,
+    ok(wire)  ? 'ลวด:' + ok(wire)  : null,
+    ok(ba)    ? 'บ:'   + ok(ba)    : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : (String(spec || '-').trim() || '-');
+}
+// สร้างจาก object สเปค (รองรับทั้ง format ใหม่ที่แยก field และ format เก่าที่ต่อด้วย "/")
+function _specFullFromEntry(v) {
+  if (!v) return '-';
+  if (v.weld || v.steel || v.wire || v.ba) return _specFullLabel(v.spec, v.weld, v.steel, v.wire, v.ba);
+  const s = String(v.spec || v.base || '');
+  if (s.includes('/')) {
+    const p = s.split('/').map(x => x.trim());
+    return _specFullLabel(p[0], p[1], p[2], p[3], p[4]);
+  }
+  return _specFullLabel(s, '-', '-', '-', '-');
+}
+// [ช่วยตรวจย้อนหลัง] เรียกจาก Console:  whatSpec('I22-337','11')
+// ใช้ดูว่าความยาวนั้น ๆ ในเสาต้นนี้ มีกี่สเปคย่อย (ช/สล/ลวด/บ) และเหลือเท่าไร
+function whatSpec(pileName, lenPrefix) {
+  const list = (typeof getSpecs === 'function' ? getSpecs(pileName) : []) || [];
+  const hit  = list.filter(v => !lenPrefix || String(v.spec || '').trim().indexOf(String(lenPrefix)) === 0);
+  console.log('เสา ' + pileName + ' · ความยาวขึ้นต้นด้วย "' + (lenPrefix || 'ทั้งหมด') + '" → ' + hit.length + ' สเปค');
+  hit.forEach(v => console.log('  • ' + _specFullFromEntry(v) + '  =  ' + (v.qty || 0) + ' ต้น'));
+  return hit.map(v => ({ spec: _specFullFromEntry(v), qty: v.qty || 0 }));
+}
 // จับคู่เลข Order กับ error แบบทั้งคำ (กัน ORD-1 ไปชนกับ ORD-10)
 function _orderMatch(errOrder, orderNum) {
   if (!errOrder || !orderNum) return false;
@@ -7836,14 +7871,18 @@ function _deductStockOnDeleteCp(items) {
   const stock = getStock();
   const log   = getStockLog() || [];
   const byPile = {};
-  offline.forEach(x => { if (x.pileType) byPile[x.pileType] = (byPile[x.pileType]||0) + (x.qty||0); });
+  offline.forEach(x => { if (x.pileType) (byPile[x.pileType] = byPile[x.pileType] || []).push(x); });
   Object.keys(byPile).forEach(pile => {
-    const d = byPile[pile];
+    const items = byPile[pile];
+    const d = items.reduce((s,x) => s + (x.qty||0), 0);
     if (!d) return;
     stock[pile] = Math.max(0, (stock[pile]||0) - d);
+    // [FIX] ระบุสเปคที่ถูกลบลงใน log ด้วย (เดิมเขียนแค่ "ลบเสาค้างสต็อก")
+    const detail = items.map(x => _specFullFromEntry(x) + ' × ' + (x.qty||0)).join(' | ');
     log.unshift({ ts:nowTs(), typeVal:'🗑 ลบเสาค้างสต็อก (เบิกออก)', name:pile, qty:d,
       newStock:stock[pile], qtyDisplay:'-'+d, ref:'-',
-      staff:(_currentUser && _currentUser.email) || '-', note:'ลบเสาค้างสต็อก' });
+      staff:(_currentUser && _currentUser.email) || '-', note:'ลบเสาค้างสต็อก: ' + detail,
+      specFull:detail });
   });
   saveStock(stock); saveStockLog(log);
 }
@@ -7854,7 +7893,7 @@ function deleteCpEntry(id) {
   const _it = getCustPoles().find(x => x.id === id);
   deleteCustPole(id);
   _deductStockOnDeleteCp(_it ? [_it] : []);
-  try { logAudit('ลบเสา', _it ? (_it.pileType||'-') : '-', _it ? ((_it.qty||0) + ' ต้น' + (_it.orderNum ? ' · Order ' + _it.orderNum : '') + (_it.spec ? ' · ' + _it.spec : '')) : ''); } catch(e){}
+  try { logAudit('ลบเสา', _it ? (_it.pileType||'-') : '-', _it ? ('[' + _specFullFromEntry(_it) + '] ' + (_it.qty||0) + ' ต้น' + (_it.orderNum ? ' · Order ' + _it.orderNum : '')) : ''); } catch(e){}
   if (_sdCurrentPile) renderSdCustPoles();
   renderStockCards(); renderStockLog(true);
   showToast('🗑 ลบแล้ว');
@@ -7869,7 +7908,11 @@ function deleteCpAll(ids) {
   const _sum  = _its.reduce((s,x)=>s+(x.qty||0),0);
   ids.forEach(id => deleteCustPole(id));
   _deductStockOnDeleteCp(_its);
-  try { logAudit('ลบเสา (กลุ่ม)', _pile, ids.length + ' รายการ · ' + _sum + ' ต้น'); } catch(e){}
+  // [FIX] บอกด้วยว่าลบสเปคไหนไปบ้าง (เดิมบอกแค่จำนวนรายการ/จำนวนต้น)
+  try {
+    const _detail = _its.map(x => _specFullFromEntry(x) + ' × ' + (x.qty||0)).join(' | ');
+    logAudit('ลบเสา (กลุ่ม)', _pile, ids.length + ' รายการ · ' + _sum + ' ต้น' + (_detail ? ' · ' + _detail : ''));
+  } catch(e){}
   if (_sdCurrentPile) renderSdCustPoles();
   renderStockCards(); renderStockLog(true);
   showToast('🗑 ลบแล้ว ' + ids.length + ' รายการ');
@@ -9152,7 +9195,7 @@ function renderSpecGrid() {
         <span style="font-size:13px;font-weight:700;color:#1E293B;white-space:nowrap;">${v.qty||0} ${_u}</span>
       </div>
       <div style="display:flex;gap:6px;">
-        <button onclick="quickDeductSpec('${v.spec.replace(/'/g,"\\'")}',this)" style="flex:1;padding:4px 8px;font-size:11px;font-weight:700;border-radius:6px;border:1.5px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;">− เบิก</button>
+        <button onclick="quickDeductSpec('${String(v.spec||'').replace(/'/g,"\\'")}','${v.id}')" style="flex:1;padding:4px 8px;font-size:11px;font-weight:700;border-radius:6px;border:1.5px solid #FCA5A5;background:#FEF2F2;color:#DC2626;cursor:pointer;">− เบิก</button>
         <button onclick="deleteSpec('${v.id}')" style="padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid #E2E8F0;background:#F8FAFC;color:#94A3B8;cursor:pointer;">✕</button>
       </div>
     </div>`;
@@ -9175,20 +9218,28 @@ function deleteSpec(vid) {
   const log     = getStockLog()||[];
   const deduct  = target.qty||0;
   stock[_sdCurrentPile] = Math.max(0, (stock[_sdCurrentPile]||0) - deduct);
+  const _tFull = _specFullFromEntry(target); // [FIX] สเปคเต็ม
   if (deduct > 0) log.unshift({ ts:nowTs(), typeVal:'🗑 ลบสเปค (เบิกออก)', name:_sdCurrentPile, qty:deduct, // BugFix#7: ปรับ log type ให้ถูกต้อง
-    newStock:stock[_sdCurrentPile], qtyDisplay:'-'+deduct, ref:'-', staff:'-', note:'ลบสเปค: '+target.spec });
+    newStock:stock[_sdCurrentPile], qtyDisplay:'-'+deduct, ref:'-',
+    staff:(_currentUser && _currentUser.email) || '-', note:'ลบสเปค: '+_tFull,
+    spec:target.spec, weld:target.weld, steel:target.steel, wire:target.wire, ba:target.ba, specFull:_tFull });
   saveStock(stock); saveStockLog(log);
-  try { logAudit('ลบสเปค', _sdCurrentPile, '[' + target.spec + '] หักออก ' + deduct + ' ต้น · คงเหลือ ' + stock[_sdCurrentPile]); } catch(e){}
+  try { logAudit('ลบสเปค', _sdCurrentPile, '[' + _tFull + '] หักออก ' + deduct + ' ต้น · คงเหลือ ' + stock[_sdCurrentPile]); } catch(e){}
   openStockDetail(_sdCurrentPile);
   renderStockCards(); populateLogPileFilter(); renderStockLog(true);
-  showToast('🗑 ลบสเปค: ' + target.spec);
+  showToast('🗑 ลบสเปค: ' + _tFull);
 }
 
-function quickDeductSpec(spec) {
+// [FIX] เดิมปุ่ม "− เบิก" ส่งมาแค่ความยาว ทำให้ไปหักสเปคผิดตัว (ตัวที่ไม่มี ช/สล/ลวด/บ)
+// ใหม่: ส่ง id ของสเปคมาด้วย แล้วเติมทุกช่องให้ครบ
+function quickDeductSpec(spec, vid) {
   const el = document.getElementById('sd_logtype');
   const sp = document.getElementById('sd_logspec');
   if (el) el.value = 'out';
   if (sp) sp.value = spec;
+  const t = vid ? (getSpecs(_sdCurrentPile)||[]).find(v => v.id === vid) : null;
+  const put = (id, v) => { const e = document.getElementById(id); if (e) e.value = (v && v !== '-') ? v : ''; };
+  if (t) { put('sd_logweld', t.weld); put('sd_logsteel', t.steel); put('sd_logwire', t.wire); put('sd_logba', t.ba); }
   sdPreview();
   document.getElementById('sd_logqty')?.focus();
   document.getElementById('sdLogForm')?.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -9412,7 +9463,11 @@ function submitSdLog() {
   }
 
   stock[name] = newMain;
-  log.unshift({ ts:nowTs(), typeVal:typeLabel, name, qty, newStock:newMain, qtyDisplay, ref:'-', staff, note:'['+spec+'] '+note });
+  // [FIX] เก็บสเปคแบบเต็ม (ความยาว + ช/สล/ลวด/บ) แทนที่จะเก็บแค่ความยาว
+  const _fullSpec = _specFullLabel(spec, weld, steel, wire, ba);
+  log.unshift({ ts:nowTs(), typeVal:typeLabel, name, qty, newStock:newMain, qtyDisplay, ref:'-', staff,
+    note:'['+_fullSpec+'] '+note,
+    spec, weld, steel, wire, ba, specFull:_fullSpec });
   saveSpecs(name, specs);
   saveStock(stock);
   saveStockLog(log);
@@ -9422,7 +9477,7 @@ function submitSdLog() {
     const _auditAct = (typeVal === 'in')  ? 'รับเข้าสต็อก'
                     : (typeVal === 'out') ? 'เบิกออกสต็อก'
                     : 'ปรับสต็อก';
-    logAudit(_auditAct, name, '[' + spec + '] ' + qtyDisplay + ' ต้น · คงเหลือ ' + newMain + (note !== '-' ? ' · ' + note : ''));
+    logAudit(_auditAct, name, '[' + _fullSpec + '] ' + qtyDisplay + ' ต้น · คงเหลือ ' + newMain + (note !== '-' ? ' · ' + note : ''));
   } catch(e) { /* ไม่ให้ audit ทำให้งานหลักล้ม */ }
 
   // Auto: รับเข้า → สร้าง entry เสาค้างสต็อก
