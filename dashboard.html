@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SUD Dashboard</title>
+
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   TOKENS — light เป็นค่าตั้งต้น, dark ประกาศทั้ง media query และ data-theme
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: light;
+  --surface-1:      #fcfcfb;
+  --page:           #f9f9f7;
+  --text-primary:   #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted:     #898781;
+  --gridline:       #e1e0d9;
+  --baseline:       #c3c2b7;
+  --border:         rgba(11,11,11,0.10);
+  --hover-wash:     rgba(11,11,11,0.04);
+
+  --series-1:       #2a78d6;
+  --series-2:       #eb6834;
+  --series-3:       #1baf7a;
+  --de-emphasis:    #c3c2b7;
+
+  --seq-100:        #cde2fb;
+  --seq-250:        #86b6ef;
+  --seq-450:        #2a78d6;
+  --seq-600:        #184f95;
+
+  --status-good:    #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical:#d03b3b;
+  --success-text:   #006300;
+
+  --diverge-pos:    #2a78d6;
+  --diverge-neg:    #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page:           #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --hover-wash:     rgba(255,255,255,0.06);
+
+    --series-1:       #3987e5;
+    --series-2:       #d95926;
+    --series-3:       #199e70;
+    --de-emphasis:    #383835;
+
+    --seq-100:        #184f95;
+    --seq-250:        #256abf;
+    --seq-450:        #3987e5;
+    --seq-600:        #86b6ef;
+
+    --success-text:   #0ca30c;
+    --diverge-pos:    #3987e5;
+    --diverge-neg:    #d03b3b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-1:      #1a1a19;
+  --page:           #0d0d0d;
+  --text-primary:   #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted:     #898781;
+  --gridline:       #2c2c2a;
+  --baseline:       #383835;
+  --border:         rgba(255,255,255,0.10);
+  --hover-wash:     rgba(255,255,255,0.06);
+
+  --series-1:       #3987e5;
+  --series-2:       #d95926;
+  --series-3:       #199e70;
+  --de-emphasis:    #383835;
+
+  --seq-100:        #184f95;
+  --seq-250:        #256abf;
+  --seq-450:        #3987e5;
+  --seq-600:        #86b6ef;
+
+  --success-text:   #0ca30c;
+  --diverge-pos:    #3987e5;
+  --diverge-neg:    #d03b3b;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BASE
+   ══════════════════════════════════════════════════════════════════════════ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
+  background: var(--page);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: var(--series-1); }
+
+.hidden { display: none !important; }
+
+/* ── LOGIN ──────────────────────────────────────────────────────────────── */
+#login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px 28px;
+}
+.login-card h1 { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; }
+.login-card p.sub { color: var(--text-secondary); font-size: 13px; margin-top: 6px; }
+.field { margin-top: 18px; }
+.field label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--text-secondary); margin-bottom: 6px;
+}
+.field input {
+  width: 100%; padding: 10px 12px; font: inherit;
+  background: var(--page); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.field input:focus { outline: 2px solid var(--series-1); outline-offset: 1px; }
+.btn-primary {
+  width: 100%; margin-top: 22px; padding: 11px 16px;
+  background: var(--series-1); color: #fff; font-weight: 650;
+  border: none; border-radius: 8px;
+}
+.btn-primary:disabled { opacity: 0.55; cursor: default; }
+.msg { margin-top: 14px; font-size: 13px; min-height: 20px; }
+.msg.error { color: var(--status-critical); }
+
+/* ── APP SHELL ──────────────────────────────────────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.brand { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.sync-note { font-size: 12px; color: var(--text-muted); }
+.topbar-spacer { flex: 1; }
+.icon-btn {
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+}
+.icon-btn:hover { background: var(--hover-wash); }
+
+nav.tabs {
+  position: sticky; top: 53px; z-index: 19;
+  background: var(--page);
+  border-bottom: 1px solid var(--border);
+  display: flex; gap: 2px; padding: 0 12px;
+  overflow-x: auto; scrollbar-width: none;
+}
+nav.tabs::-webkit-scrollbar { display: none; }
+nav.tabs button {
+  background: transparent; border: none;
+  border-bottom: 2px solid transparent;
+  padding: 12px 14px; font-size: 13px; font-weight: 600;
+  color: var(--text-secondary); white-space: nowrap;
+}
+nav.tabs button[aria-selected="true"] {
+  color: var(--text-primary);
+  border-bottom-color: var(--series-1);
+}
+nav.tabs button:hover { color: var(--text-primary); }
+
+main { padding: 20px; max-width: 1240px; margin: 0 auto; }
+
+/* ── FILTER ROW (หนึ่งแถวเหนือทุกกราฟที่มันคุม) ─────────────────────────── */
+.filter-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.filter-row .label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.seg { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button {
+  background: transparent; border: none; padding: 6px 13px;
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+}
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--series-1); color: #fff; }
+.seg button:not([aria-pressed="true"]):hover { background: var(--hover-wash); }
+
+/* ── HERO + STAT TILES ──────────────────────────────────────────────────── */
+.hero {
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 14px; padding: 22px 24px; margin-bottom: 14px;
+}
+.hero .label { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+.hero .value {
+  font-size: 52px; font-weight: 650; letter-spacing: -0.025em;
+  line-height: 1.1; margin-top: 4px;
+}
+.hero .sub { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+
+.kpi-grid {
+  display: grid; gap: 12px; margin-bottom: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+}
+.tile {
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 12px; padding: 15px 16px;
+}
+.tile .label { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.tile .value { font-size: 27px; font-weight: 650; letter-spacing: -0.02em; margin-top: 3px; }
+.tile .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.tile .sub.good     { color: var(--success-text); }
+.tile .sub.critical { color: var(--status-critical); }
+
+.status-dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  margin-right: 6px; vertical-align: 1px;
+}
+
+/* ── CHART CARD ─────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 20px 16px; margin-bottom: 14px;
+}
+.card-head {
+  display: flex; align-items: baseline; gap: 12px;
+  margin-bottom: 4px; flex-wrap: wrap;
+}
+.card-title { font-size: 14px; font-weight: 650; }
+.card-sub { font-size: 12px; color: var(--text-secondary); }
+.card-head .spacer { flex: 1; }
+.toggle-table {
+  background: transparent; border: 1px solid var(--border); border-radius: 7px;
+  padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--text-secondary);
+}
+.toggle-table:hover { background: var(--hover-wash); }
+.chart-wrap { margin-top: 14px; position: relative; }
+.chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+.legend .item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-secondary); }
+.legend .swatch { width: 11px; height: 11px; border-radius: 3px; }
+
+.empty {
+  padding: 34px 12px; text-align: center;
+  color: var(--text-muted); font-size: 13px;
+}
+
+/* ── TOOLTIP ────────────────────────────────────────────────────────────── */
+.tip {
+  position: fixed; z-index: 60; pointer-events: none;
+  background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 9px;
+  padding: 9px 12px; font-size: 12px; line-height: 1.5;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.16);
+  max-width: 260px;
+}
+.tip .t-label { font-weight: 650; margin-bottom: 3px; }
+.tip .t-row { color: var(--text-secondary); }
+.tip .t-row b { color: var(--text-primary); font-weight: 600; }
+
+/* ── TABLE ──────────────────────────────────────────────────────────────── */
+.tbl-wrap { margin-top: 14px; overflow-x: auto; }
+table.data { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.data th {
+  text-align: left; font-size: 11px; font-weight: 700;
+  color: var(--text-secondary); text-transform: none;
+  padding: 8px 10px; border-bottom: 1px solid var(--baseline); white-space: nowrap;
+}
+table.data td {
+  padding: 8px 10px; border-bottom: 1px solid var(--gridline);
+  font-variant-numeric: tabular-nums;
+}
+table.data td.txt { font-variant-numeric: normal; }
+table.data tr:last-child td { border-bottom: none; }
+table.data tr:hover td { background: var(--hover-wash); }
+td.num, th.num { text-align: right; }
+.pill {
+  display: inline-block; padding: 2px 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 650;
+}
+
+.loading { padding: 60px 20px; text-align: center; color: var(--text-muted); }
+
+/* ── เวลาถูกฝังเป็นแท็บในเว็บหลัก: ตัดหัวข้อที่ซ้ำกับเว็บแม่ออก ────────────── */
+body.embedded .topbar { padding: 9px 20px; }
+body.embedded .brand  { display: none; }
+body.embedded nav.tabs { top: 0; }
+body.embedded .topbar  { position: static; }
+.refetching { opacity: 0.55; transition: opacity .15s; }
+
+.setup-warn {
+  background: var(--surface-1); border: 1px solid var(--status-critical);
+  border-left-width: 3px; border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 16px; font-size: 13px;
+}
+.setup-warn b { color: var(--status-critical); }
+code.inline {
+  background: var(--hover-wash); padding: 1px 5px; border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+}
+@media (max-width: 720px) {
+  .hero .value { font-size: 40px; }
+  main { padding: 14px; }
+  .card { padding: 16px 14px 14px; }
+  /* จอแคบ: ให้กราฟเลื่อนแนวนอนแทนที่จะย่อจนอ่านตัวหนังสือไม่ออก */
+  .chart-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chart-wrap svg { min-width: 620px; }
+  .card-head .spacer { display: none; }
+  .toggle-table { margin-left: auto; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     LOGIN
+     ══════════════════════════════════════════════════════════════════════ -->
+<div id="login">
+  <form class="login-card" id="loginForm">
+    <h1>SUD Dashboard</h1>
+    <p class="sub">ระบบสรุปข้อมูลออเดอร์ ผลิต ขนส่ง และสต็อก</p>
+
+    <div class="field">
+      <label for="email">อีเมล</label>
+      <input type="email" id="email" autocomplete="username" required/>
+    </div>
+    <div class="field">
+      <label for="password">รหัสผ่าน</label>
+      <input type="password" id="password" autocomplete="current-password" required/>
+    </div>
+
+    <button type="submit" class="btn-primary" id="loginBtn">เข้าสู่ระบบ</button>
+    <div class="msg" id="loginMsg"></div>
+  </form>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     APP
+     ══════════════════════════════════════════════════════════════════════ -->
+<div id="app" class="hidden">
+  <header class="topbar">
+    <span class="brand">SUD Dashboard</span>
+    <span class="sync-note" id="syncNote"></span>
+    <span class="topbar-spacer"></span>
+    <button class="icon-btn" id="refreshBtn">รีเฟรช</button>
+    <button class="icon-btn" id="themeBtn">โหมดมืด</button>
+    <button class="icon-btn" id="logoutBtn">ออกจากระบบ</button>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button role="tab" data-tab="overview"  aria-selected="true">ภาพรวม</button>
+    <button role="tab" data-tab="sales"     aria-selected="false">ฝ่ายขาย</button>
+    <button role="tab" data-tab="production" aria-selected="false">ฝ่ายผลิต</button>
+    <button role="tab" data-tab="delivery"  aria-selected="false">ฝ่ายขนส่ง</button>
+    <button role="tab" data-tab="stock"     aria-selected="false">ฝ่ายสต็อก</button>
+  </nav>
+
+  <main id="main">
+    <div class="loading">กำลังโหลดข้อมูล…</div>
+  </main>
+</div>
+
+<div class="tip hidden" id="tip"></div>
+
+<script type="module">
+/* ══════════════════════════════════════════════════════════════════════════
+   ①  ตั้งค่าตรงนี้  ← แก้แค่ 2 บรรทัดนี้เท่านั้น
+   ══════════════════════════════════════════════════════════════════════════
+   หาได้ที่ Supabase Dashboard → Project Settings → API Keys
+   ใช้ "anon / publishable" key เท่านั้น  ⚠️ ห้ามใช้ service_role key เด็ดขาด
+   (anon key ออกแบบมาให้เปิดเผยได้ ข้อมูลถูกป้องกันด้วย RLS + การล็อกอิน)      */
+
+const SUPABASE_URL      = 'https://dmxegqmhxarabyqduikb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRteGVncW1oeGFyYWJ5cWR1aWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMTA2NjksImV4cCI6MjEwMjY4NjY2OX0.R1NyeKfVmjnp48zGHdMeB6XsChlHd8N5KD67k8RTWI8';
+
+/* ══════════════════════════════════════════════════════════════════════════ */
+
+const CONFIGURED = SUPABASE_ANON_KEY.startsWith('eyJ') || SUPABASE_ANON_KEY.startsWith('sb_');
+const API = SUPABASE_URL.replace(/\/+$/, '');
+
+/* ──────────────────────────────────────────────────────────────────────────
+   ไคลเอนต์ Supabase ขนาดจิ๋ว — เขียนด้วย fetch ล้วน
+   ไม่ต้องโหลดไลบรารีจากอินเทอร์เน็ต ไฟล์นี้จึงทำงานได้ด้วยตัวเองทั้งไฟล์
+   ────────────────────────────────────────────────────────────────────────── */
+const auth = {
+  token: null,
+  load() {
+    try { this.token = sessionStorage.getItem('sud_token'); } catch { /* ปิดคุกกี้ไว้ก็ไม่เป็นไร */ }
+    return this.token;
+  },
+  save(t) {
+    this.token = t;
+    try { t ? sessionStorage.setItem('sud_token', t) : sessionStorage.removeItem('sud_token'); } catch {}
+  },
+
+  /** ล็อกอินด้วยอีเมล + รหัสผ่าน (Supabase Auth) */
+  async signIn(email, password) {
+    const res = await fetch(`${API}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { error: body.error_description || body.msg || body.message || 'เข้าสู่ระบบไม่สำเร็จ' };
+    }
+    this.save(body.access_token);
+    return {};
+  },
+
+  signOut() { this.save(null); },
+};
+
+/**
+ * ดึงข้อมูลจาก view ใน schema sud ผ่าน REST API ของ Supabase
+ * opts.order = 'month.asc' | 'started_at.desc'   opts.limit = จำนวนแถว
+ */
+async function fetchView(view, opts = {}) {
+  const qs = new URLSearchParams({ select: '*' });
+  if (opts.order) qs.set('order', opts.order);
+  if (opts.limit) qs.set('limit', String(opts.limit));
+
+  const res = await fetch(`${API}/rest/v1/${view}?${qs}`, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${auth.token || SUPABASE_ANON_KEY}`,
+      'Accept-Profile': 'sud',          // บอก PostgREST ให้มองที่ schema sud
+      Accept: 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) { auth.signOut(); throw new Error('เซสชันหมดอายุ กรุณาล็อกอินใหม่'); }
+    throw new Error(body.message || body.hint || `โหลด ${view} ไม่สำเร็จ (${res.status})`);
+  }
+  return res.json();
+}
+
+/* ─────────────────────────── helpers ─────────────────────────── */
+const $  = (s, r = document) => r.querySelector(s);
+const el = (t, c) => { const n = document.createElement(t); if (c) n.className = c; return n; };
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (m) =>
+  ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+
+const nf  = new Intl.NumberFormat('th-TH');
+const num = (v) => nf.format(Math.round(Number(v) || 0));
+
+/** ย่อตัวเลขใหญ่ให้อ่านง่าย: 1,284 / 12.9 หมื่น / 4.2 ล้าน */
+function compact(v) {
+  const n = Number(v) || 0;
+  const a = Math.abs(n);
+  if (a >= 1e6) return (n / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, '') + ' ล้าน';
+  if (a >= 1e5) return (n / 1e4).toFixed(0) + ' หมื่น';
+  return nf.format(Math.round(n));
+}
+
+const THAI_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function monthLabel(ym) {                     // '2026-08' → 'ส.ค. 69'
+  if (!ym) return '-';
+  const [y, m] = String(ym).split('-').map(Number);
+  if (!y || !m) return String(ym);
+  return `${THAI_M[m - 1]} ${String(y + 543).slice(-2)}`;
+}
+function thaiDate(iso) {                      // '2026-08-19' → '19 ส.ค. 2569'
+  if (!iso) return '-';
+  const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return String(iso);
+  return `${d} ${THAI_M[m - 1]} ${y + 543}`;
+}
+function relTime(isoTs) {
+  if (!isoTs) return 'ยังไม่เคย sync';
+  const diffMin = Math.round((Date.now() - new Date(isoTs).getTime()) / 60000);
+  if (diffMin < 1)  return 'sync ล่าสุด: เมื่อสักครู่';
+  if (diffMin < 60) return `sync ล่าสุด: ${diffMin} นาทีที่แล้ว`;
+  const h = Math.round(diffMin / 60);
+  if (h < 24) return `sync ล่าสุด: ${h} ชั่วโมงที่แล้ว`;
+  return `sync ล่าสุด: ${Math.round(h / 24)} วันที่แล้ว`;
+}
+
+/* ─────────────────────────── tooltip ─────────────────────────── */
+const tipEl = $('#tip');
+function showTip(evt, html) {
+  tipEl.innerHTML = html;
+  tipEl.classList.remove('hidden');
+  const r = tipEl.getBoundingClientRect();
+  let x = evt.clientX + 14, y = evt.clientY - r.height - 12;
+  if (x + r.width > innerWidth - 8) x = evt.clientX - r.width - 14;
+  if (y < 8) y = evt.clientY + 18;
+  tipEl.style.left = x + 'px';
+  tipEl.style.top  = y + 'px';
+}
+const hideTip = () => tipEl.classList.add('hidden');
+addEventListener('scroll', hideTip, true);
+
+/** ผูก hover + keyboard focus ให้ mark (คีย์บอร์ดเห็นเหมือน hover) */
+function bindHover(node, html) {
+  node.style.cursor = 'default';
+  node.setAttribute('tabindex', '0');
+  node.addEventListener('mousemove', (e) => showTip(e, html));
+  node.addEventListener('mouseleave', hideTip);
+  node.addEventListener('focus', (e) => {
+    const b = node.getBoundingClientRect();
+    showTip({ clientX: b.left + b.width / 2, clientY: b.top }, html);
+  });
+  node.addEventListener('blur', hideTip);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CHART BUILDERS — SVG เขียนเอง ตามสเปก: แท่งบาง ≤24px, ปลายมน 4px,
+   เส้น 2px, grid hairline ทึบ, ป้ายกำกับเฉพาะจุดที่ต้องสื่อ
+   ══════════════════════════════════════════════════════════════════════════ */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs = {}) => {
+  const n = document.createElementNS(SVG_NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+};
+
+/** เส้น grid + แกน y ที่ปัดเป็นเลขกลม */
+function niceTicks(max, count = 4) {
+  if (max <= 0) return [0];
+  const raw  = max / count;
+  const mag  = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) || mag * 10;
+  const out = [];
+  for (let v = 0; v <= max + step * 0.001; v += step) out.push(v);
+  return out;
+}
+
+/**
+ * แผนภูมิแท่งแนวตั้ง — ซีรีส์เดียว ใช้สีลำดับ (ไม่ต้องมี legend)
+ * rows: [{ label, value, tipRows:[[k,v],…] }]
+ */
+function columnChart(rows, { valueFmt = num, unit = '', highlightLast = true } = {}) {
+  const W = 760, H = 260, padL = 46, padR = 16, padT = 18, padB = 34;
+  const cW = W - padL - padR, cH = H - padT - padB;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' });
+
+  const max   = Math.max(...rows.map((r) => r.value), 0);
+  const ticks = niceTicks(max);
+  const top   = ticks[ticks.length - 1] || 1;
+  const y     = (v) => padT + cH - (v / top) * cH;
+
+  ticks.forEach((t) => {
+    svg.appendChild(svgEl('line', {
+      x1: padL, x2: W - padR, y1: y(t), y2: y(t),
+      stroke: 'var(--gridline)', 'stroke-width': 1,
+    }));
+    const lb = svgEl('text', {
+      x: padL - 8, y: y(t) + 4, 'text-anchor': 'end',
+      'font-size': 10, fill: 'var(--text-muted)',
+      style: 'font-variant-numeric:tabular-nums',
+    });
+    lb.textContent = compact(t);
+    svg.appendChild(lb);
+  });
+
+  svg.appendChild(svgEl('line', {
+    x1: padL, x2: W - padR, y1: padT + cH, y2: padT + cH,
+    stroke: 'var(--baseline)', 'stroke-width': 1,
+  }));
+
+  const band = cW / rows.length;
+  const bw   = Math.min(24, band * 0.55);
+
+  rows.forEach((r, i) => {
+    const cx = padL + band * (i + 0.5);
+    const x  = cx - bw / 2;
+    const h  = r.value > 0 ? Math.max(3, (r.value / top) * cH) : 0;
+    const yy = padT + cH - h;
+    const isLast = highlightLast && i === rows.length - 1;
+
+    if (h > 0) {
+      // ปลายบนมน 4px ฐานเหลี่ยม — วาดด้วย path
+      const rad = Math.min(4, h);
+      const p = svgEl('path', {
+        d: `M${x},${padT + cH} L${x},${yy + rad} Q${x},${yy} ${x + rad},${yy}
+            L${x + bw - rad},${yy} Q${x + bw},${yy} ${x + bw},${yy + rad}
+            L${x + bw},${padT + cH} Z`,
+        fill: isLast ? 'var(--seq-450)' : 'var(--seq-250)',
+      });
+      svg.appendChild(p);
+    }
+
+    // hit area ใหญ่กว่าแท่ง (อย่างน้อย 24px) เพื่อให้ hover ง่าย
+    const hit = svgEl('rect', {
+      x: cx - Math.max(12, band / 2), y: padT,
+      width: Math.max(24, band), height: cH,
+      fill: 'transparent',
+    });
+    const tipHtml =
+      `<div class="t-label">${esc(r.label)}</div>` +
+      (r.tipRows || [['จำนวน', valueFmt(r.value) + (unit ? ' ' + unit : '')]])
+        .map(([k, v]) => `<div class="t-row">${esc(k)} <b>${esc(v)}</b></div>`).join('');
+    bindHover(hit, tipHtml);
+    svg.appendChild(hit);
+
+    // ป้ายกำกับเฉพาะแท่งล่าสุด (ไม่ใส่ทุกจุด)
+    if (isLast && r.value > 0) {
+      const t = svgEl('text', {
+        x: cx, y: yy - 7, 'text-anchor': 'middle',
+        'font-size': 11, 'font-weight': 650, fill: 'var(--text-primary)',
+      });
+      t.textContent = valueFmt(r.value);
+      svg.appendChild(t);
+    }
+
+    const xl = svgEl('text', {
+      x: cx, y: H - 12, 'text-anchor': 'middle',
+      'font-size': 10, fill: 'var(--text-muted)',
+    });
+    xl.textContent = r.label;
+    svg.appendChild(xl);
+  });
+
+  return svg;
+}
+
+/**
+ * แผนภูมิแท่งแนวนอน — สำหรับหมวดหมู่ที่ชื่อยาว
+ * rows: [{ label, value, color?, tipRows }]
+ */
+function barChartH(rows, { valueFmt = num, unit = '' } = {}) {
+  const rowH = 30, padL = 150, padT = 6, padB = 6;
+  // เผื่อที่ปลายแท่งให้พอกับป้ายค่าที่ยาวที่สุด (กันข้อความล้นขอบ)
+  const longest = Math.max(...rows.map((r) =>
+    (valueFmt(r.value) + (unit ? ' ' + unit : '')).length), 4);
+  const padR = Math.min(140, 16 + longest * 7.2);
+  const W = 760, H = padT + padB + rows.length * rowH;
+  const cW = W - padL - padR;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' });
+
+  const max = Math.max(...rows.map((r) => Math.abs(r.value)), 1);
+
+  rows.forEach((r, i) => {
+    const cy = padT + i * rowH + rowH / 2;
+    const bh = Math.min(18, rowH - 12);
+    const w  = Math.max(r.value > 0 ? 3 : 0, (Math.abs(r.value) / max) * cW);
+    const yy = cy - bh / 2;
+    const rad = Math.min(4, w);
+
+    if (w > 0) {
+      svg.appendChild(svgEl('path', {
+        d: `M${padL},${yy} L${padL + w - rad},${yy} Q${padL + w},${yy} ${padL + w},${yy + rad}
+            L${padL + w},${yy + bh - rad} Q${padL + w},${yy + bh} ${padL + w - rad},${yy + bh}
+            L${padL},${yy + bh} Z`,
+        fill: r.color || 'var(--seq-450)',
+      }));
+    }
+
+    const lb = svgEl('text', {
+      x: padL - 10, y: cy + 4, 'text-anchor': 'end',
+      'font-size': 11.5, fill: 'var(--text-secondary)',
+    });
+    lb.textContent = r.label.length > 22 ? r.label.slice(0, 21) + '…' : r.label;
+    svg.appendChild(lb);
+
+    const vl = svgEl('text', {
+      x: padL + w + 8, y: cy + 4,
+      'font-size': 11.5, 'font-weight': 600, fill: 'var(--text-primary)',
+      style: 'font-variant-numeric:tabular-nums',
+    });
+    vl.textContent = valueFmt(r.value) + (unit ? ' ' + unit : '');
+    svg.appendChild(vl);
+
+    const hit = svgEl('rect', { x: 0, y: cy - rowH / 2, width: W, height: rowH, fill: 'transparent' });
+    bindHover(hit,
+      `<div class="t-label">${esc(r.label)}</div>` +
+      (r.tipRows || [['ค่า', valueFmt(r.value)]])
+        .map(([k, v]) => `<div class="t-row">${esc(k)} <b>${esc(v)}</b></div>`).join('')
+    );
+    svg.appendChild(hit);
+  });
+
+  return svg;
+}
+
+/**
+ * แผนภูมิแท่งสองทิศ (diverging) — บวก/ลบ รอบเส้นศูนย์
+ * ใช้กับ "สต็อกพอ / ไม่พอ"
+ */
+function divergingBar(rows, { valueFmt = num, unit = '' } = {}) {
+  const rowH = 30, padL = 130, padR = 14, padT = 6, padB = 22;
+  const W = 760, H = padT + padB + rows.length * rowH;
+  const cW = W - padL - padR;
+  const zero = padL + cW / 2;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' });
+
+  const max = Math.max(...rows.map((r) => Math.abs(r.value)), 1);
+  const half = cW / 2;
+
+  svg.appendChild(svgEl('line', {
+    x1: zero, x2: zero, y1: padT, y2: H - padB,
+    stroke: 'var(--baseline)', 'stroke-width': 1,
+  }));
+
+  rows.forEach((r, i) => {
+    const cy  = padT + i * rowH + rowH / 2;
+    const bh  = Math.min(18, rowH - 12);
+    const yy  = cy - bh / 2;
+    const w   = Math.max(3, (Math.abs(r.value) / max) * half);
+    const neg = r.value < 0;
+    const x   = neg ? zero - w : zero;
+    const rad = Math.min(4, w);
+
+    const d = neg
+      ? `M${zero},${yy} L${x + rad},${yy} Q${x},${yy} ${x},${yy + rad}
+         L${x},${yy + bh - rad} Q${x},${yy + bh} ${x + rad},${yy + bh} L${zero},${yy + bh} Z`
+      : `M${zero},${yy} L${x + w - rad},${yy} Q${x + w},${yy} ${x + w},${yy + rad}
+         L${x + w},${yy + bh - rad} Q${x + w},${yy + bh} ${x + w - rad},${yy + bh} L${zero},${yy + bh} Z`;
+
+    svg.appendChild(svgEl('path', { d, fill: neg ? 'var(--diverge-neg)' : 'var(--diverge-pos)' }));
+
+    const lb = svgEl('text', {
+      x: padL - 10, y: cy + 4, 'text-anchor': 'end',
+      'font-size': 11.5, fill: 'var(--text-secondary)',
+    });
+    lb.textContent = r.label;
+    svg.appendChild(lb);
+
+    // ป้ายค่า: วางนอกปลายแท่ง ถ้าไม่พอที่ให้ย้ายเข้าไปในแท่ง (ห้ามล้น/ถูกตัด)
+    const txt   = (r.value > 0 ? '+' : '') + valueFmt(r.value);
+    const tw    = txt.length * 7.2;
+    const outX  = neg ? x - 8 : x + w + 8;
+    const fits  = neg ? (outX - tw > padL) : (outX + tw < W - padR);
+    const vl = svgEl('text', {
+      x: fits ? outX : (neg ? x + 8 : x + w - 8),
+      y: cy + 4,
+      'text-anchor': fits ? (neg ? 'end' : 'start') : (neg ? 'start' : 'end'),
+      'font-size': 11.5, 'font-weight': 600,
+      fill: fits ? 'var(--text-primary)' : '#ffffff',
+      style: 'font-variant-numeric:tabular-nums',
+    });
+    vl.textContent = txt;
+    svg.appendChild(vl);
+
+    const hit = svgEl('rect', { x: 0, y: cy - rowH / 2, width: W, height: rowH, fill: 'transparent' });
+    bindHover(hit,
+      `<div class="t-label">${esc(r.label)}</div>` +
+      (r.tipRows || []).map(([k, v]) => `<div class="t-row">${esc(k)} <b>${esc(v)}</b></div>`).join('')
+    );
+    svg.appendChild(hit);
+  });
+
+  const l1 = svgEl('text', { x: zero - 10, y: H - 6, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--text-muted)' });
+  l1.textContent = '← สต็อกไม่พอ';
+  svg.appendChild(l1);
+  const l2 = svgEl('text', { x: zero + 10, y: H - 6, 'font-size': 10, fill: 'var(--text-muted)' });
+  l2.textContent = 'สต็อกเหลือ →';
+  svg.appendChild(l2);
+
+  return svg;
+}
+
+/**
+ * กราฟเส้น — ซีรีส์เดียว มี crosshair + tooltip
+ * rows: [{ label, value, tipRows }]
+ */
+function lineChart(rows, { valueFmt = num, unit = '', suffix = '' } = {}) {
+  const W = 760, H = 250, padL = 46, padR = 22, padT = 18, padB = 34;
+  const cW = W - padL - padR, cH = H - padT - padB;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' });
+
+  const vals  = rows.map((r) => Number(r.value) || 0);
+  const max   = Math.max(...vals, 0);
+  const ticks = niceTicks(max);
+  const top   = ticks[ticks.length - 1] || 1;
+  const x = (i) => padL + (rows.length === 1 ? cW / 2 : (i / (rows.length - 1)) * cW);
+  const y = (v) => padT + cH - ((Number(v) || 0) / top) * cH;
+
+  ticks.forEach((t) => {
+    svg.appendChild(svgEl('line', {
+      x1: padL, x2: W - padR, y1: y(t), y2: y(t),
+      stroke: 'var(--gridline)', 'stroke-width': 1,
+    }));
+    const lb = svgEl('text', {
+      x: padL - 8, y: y(t) + 4, 'text-anchor': 'end',
+      'font-size': 10, fill: 'var(--text-muted)',
+      style: 'font-variant-numeric:tabular-nums',
+    });
+    lb.textContent = compact(t) + suffix;
+    svg.appendChild(lb);
+  });
+
+  svg.appendChild(svgEl('line', {
+    x1: padL, x2: W - padR, y1: padT + cH, y2: padT + cH,
+    stroke: 'var(--baseline)', 'stroke-width': 1,
+  }));
+
+  // area wash 10% + เส้น 2px
+  const dArea = `M${x(0)},${padT + cH} ` + rows.map((r, i) => `L${x(i)},${y(r.value)}`).join(' ') +
+                ` L${x(rows.length - 1)},${padT + cH} Z`;
+  svg.appendChild(svgEl('path', { d: dArea, fill: 'var(--series-1)', 'fill-opacity': 0.1 }));
+  svg.appendChild(svgEl('path', {
+    d: 'M' + rows.map((r, i) => `${x(i)},${y(r.value)}`).join(' L'),
+    fill: 'none', stroke: 'var(--series-1)', 'stroke-width': 2,
+    'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+  }));
+
+  const cross = svgEl('line', {
+    x1: 0, x2: 0, y1: padT, y2: padT + cH,
+    stroke: 'var(--baseline)', 'stroke-width': 1, opacity: 0,
+  });
+  svg.appendChild(cross);
+
+  rows.forEach((r, i) => {
+    const isLast = i === rows.length - 1;
+    if (isLast) {
+      // end-dot ≥8px + surface ring 2px
+      svg.appendChild(svgEl('circle', {
+        cx: x(i), cy: y(r.value), r: 5,
+        fill: 'var(--series-1)', stroke: 'var(--surface-1)', 'stroke-width': 2,
+      }));
+      const t = svgEl('text', {
+        x: x(i), y: y(r.value) - 12, 'text-anchor': 'end',
+        'font-size': 11, 'font-weight': 650, fill: 'var(--text-primary)',
+      });
+      t.textContent = valueFmt(r.value) + suffix;
+      svg.appendChild(t);
+    }
+
+    const bandW = cW / Math.max(rows.length - 1, 1);
+    const hit = svgEl('rect', {
+      x: x(i) - bandW / 2, y: padT,
+      width: Math.max(24, bandW), height: cH, fill: 'transparent',
+    });
+    const html =
+      `<div class="t-label">${esc(r.label)}</div>` +
+      (r.tipRows || [['ค่า', valueFmt(r.value) + suffix]])
+        .map(([k, v]) => `<div class="t-row">${esc(k)} <b>${esc(v)}</b></div>`).join('');
+    hit.addEventListener('mousemove', (e) => {
+      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+      cross.setAttribute('opacity', 1);
+      showTip(e, html);
+    });
+    hit.addEventListener('mouseleave', () => { cross.setAttribute('opacity', 0); hideTip(); });
+    hit.setAttribute('tabindex', '0');
+    hit.addEventListener('focus', () => {
+      const b = hit.getBoundingClientRect();
+      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+      cross.setAttribute('opacity', 1);
+      showTip({ clientX: b.left + b.width / 2, clientY: b.top }, html);
+    });
+    hit.addEventListener('blur', () => { cross.setAttribute('opacity', 0); hideTip(); });
+    svg.appendChild(hit);
+
+    if (rows.length <= 14 || i % 2 === 0) {
+      const xl = svgEl('text', {
+        x: x(i), y: H - 12, 'text-anchor': 'middle',
+        'font-size': 10, fill: 'var(--text-muted)',
+      });
+      xl.textContent = r.label;
+      svg.appendChild(xl);
+    }
+  });
+
+  return svg;
+}
+
+/* ─────────────────────────── card + table view ─────────────────────────── */
+
+/**
+ * การ์ดกราฟ พร้อมปุ่มสลับดูเป็นตาราง (ทุกกราฟมีตารางคู่เสมอ)
+ * table = { head:[…], rows:[[…]…], align:['txt','num',…] }
+ */
+function chartCard({ title, sub, buildChart, table, legend, empty }) {
+  const card = el('div', 'card');
+  const head = el('div', 'card-head');
+
+  const h = el('div', 'card-title'); h.textContent = title; head.appendChild(h);
+  if (sub) { const s = el('div', 'card-sub'); s.textContent = sub; head.appendChild(s); }
+  head.appendChild(el('div', 'spacer'));
+
+  const body = el('div', 'chart-wrap');
+  const tblWrap = el('div', 'tbl-wrap hidden');
+
+  if (empty) {
+    const e = el('div', 'empty'); e.textContent = empty;
+    card.append(head, e);
+    return card;
+  }
+
+  const btn = el('button', 'toggle-table');
+  btn.type = 'button';
+  btn.textContent = 'ดูเป็นตาราง';
+  btn.addEventListener('click', () => {
+    const showTable = tblWrap.classList.contains('hidden');
+    tblWrap.classList.toggle('hidden', !showTable);
+    body.classList.toggle('hidden', showTable);
+    if (legendEl) legendEl.classList.toggle('hidden', showTable);
+    btn.textContent = showTable ? 'ดูเป็นกราฟ' : 'ดูเป็นตาราง';
+  });
+  head.appendChild(btn);
+
+  body.appendChild(buildChart());
+
+  let legendEl = null;
+  if (legend && legend.length) {
+    legendEl = el('div', 'legend');
+    legend.forEach(([label, color]) => {
+      const it = el('div', 'item');
+      const sw = el('span', 'swatch'); sw.style.background = color;
+      const tx = document.createElement('span'); tx.textContent = label;
+      it.append(sw, tx); legendEl.appendChild(it);
+    });
+  }
+
+  if (table) tblWrap.appendChild(buildTable(table));
+
+  card.append(head, body);
+  if (legendEl) card.appendChild(legendEl);
+  card.appendChild(tblWrap);
+  return card;
+}
+
+function buildTable({ head, rows, align = [] }) {
+  const t = el('table', 'data');
+  const thead = el('thead'); const tr = el('tr');
+  head.forEach((h, i) => {
+    const th = el('th', align[i] === 'num' ? 'num' : '');
+    th.textContent = h; tr.appendChild(th);
+  });
+  thead.appendChild(tr); t.appendChild(thead);
+
+  const tb = el('tbody');
+  rows.forEach((r) => {
+    const trr = el('tr');
+    r.forEach((c, i) => {
+      const td = el('td', align[i] === 'num' ? 'num' : 'txt');
+      if (c && typeof c === 'object' && c.html) td.innerHTML = c.html;
+      else td.textContent = c ?? '-';
+      trr.appendChild(td);
+    });
+    tb.appendChild(trr);
+  });
+  t.appendChild(tb);
+  return t;
+}
+
+function statTile(label, value, sub, subClass, dotColor) {
+  const d = el('div', 'tile');
+  const l = el('div', 'label');
+  if (dotColor) {
+    const dot = el('span', 'status-dot'); dot.style.background = dotColor;
+    l.appendChild(dot);
+  }
+  l.appendChild(document.createTextNode(label));
+  const v = el('div', 'value'); v.textContent = value;
+  d.append(l, v);
+  if (sub) { const s = el('div', 'sub' + (subClass ? ' ' + subClass : '')); s.textContent = sub; d.appendChild(s); }
+  return d;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DATA
+   ══════════════════════════════════════════════════════════════════════════ */
+const DATA = {};
+let monthsWindow = 12;
+
+async function loadAll() {
+  const [summary, status, monthly, customers, pile, defect, overdue, lane, runs] =
+    await Promise.all([
+      fetchView('v_summary_now'),
+      fetchView('v_status_breakdown'),
+      fetchView('v_monthly_orders',  { order: 'month.asc' }),
+      fetchView('v_customer_ranking'),
+      fetchView('v_pile_demand'),
+      fetchView('v_defect_rate',     { order: 'month.asc' }),
+      fetchView('v_overdue_orders'),
+      fetchView('v_prod_by_lane'),
+      fetchView('sync_runs',         { order: 'started_at.desc', limit: 1 }),
+    ]);
+
+  DATA.summary   = summary[0] || {};
+  DATA.status    = status    || [];
+  DATA.monthly   = monthly   || [];
+  DATA.customers = customers || [];
+  DATA.pile      = pile      || [];
+  DATA.defect    = defect    || [];
+  DATA.overdue   = overdue   || [];
+  DATA.lane      = lane      || [];
+  DATA.lastRun   = runs[0]   || null;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   VIEWS
+   ══════════════════════════════════════════════════════════════════════════ */
+function renderOverview(root) {
+  const s = DATA.summary;
+
+  const hero = el('div', 'hero');
+  hero.innerHTML =
+    `<div class="label">มูลค่างานทั้งหมด</div>
+     <div class="value">${esc(compact(s.grand_total_value))} บาท</div>
+     <div class="sub">กำลังดำเนินการ ${esc(compact(s.active_value))} · จบบิลแล้ว ${esc(compact(s.history_value))}</div>`;
+  root.appendChild(hero);
+
+  const kpi = el('div', 'kpi-grid');
+  kpi.append(
+    statTile('Order ที่กำลังทำ', num(s.total_orders),
+      `ส่งครบแล้ว ${num(s.done_orders)} รายการ`),
+    statTile('เสาเข็มที่ส่งแล้ว', num(s.total_delivered),
+      `จากทั้งหมด ${num(s.total_qty)} ต้น`),
+    statTile('เกินกำหนดส่ง', num(s.overdue_orders),
+      s.overdue_orders > 0 ? 'ต้องตามด่วน' : 'ไม่มีงานค้าง',
+      s.overdue_orders > 0 ? 'critical' : 'good',
+      s.overdue_orders > 0 ? 'var(--status-critical)' : 'var(--status-good)'),
+    statTile('ของเสียสะสม', num(Number(s.prod_err_qty || 0) + Number(s.ship_err_qty || 0)),
+      `ผลิต ${num(s.prod_err_qty)} · ขนส่ง ${num(s.ship_err_qty)} ต้น`),
+    statTile('สต็อกคงเหลือ', num(s.stock_total), 'ต้น'),
+    statTile('รอลูกค้าคอนเฟิร์ม', num(s.pending_orders), 'รายการ'),
+  );
+  root.appendChild(kpi);
+
+  // ── ออเดอร์รายเดือน ──
+  const mRows = DATA.monthly.slice(-monthsWindow).map((m) => ({
+    label: monthLabel(m.month_label),
+    value: Number(m.order_count) || 0,
+    tipRows: [
+      ['จำนวน Order', num(m.order_count) + ' รายการ'],
+      ['เสาเข็มที่สั่ง', num(m.total_qty) + ' ต้น'],
+      ['มูลค่า', num(m.total_value) + ' บาท'],
+    ],
+  }));
+  root.appendChild(chartCard({
+    title: 'จำนวน Order รายเดือน',
+    sub: `${monthsWindow} เดือนล่าสุด`,
+    empty: mRows.every((r) => r.value === 0) ? 'ยังไม่มีออเดอร์ในช่วงเวลานี้' : null,
+    buildChart: () => columnChart(mRows, { unit: 'รายการ' }),
+    table: {
+      head: ['เดือน', 'จำนวน Order', 'เสาเข็มที่สั่ง', 'ส่งแล้ว', 'มูลค่า (บาท)'],
+      align: ['txt', 'num', 'num', 'num', 'num'],
+      rows: DATA.monthly.slice(-monthsWindow).map((m) => [
+        monthLabel(m.month_label), num(m.order_count),
+        num(m.total_qty), num(m.total_delivered), num(m.total_value),
+      ]),
+    },
+  }));
+
+  // ── สถานะ Order ──
+  const stRows = DATA.status.map((r) => ({
+    label: r.status,
+    value: Number(r.order_count) || 0,
+    tipRows: [
+      ['จำนวน', num(r.order_count) + ' รายการ'],
+      ['เสาเข็ม', num(r.total_qty) + ' ต้น'],
+      ['มูลค่า', num(r.total_value) + ' บาท'],
+    ],
+  }));
+  root.appendChild(chartCard({
+    title: 'Order แยกตามสถานะ',
+    sub: 'เฉพาะงานที่ยังไม่จบบิล',
+    empty: stRows.length ? null : 'ยังไม่มีออเดอร์ที่กำลังดำเนินการ',
+    buildChart: () => barChartH(stRows, { unit: 'รายการ' }),
+    table: {
+      head: ['สถานะ', 'จำนวน Order', 'เสาเข็ม (ต้น)', 'มูลค่า (บาท)'],
+      align: ['txt', 'num', 'num', 'num'],
+      rows: DATA.status.map((r) => [r.status, num(r.order_count), num(r.total_qty), num(r.total_value)]),
+    },
+  }));
+}
+
+function renderSales(root) {
+  const mRows = DATA.monthly.slice(-monthsWindow).map((m) => ({
+    label: monthLabel(m.month_label),
+    value: Number(m.total_value) || 0,
+    tipRows: [
+      ['มูลค่า', num(m.total_value) + ' บาท'],
+      ['จำนวน Order', num(m.order_count) + ' รายการ'],
+    ],
+  }));
+  root.appendChild(chartCard({
+    title: 'มูลค่างานรายเดือน',
+    sub: `${monthsWindow} เดือนล่าสุด (บาท)`,
+    empty: mRows.every((r) => r.value === 0) ? 'ยังไม่มีข้อมูลมูลค่า — อาจยังไม่ได้กรอกราคาในระบบเดิม' : null,
+    buildChart: () => columnChart(mRows, { valueFmt: compact, unit: 'บาท' }),
+    table: {
+      head: ['เดือน', 'มูลค่า (บาท)', 'จำนวน Order'],
+      align: ['txt', 'num', 'num'],
+      rows: DATA.monthly.slice(-monthsWindow).map((m) => [
+        monthLabel(m.month_label), num(m.total_value), num(m.order_count),
+      ]),
+    },
+  }));
+
+  const top = DATA.customers.slice(0, 12);
+  root.appendChild(chartCard({
+    title: 'ลูกค้าเรียงตามมูลค่าสะสม',
+    sub: `แสดง ${top.length} อันดับแรก จากทั้งหมด ${DATA.customers.length} ราย`,
+    empty: top.length ? null : 'ยังไม่มีข้อมูลลูกค้า',
+    buildChart: () => barChartH(
+      top.map((c) => ({
+        label: c.customer,
+        value: Number(c.total_value) || 0,
+        tipRows: [
+          ['มูลค่ารวม', num(c.total_value) + ' บาท'],
+          ['จำนวน Order', num(c.order_count) + ' รายการ'],
+          ['จบบิลแล้ว', num(c.closed_orders) + ' รายการ'],
+          ['สั่งล่าสุด', thaiDate(c.last_order_date)],
+        ],
+      })),
+      { valueFmt: compact }
+    ),
+    table: {
+      head: ['ลูกค้า', 'เบอร์โทร', 'Order', 'จบบิล', 'เสาเข็ม (ต้น)', 'มูลค่า (บาท)', 'สั่งล่าสุด'],
+      align: ['txt', 'txt', 'num', 'num', 'num', 'num', 'txt'],
+      rows: DATA.customers.map((c) => [
+        c.customer, c.tel || '-', num(c.order_count), num(c.closed_orders),
+        num(c.total_qty), num(c.total_value), thaiDate(c.last_order_date),
+      ]),
+    },
+  }));
+}
+
+function renderProduction(root) {
+  const dRows = DATA.defect.slice(-monthsWindow).map((d) => ({
+    label: monthLabel(d.month_label),
+    value: Number(d.defect_pct) || 0,
+    tipRows: [
+      ['อัตราของเสีย', (d.defect_pct == null ? '-' : d.defect_pct + '%')],
+      ['ผลิตได้', num(d.produced_qty) + ' ต้น'],
+      ['เสียระหว่างผลิต', num(d.defect_qty) + ' ต้น'],
+      ['Error ผลิต', num(d.prod_err_qty) + ' ต้น'],
+      ['Error ขนส่ง', num(d.ship_err_qty) + ' ต้น'],
+    ],
+  }));
+  root.appendChild(chartCard({
+    title: 'อัตราของเสียระหว่างผลิต',
+    sub: 'เปอร์เซ็นต์ของจำนวนที่ผลิตในเดือนนั้น',
+    empty: dRows.length && dRows.some((r) => r.value > 0) ? null : 'ยังไม่มีข้อมูลการผลิตพอจะคำนวณ',
+    buildChart: () => lineChart(dRows, { valueFmt: (v) => (Number(v) || 0).toFixed(1), suffix: '%' }),
+    table: {
+      head: ['เดือน', 'ผลิตได้ (ต้น)', 'เสียระหว่างผลิต', 'อัตราของเสีย', 'Error ผลิต', 'Error ขนส่ง'],
+      align: ['txt', 'num', 'num', 'num', 'num', 'num'],
+      rows: DATA.defect.slice(-monthsWindow).map((d) => [
+        monthLabel(d.month_label), num(d.produced_qty), num(d.defect_qty),
+        d.defect_pct == null ? '-' : d.defect_pct + '%',
+        num(d.prod_err_qty), num(d.ship_err_qty),
+      ]),
+    },
+  }));
+
+  const lanes = DATA.lane.filter((l) => Number(l.produced_qty) > 0);
+  root.appendChild(chartCard({
+    title: 'ผลผลิตแยกตามเลนผลิต',
+    sub: 'จำนวนที่ผลิตได้สุทธิ (หักของเสียแล้ว)',
+    empty: lanes.length ? null : 'ยังไม่มีบันทึกการผลิต',
+    buildChart: () => barChartH(
+      lanes.map((l) => ({
+        label: 'เลน ' + l.lane,
+        value: Number(l.net_qty) || 0,
+        tipRows: [
+          ['ผลิตสุทธิ', num(l.net_qty) + ' ต้น'],
+          ['ผลิตทั้งหมด', num(l.produced_qty) + ' ต้น'],
+          ['ของเสีย', num(l.defect_qty) + ' ต้น'],
+          ['อัตราของเสีย', (l.defect_pct == null ? '-' : l.defect_pct + '%')],
+          ['บันทึกล่าสุด', thaiDate(l.last_log)],
+        ],
+      })),
+      { unit: 'ต้น' }
+    ),
+    table: {
+      head: ['เลน', 'ครั้งที่บันทึก', 'ผลิตทั้งหมด', 'ของเสีย', 'สุทธิ', 'อัตราของเสีย', 'บันทึกล่าสุด'],
+      align: ['txt', 'num', 'num', 'num', 'num', 'num', 'txt'],
+      rows: DATA.lane.map((l) => [
+        'เลน ' + l.lane, num(l.log_count), num(l.produced_qty), num(l.defect_qty),
+        num(l.net_qty), l.defect_pct == null ? '-' : l.defect_pct + '%', thaiDate(l.last_log),
+      ]),
+    },
+  }));
+}
+
+function renderDelivery(root) {
+  const od = DATA.overdue;
+
+  const card = el('div', 'card');
+  const head = el('div', 'card-head');
+  const h = el('div', 'card-title'); h.textContent = 'Order ที่เลยกำหนดส่ง';
+  const s = el('div', 'card-sub');
+  s.textContent = od.length ? `${od.length} รายการ เรียงจากค้างนานที่สุด` : '';
+  head.append(h, s);
+  card.appendChild(head);
+
+  if (!od.length) {
+    const e = el('div', 'empty');
+    e.innerHTML = '<span class="status-dot" style="background:var(--status-good)"></span>' +
+                  'ไม่มีออเดอร์ที่เลยกำหนดส่ง';
+    card.appendChild(e);
+  } else {
+    const wrap = el('div', 'tbl-wrap');
+    wrap.appendChild(buildTable({
+      head: ['Order', 'ลูกค้า', 'ชนิด', 'สถานะ', 'สั่ง', 'ส่งแล้ว', 'คงค้าง', 'กำหนดส่ง', 'เลยมา'],
+      align: ['txt', 'txt', 'txt', 'txt', 'num', 'num', 'num', 'txt', 'num'],
+      rows: od.map((o) => {
+        const d = Number(o.days_overdue) || 0;
+        const color = d >= 14 ? 'var(--status-critical)'
+                    : d >= 7  ? 'var(--status-serious)'
+                              : 'var(--status-warning)';
+        const icon  = d >= 14 ? '⛔' : d >= 7 ? '⚠️' : '•';
+        return [
+          o.order_num, o.customer || '-', o.pile_label || '-', o.status || '-',
+          num(o.qty), num(o.delivered), num(o.remaining), thaiDate(o.delivery_date),
+          { html: `<span class="pill" style="background:${color}22;color:${color}">` +
+                  `${icon} ${num(d)} วัน</span>` },
+        ];
+      }),
+    }));
+    card.appendChild(wrap);
+  }
+  root.appendChild(card);
+
+  // สรุปงานส่งรายเดือน
+  const mRows = DATA.monthly.slice(-monthsWindow).map((m) => ({
+    label: monthLabel(m.month_label),
+    value: Number(m.total_delivered) || 0,
+    tipRows: [
+      ['ส่งแล้ว', num(m.total_delivered) + ' ต้น'],
+      ['สั่งทั้งหมด', num(m.total_qty) + ' ต้น'],
+    ],
+  }));
+  root.appendChild(chartCard({
+    title: 'จำนวนเสาเข็มที่ส่งรายเดือน',
+    sub: `${monthsWindow} เดือนล่าสุด`,
+    empty: mRows.every((r) => r.value === 0) ? 'ยังไม่มีการส่งในช่วงนี้' : null,
+    buildChart: () => columnChart(mRows, { unit: 'ต้น' }),
+    table: {
+      head: ['เดือน', 'ส่งแล้ว (ต้น)', 'สั่งทั้งหมด (ต้น)'],
+      align: ['txt', 'num', 'num'],
+      rows: DATA.monthly.slice(-monthsWindow).map((m) => [
+        monthLabel(m.month_label), num(m.total_delivered), num(m.total_qty),
+      ]),
+    },
+  }));
+}
+
+function renderStock(root) {
+  const rows = DATA.pile.filter((p) =>
+    Number(p.stock_qty) > 0 || Number(p.outstanding_qty) > 0);
+
+  const short = rows.filter((p) => Number(p.stock_gap) < 0);
+  if (short.length) {
+    const w = el('div', 'setup-warn');
+    w.innerHTML = `<b>สต็อกไม่พอ ${short.length} ชนิด</b> — ` +
+      short.map((p) => `${esc(p.pile_type)} ขาด ${num(Math.abs(p.stock_gap))} ต้น`).join(' · ');
+    root.appendChild(w);
+  }
+
+  root.appendChild(chartCard({
+    title: 'สต็อกเทียบกับงานที่ค้างส่ง',
+    sub: 'ค่าติดลบ = ของในสต็อกไม่พอกับงานที่รับไว้',
+    empty: rows.length ? null : 'ยังไม่มีข้อมูลสต็อก',
+    buildChart: () => divergingBar(
+      rows.slice(0, 14).map((p) => ({
+        label: p.pile_type,
+        value: Number(p.stock_gap) || 0,
+        tipRows: [
+          ['สต็อกคงเหลือ', num(p.stock_qty) + ' ต้น'],
+          ['ค้างส่ง', num(p.outstanding_qty) + ' ต้น'],
+          ['ส่วนต่าง', (Number(p.stock_gap) > 0 ? '+' : '') + num(p.stock_gap) + ' ต้น'],
+          ['สั่งทั้งหมด', num(p.ordered_qty) + ' ต้น'],
+        ],
+      })),
+      { unit: 'ต้น' }
+    ),
+    legend: [
+      ['สต็อกเหลือพอ', 'var(--diverge-pos)'],
+      ['สต็อกไม่พอ',   'var(--diverge-neg)'],
+    ],
+    table: {
+      head: ['ชนิดเสาเข็ม', 'สั่งทั้งหมด', 'ส่งแล้ว', 'ค้างส่ง', 'สต็อก', 'ส่วนต่าง', 'มูลค่า (บาท)'],
+      align: ['txt', 'num', 'num', 'num', 'num', 'num', 'num'],
+      rows: DATA.pile.map((p) => [
+        p.pile_type, num(p.ordered_qty), num(p.delivered_qty), num(p.outstanding_qty),
+        num(p.stock_qty),
+        { html: `<span style="color:${Number(p.stock_gap) < 0 ? 'var(--status-critical)' : 'var(--success-text)'}">` +
+                `${Number(p.stock_gap) > 0 ? '+' : ''}${num(p.stock_gap)}</span>` },
+        num(p.total_value),
+      ]),
+    },
+  }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ROUTER
+   ══════════════════════════════════════════════════════════════════════════ */
+const RENDERERS = {
+  overview:   renderOverview,
+  sales:      renderSales,
+  production: renderProduction,
+  delivery:   renderDelivery,
+  stock:      renderStock,
+};
+let currentTab = 'overview';
+
+function render() {
+  const main = $('#main');
+  main.innerHTML = '';
+
+  // แถวฟิลเตอร์เดียว เหนือทุกกราฟที่มันคุม
+  if (['overview', 'sales', 'production', 'delivery'].includes(currentTab)) {
+    const row = el('div', 'filter-row');
+    const lb = el('span', 'label'); lb.textContent = 'ช่วงเวลา';
+    const seg = el('div', 'seg');
+    [[6, '6 เดือน'], [12, '12 เดือน'], [24, '24 เดือน']].forEach(([v, t]) => {
+      const b = el('button'); b.type = 'button'; b.textContent = t;
+      b.setAttribute('aria-pressed', String(monthsWindow === v));
+      b.addEventListener('click', () => { monthsWindow = v; render(); });
+      seg.appendChild(b);
+    });
+    row.append(lb, seg);
+    main.appendChild(row);
+  }
+
+  RENDERERS[currentTab](main);
+}
+
+$('#tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-tab]');
+  if (!btn) return;
+  currentTab = btn.dataset.tab;
+  [...$('#tabs').children].forEach((b) =>
+    b.setAttribute('aria-selected', String(b === btn)));
+  render();
+});
+
+/* ─────────────────────────── theme ─────────────────────────── */
+const themeBtn = $('#themeBtn');
+function applyTheme(mode) {
+  document.documentElement.setAttribute('data-theme', mode);
+  themeBtn.textContent = mode === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด';
+}
+applyTheme(matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+themeBtn.addEventListener('click', () => {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+/* ─────────────────────────── boot ─────────────────────────── */
+// ถูกเปิดอยู่ในกรอบของเว็บหลักหรือเปล่า — ถ้าใช่ ซ่อนหัวข้อที่ซ้ำกัน
+const EMBEDDED = (() => { try { return window.self !== window.top; } catch { return true; } })();
+if (EMBEDDED) document.body.classList.add('embedded');
+
+async function enterApp() {
+  $('#login').classList.add('hidden');
+  $('#app').classList.remove('hidden');
+  await refresh(true);
+}
+
+async function refresh(first = false) {
+  const main = $('#main');
+  if (first) main.innerHTML = '<div class="loading">กำลังโหลดข้อมูล…</div>';
+  else main.classList.add('refetching');       // ไม่ให้กระพริบเป็นโครงกระดูก
+
+  try {
+    await loadAll();
+    const r = DATA.lastRun;
+    $('#syncNote').textContent =
+      relTime(r?.finished_at) + (r && r.status === 'error' ? ' · รอบล่าสุดล้มเหลว' : '');
+    render();
+  } catch (err) {
+    main.innerHTML =
+      `<div class="setup-warn"><b>โหลดข้อมูลไม่สำเร็จ</b><br>${esc(err.message || err)}
+       <br><br>ถ้าขึ้นว่าหา schema ไม่เจอ ให้ตรวจว่าเพิ่ม <code class="inline">sud</code>
+       ใน Project Settings → API → Exposed schemas แล้วหรือยัง</div>`;
+  } finally {
+    main.classList.remove('refetching');
+  }
+}
+
+$('#refreshBtn').addEventListener('click', () => refresh(false));
+
+$('#logoutBtn').addEventListener('click', () => {
+  auth.signOut();
+  location.reload();
+});
+
+$('#loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('#loginBtn'), msg = $('#loginMsg');
+
+  if (!CONFIGURED) {
+    msg.className = 'msg error';
+    msg.textContent = 'ยังไม่ได้ใส่ anon key ในไฟล์ — ดูหัวข้อ ① ในโค้ด';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ…';
+  msg.className = 'msg'; msg.textContent = '';
+
+  let error;
+  try {
+    ({ error } = await auth.signIn($('#email').value.trim(), $('#password').value));
+  } catch (err) {
+    error = 'เชื่อมต่อ Supabase ไม่ได้ — ตรวจอินเทอร์เน็ตหรือ URL ในไฟล์';
+  }
+
+  if (error) {
+    msg.className = 'msg error';
+    msg.textContent = /invalid login credentials/i.test(error)
+      ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
+      : error;
+    btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
+    return;
+  }
+  await enterApp();
+});
+
+// ถ้าเคยล็อกอินไว้ในแท็บนี้แล้ว เข้าได้เลย
+if (CONFIGURED) {
+  if (auth.load()) await enterApp();
+} else {
+  $('#loginMsg').className = 'msg error';
+  $('#loginMsg').textContent = 'ยังไม่ได้ใส่ anon key ในไฟล์ — ดูหัวข้อ ① ในโค้ด';
+}
+</script>
+</body>
+</html>
