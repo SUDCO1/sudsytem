@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>SUD Dashboard</title>
+<title>SUDCO Dashboard</title>
 
 <style>
 /* ══════════════════════════════════════════════════════════════════════════
@@ -338,7 +338,7 @@ code.inline {
      ══════════════════════════════════════════════════════════════════════ -->
 <div id="login">
   <form class="login-card" id="loginForm">
-    <h1>SUD Dashboard</h1>
+    <h1>SUDCO Dashboard</h1>
     <p class="sub">ระบบสรุปข้อมูลออเดอร์ ผลิต ขนส่ง และสต็อก</p>
 
     <div class="field">
@@ -360,7 +360,7 @@ code.inline {
      ══════════════════════════════════════════════════════════════════════ -->
 <div id="app" class="hidden">
   <header class="topbar">
-    <span class="brand">SUD Dashboard</span>
+    <span class="brand">SUDCO Dashboard</span>
     <span class="sync-note" id="syncNote"></span>
     <span class="topbar-spacer"></span>
     <button class="icon-btn" id="refreshBtn">รีเฟรช</button>
@@ -369,7 +369,8 @@ code.inline {
   </header>
 
   <nav class="tabs" id="tabs" role="tablist">
-    <button role="tab" data-tab="overview"  aria-selected="true">ภาพรวม</button>
+    <button role="tab" data-tab="exec"      aria-selected="true">กราฟ</button>
+    <button role="tab" data-tab="overview"  aria-selected="false">ภาพรวม</button>
     <button role="tab" data-tab="sales"     aria-selected="false">ฝ่ายขาย</button>
     <button role="tab" data-tab="production" aria-selected="false">ฝ่ายผลิต</button>
     <button role="tab" data-tab="delivery"  aria-selected="false">ฝ่ายขนส่ง</button>
@@ -405,13 +406,23 @@ const API = SUPABASE_URL.replace(/\/+$/, '');
    ────────────────────────────────────────────────────────────────────────── */
 const auth = {
   token: null,
+  refreshToken: null,
+  _refreshing: null,                        // กัน refresh ซ้อนกันหลายเส้น (single-flight)
   load() {
-    try { this.token = sessionStorage.getItem('sud_token'); } catch { /* ปิดคุกกี้ไว้ก็ไม่เป็นไร */ }
+    try {
+      this.token        = sessionStorage.getItem('sud_token');
+      this.refreshToken = sessionStorage.getItem('sud_refresh');
+    } catch { /* ปิดคุกกี้ไว้ก็ไม่เป็นไร */ }
     return this.token;
   },
-  save(t) {
+  save(t, rt) {
     this.token = t;
-    try { t ? sessionStorage.setItem('sud_token', t) : sessionStorage.removeItem('sud_token'); } catch {}
+    if (rt !== undefined) this.refreshToken = rt;   // undefined = ไม่แตะ, null = ล้าง
+    try {
+      if (t) sessionStorage.setItem('sud_token', t); else sessionStorage.removeItem('sud_token');
+      if (this.refreshToken) sessionStorage.setItem('sud_refresh', this.refreshToken);
+      else sessionStorage.removeItem('sud_refresh');
+    } catch {}
   },
 
   /** ล็อกอินด้วยอีเมล + รหัสผ่าน (Supabase Auth) */
@@ -425,18 +436,44 @@ const auth = {
     if (!res.ok) {
       return { error: body.error_description || body.msg || body.message || 'เข้าสู่ระบบไม่สำเร็จ' };
     }
-    this.save(body.access_token);
+    this.save(body.access_token, body.refresh_token);
     return {};
   },
 
-  signOut() { this.save(null); },
+  /** ต่ออายุ token ด้วย refresh_token — ยิงจริงครั้งเดียวแม้เรียกพร้อมกันหลายจุด */
+  async refresh() {
+    if (!this.refreshToken) return false;
+    if (this._refreshing) return this._refreshing;
+    this._refreshing = (async () => {
+      try {
+        const res = await fetch(`${API}/auth/v1/token?grant_type=refresh_token`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: this.refreshToken }),
+        });
+        if (!res.ok) return false;
+        const body = await res.json().catch(() => ({}));
+        if (!body.access_token) return false;
+        this.save(body.access_token, body.refresh_token);
+        return true;
+      } catch { return false; }
+    })();
+    const ok = await this._refreshing;
+    this._refreshing = null;
+    return ok;
+  },
+
+  signOut() {
+    this.token = null; this.refreshToken = null; this._refreshing = null;
+    try { sessionStorage.removeItem('sud_token'); sessionStorage.removeItem('sud_refresh'); } catch {}
+  },
 };
 
 /**
  * ดึงข้อมูลจาก view ใน schema sud ผ่าน REST API ของ Supabase
  * opts.order = 'month.asc' | 'started_at.desc'   opts.limit = จำนวนแถว
  */
-async function fetchView(view, opts = {}) {
+async function fetchView(view, opts = {}, _retried = false) {
   const qs = new URLSearchParams({ select: '*' });
   if (opts.order) qs.set('order', opts.order);
   if (opts.limit) qs.set('limit', String(opts.limit));
@@ -451,11 +488,20 @@ async function fetchView(view, opts = {}) {
   });
 
   if (!res.ok) {
+    // token หมดอายุ: ลองต่ออายุด้วย refresh_token ก่อน แล้วยิงซ้ำ 1 ครั้ง (กันเด้งออกกลางคัน)
+    if (res.status === 401 && !_retried && auth.refreshToken) {
+      if (await auth.refresh()) return fetchView(view, opts, true);
+    }
     const body = await res.json().catch(() => ({}));
     if (res.status === 401) { auth.signOut(); throw new Error('เซสชันหมดอายุ กรุณาล็อกอินใหม่'); }
     throw new Error(body.message || body.hint || `โหลด ${view} ไม่สำเร็จ (${res.status})`);
   }
-  return res.json();
+  const data = await res.json();
+  // PostgREST คืนสูงสุด ~1000 แถวโดย default — เตือนถ้าอาจถูกตัด (กันยอดรวมเพี้ยนเงียบ ๆ)
+  if (Array.isArray(data) && data.length === 1000 && !opts.limit) {
+    console.warn(`fetchView: ${view} คืน 1000 แถวพอดี ข้อมูลอาจถูกตัด — ควรรวมยอดในฝั่ง DB หรือใส่ limit`);
+  }
+  return data;
 }
 
 /* ─────────────────────────── helpers ─────────────────────────── */
@@ -783,8 +829,11 @@ function lineChart(rows, { valueFmt = num, unit = '', suffix = '' } = {}) {
   const cW = W - padL - padR, cH = H - padT - padB;
   const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' });
 
-  const vals  = rows.map((r) => Number(r.value) || 0);
-  const max   = Math.max(...vals, 0);
+  // value อาจเป็น null = "ไม่มีข้อมูล" (ต่างจาก 0) → ให้เส้นขาดช่วง ไม่ลากลง 0
+  const vals = rows.map((r) =>
+    (r.value == null || r.value === '' || isNaN(Number(r.value))) ? null : Number(r.value));
+  const present = vals.filter((v) => v != null);
+  const max   = Math.max(...present, 0);
   const ticks = niceTicks(max);
   const top   = ticks[ticks.length - 1] || 1;
   const x = (i) => padL + (rows.length === 1 ? cW / 2 : (i / (rows.length - 1)) * cW);
@@ -809,15 +858,30 @@ function lineChart(rows, { valueFmt = num, unit = '', suffix = '' } = {}) {
     stroke: 'var(--baseline)', 'stroke-width': 1,
   }));
 
-  // area wash 10% + เส้น 2px
-  const dArea = `M${x(0)},${padT + cH} ` + rows.map((r, i) => `L${x(i)},${y(r.value)}`).join(' ') +
-                ` L${x(rows.length - 1)},${padT + cH} Z`;
-  svg.appendChild(svgEl('path', { d: dArea, fill: 'var(--series-1)', 'fill-opacity': 0.1 }));
-  svg.appendChild(svgEl('path', {
-    d: 'M' + rows.map((r, i) => `${x(i)},${y(r.value)}`).join(' L'),
-    fill: 'none', stroke: 'var(--series-1)', 'stroke-width': 2,
-    'stroke-linejoin': 'round', 'stroke-linecap': 'round',
-  }));
+  // แยกเป็นช่วง ๆ ของจุดที่มีข้อมูลติดกัน — วาด area + เส้นแยกแต่ละช่วง (เว้นช่วงที่ไม่มีข้อมูล)
+  const segments = [];
+  let cur = [];
+  vals.forEach((v, i) => {
+    if (v == null) { if (cur.length) { segments.push(cur); cur = []; } }
+    else cur.push(i);
+  });
+  if (cur.length) segments.push(cur);
+
+  segments.forEach((seg) => {
+    const dArea = `M${x(seg[0])},${padT + cH} ` +
+      seg.map((i) => `L${x(i)},${y(vals[i])}`).join(' ') +
+      ` L${x(seg[seg.length - 1])},${padT + cH} Z`;
+    svg.appendChild(svgEl('path', { d: dArea, fill: 'var(--series-1)', 'fill-opacity': 0.1 }));
+    if (seg.length >= 2) {
+      svg.appendChild(svgEl('path', {
+        d: 'M' + seg.map((i) => `${x(i)},${y(vals[i])}`).join(' L'),
+        fill: 'none', stroke: 'var(--series-1)', 'stroke-width': 2,
+        'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      }));
+    } else {
+      svg.appendChild(svgEl('circle', { cx: x(seg[0]), cy: y(vals[seg[0]]), r: 3, fill: 'var(--series-1)' }));
+    }
+  });
 
   const cross = svgEl('line', {
     x1: 0, x2: 0, y1: padT, y2: padT + cH,
@@ -825,46 +889,52 @@ function lineChart(rows, { valueFmt = num, unit = '', suffix = '' } = {}) {
   });
   svg.appendChild(cross);
 
+  const lastIdx = vals.reduce((acc, v, i) => (v != null ? i : acc), -1);
+
   rows.forEach((r, i) => {
-    const isLast = i === rows.length - 1;
-    if (isLast) {
+    const v = vals[i];
+    const hasVal = v != null;
+
+    if (hasVal && i === lastIdx) {
       // end-dot ≥8px + surface ring 2px
       svg.appendChild(svgEl('circle', {
-        cx: x(i), cy: y(r.value), r: 5,
+        cx: x(i), cy: y(v), r: 5,
         fill: 'var(--series-1)', stroke: 'var(--surface-1)', 'stroke-width': 2,
       }));
       const t = svgEl('text', {
-        x: x(i), y: y(r.value) - 12, 'text-anchor': 'end',
+        x: x(i), y: y(v) - 12, 'text-anchor': 'end',
         'font-size': 11, 'font-weight': 650, fill: 'var(--text-primary)',
       });
-      t.textContent = valueFmt(r.value) + suffix;
+      t.textContent = valueFmt(v) + suffix;
       svg.appendChild(t);
     }
 
-    const bandW = cW / Math.max(rows.length - 1, 1);
-    const hit = svgEl('rect', {
-      x: x(i) - bandW / 2, y: padT,
-      width: Math.max(24, bandW), height: cH, fill: 'transparent',
-    });
-    const html =
-      `<div class="t-label">${esc(r.label)}</div>` +
-      (r.tipRows || [['ค่า', valueFmt(r.value) + suffix]])
-        .map(([k, v]) => `<div class="t-row">${esc(k)} <b>${esc(v)}</b></div>`).join('');
-    hit.addEventListener('mousemove', (e) => {
-      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
-      cross.setAttribute('opacity', 1);
-      showTip(e, html);
-    });
-    hit.addEventListener('mouseleave', () => { cross.setAttribute('opacity', 0); hideTip(); });
-    hit.setAttribute('tabindex', '0');
-    hit.addEventListener('focus', () => {
-      const b = hit.getBoundingClientRect();
-      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
-      cross.setAttribute('opacity', 1);
-      showTip({ clientX: b.left + b.width / 2, clientY: b.top }, html);
-    });
-    hit.addEventListener('blur', () => { cross.setAttribute('opacity', 0); hideTip(); });
-    svg.appendChild(hit);
+    if (hasVal) {
+      const bandW = cW / Math.max(rows.length - 1, 1);
+      const hit = svgEl('rect', {
+        x: x(i) - bandW / 2, y: padT,
+        width: Math.max(24, bandW), height: cH, fill: 'transparent',
+      });
+      const html =
+        `<div class="t-label">${esc(r.label)}</div>` +
+        (r.tipRows || [['ค่า', valueFmt(v) + suffix]])
+          .map(([k, val]) => `<div class="t-row">${esc(k)} <b>${esc(val)}</b></div>`).join('');
+      hit.addEventListener('mousemove', (e) => {
+        cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+        cross.setAttribute('opacity', 1);
+        showTip(e, html);
+      });
+      hit.addEventListener('mouseleave', () => { cross.setAttribute('opacity', 0); hideTip(); });
+      hit.setAttribute('tabindex', '0');
+      hit.addEventListener('focus', () => {
+        const b = hit.getBoundingClientRect();
+        cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+        cross.setAttribute('opacity', 1);
+        showTip({ clientX: b.left + b.width / 2, clientY: b.top }, html);
+      });
+      hit.addEventListener('blur', () => { cross.setAttribute('opacity', 0); hideTip(); });
+      svg.appendChild(hit);
+    }
 
     if (rows.length <= 14 || i % 2 === 0) {
       const xl = svgEl('text', {
@@ -914,7 +984,10 @@ function chartCard({ title, sub, buildChart, table, legend, empty }) {
   });
   head.appendChild(btn);
 
-  body.appendChild(buildChart());
+  const chartNode = buildChart();
+  // ให้ screen reader อ่านออกว่ากราฟนี้คืออะไร
+  if (chartNode && chartNode.setAttribute) chartNode.setAttribute('aria-label', title + (sub ? ' — ' + sub : ''));
+  body.appendChild(chartNode);
 
   let legendEl = null;
   if (legend && legend.length) {
@@ -980,28 +1053,52 @@ const DATA = {};
 let monthsWindow = 12;
 
 async function loadAll() {
-  const [summary, status, monthly, customers, pile, defect, overdue, lane, runs] =
-    await Promise.all([
-      fetchView('v_summary_now'),
-      fetchView('v_status_breakdown'),
-      fetchView('v_monthly_orders',  { order: 'month.asc' }),
-      fetchView('v_customer_ranking'),
-      fetchView('v_pile_demand'),
-      fetchView('v_defect_rate',     { order: 'month.asc' }),
-      fetchView('v_overdue_orders'),
-      fetchView('v_prod_by_lane'),
-      fetchView('sync_runs',         { order: 'started_at.desc', limit: 1 }),
-    ]);
+  // แต่ละวิวโหลดแยกกัน — วิวเดียวพังไม่ทำให้ทั้งแดชบอร์ดล่ม (ใช้ allSettled)
+  const specs = [
+    ['summary',   'v_summary_now',      {}],
+    ['status',    'v_status_breakdown', {}],
+    ['monthly',   'v_monthly_orders',   { order: 'month.asc' }],
+    ['customers', 'v_customer_ranking', {}],
+    ['pile',      'v_pile_demand',      {}],
+    ['defect',    'v_defect_rate',      { order: 'month.asc' }],
+    ['overdue',   'v_overdue_orders',   {}],
+    ['lane',      'v_prod_by_lane',     {}],
+    ['runs',      'sync_runs',          { order: 'started_at.desc', limit: 1 }],
+  ];
 
-  DATA.summary   = summary[0] || {};
-  DATA.status    = status    || [];
-  DATA.monthly   = monthly   || [];
-  DATA.customers = customers || [];
-  DATA.pile      = pile      || [];
-  DATA.defect    = defect    || [];
-  DATA.overdue   = overdue   || [];
-  DATA.lane      = lane      || [];
-  DATA.lastRun   = runs[0]   || null;
+  const settled = await Promise.allSettled(
+    specs.map(([, view, opts]) => fetchView(view, opts))
+  );
+
+  const failed = [];
+  let authExpired = false;
+  const raw = {};
+  settled.forEach((r, i) => {
+    const key = specs[i][0];
+    if (r.status === 'fulfilled') {
+      raw[key] = r.value;
+    } else {
+      failed.push(specs[i][1]);
+      if (/เซสชันหมดอายุ/.test(r.reason?.message || '')) authExpired = true;
+      raw[key] = [];
+    }
+  });
+
+  // ถ้าทุกวิวพังเพราะ token หมดอายุ ให้เด้งไปล็อกอินตามเดิม
+  if (authExpired && failed.length === specs.length) {
+    throw new Error('เซสชันหมดอายุ กรุณาล็อกอินใหม่');
+  }
+
+  DATA.summary   = (raw.summary && raw.summary[0]) || {};
+  DATA.status    = raw.status    || [];
+  DATA.monthly   = raw.monthly   || [];
+  DATA.customers = raw.customers || [];
+  DATA.pile      = raw.pile      || [];
+  DATA.defect    = raw.defect    || [];
+  DATA.overdue   = raw.overdue   || [];
+  DATA.lane      = raw.lane      || [];
+  DATA.lastRun   = (raw.runs && raw.runs[0]) || null;
+  DATA.failedViews = failed;            // ให้ render() เอาไปแจ้งเตือนแบบไม่ล่มทั้งหน้า
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1137,7 +1234,8 @@ function renderSales(root) {
 function renderProduction(root) {
   const dRows = DATA.defect.slice(-monthsWindow).map((d) => ({
     label: monthLabel(d.month_label),
-    value: Number(d.defect_pct) || 0,
+    // null = ไม่มีข้อมูลเดือนนั้น (ให้เส้นขาดช่วง) ต่างจาก 0% ที่คือผลิตแล้วไม่มีของเสีย
+    value: d.defect_pct == null ? null : Number(d.defect_pct),
     tipRows: [
       ['อัตราของเสีย', (d.defect_pct == null ? '-' : d.defect_pct + '%')],
       ['ผลิตได้', num(d.produced_qty) + ' ต้น'],
@@ -1149,7 +1247,7 @@ function renderProduction(root) {
   root.appendChild(chartCard({
     title: 'อัตราของเสียระหว่างผลิต',
     sub: 'เปอร์เซ็นต์ของจำนวนที่ผลิตในเดือนนั้น',
-    empty: dRows.length && dRows.some((r) => r.value > 0) ? null : 'ยังไม่มีข้อมูลการผลิตพอจะคำนวณ',
+    empty: dRows.some((r) => r.value != null) ? null : 'ยังไม่มีข้อมูลการผลิตพอจะคำนวณ',
     buildChart: () => lineChart(dRows, { valueFmt: (v) => (Number(v) || 0).toFixed(1), suffix: '%' }),
     table: {
       head: ['เดือน', 'ผลิตได้ (ต้น)', 'เสียระหว่างผลิต', 'อัตราของเสีย', 'Error ผลิต', 'Error ขนส่ง'],
@@ -1303,20 +1401,266 @@ function renderStock(root) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   EXEC — หน้าผู้บริหาร (เพิ่มใหม่: กราฟเทียบ สั่ง/ผลิต/ส่ง + hover + คลิกเจาะ + วัน/เดือน/ปี)
+   • รายเดือน/รายปี ใช้ข้อมูลที่มีอยู่แล้ว (v_monthly_orders + v_defect_rate) ได้ทันที
+   • รายวัน ต้องเพิ่มวิว EXEC_DAILY_VIEW  • คลิกเจาะดูรายการ ต้องเพิ่มวิว EXEC_ORDER_VIEW
+   ══════════════════════════════════════════════════════════════════════════ */
+let execGran = 'month';
+let execDaily = null;                         // cache ผลรายวัน (ดึงแบบ lazy)
+const EXEC_DAILY_VIEW = 'v_daily_flow';       // คอลัมน์ที่ต้องมี: day, ordered, produced, delivered
+const EXEC_ORDER_VIEW = 'v_order_lines';      // คอลัมน์: order_num, customer, pile_label, ordered, produced, delivered, status, order_date
+const EXEC_SERIES = [
+  { key:'ordered',   name:'สั่ง', color:'var(--series-1)' },
+  { key:'produced',  name:'ผลิต', color:'var(--series-3)' },
+  { key:'delivered', name:'ส่ง',  color:'var(--series-2)' },
+];
+const EXEC_GRAN_TH = { day:'รายวัน', month:'รายเดือน', year:'รายปี' };
+
+/** กราฟเส้นหลายชุด + crosshair + hover tooltip + คลิกเจาะ (ใช้ tipEl/showTip เดิม) */
+function execMultiLine(rows, series, onPick) {
+  const W = 760, H = 260, padL = 48, padR = 30, padT = 18, padB = 34;
+  const cW = W - padL - padR, cH = H - padT - padB;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' });
+  const max = Math.max(...rows.flatMap((r) => series.map((s) => Number(r[s.key]) || 0)), 0);
+  const ticks = niceTicks(max); const top = ticks[ticks.length - 1] || 1;
+  const x = (i) => padL + (rows.length === 1 ? cW / 2 : (i / (rows.length - 1)) * cW);
+  const y = (v) => padT + cH - ((Number(v) || 0) / top) * cH;
+
+  ticks.forEach((t) => {
+    svg.appendChild(svgEl('line', { x1: padL, x2: W - padR, y1: y(t), y2: y(t), stroke: 'var(--gridline)', 'stroke-width': 1 }));
+    const lb = svgEl('text', { x: padL - 8, y: y(t) + 4, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--text-muted)', style: 'font-variant-numeric:tabular-nums' });
+    lb.textContent = compact(t); svg.appendChild(lb);
+  });
+  svg.appendChild(svgEl('line', { x1: padL, x2: W - padR, y1: padT + cH, y2: padT + cH, stroke: 'var(--baseline)', 'stroke-width': 1 }));
+
+  // ป้ายค่าท้ายเส้น เรียงมาก→น้อย บังคับเว้น 14px กันชน
+  const ends = series.map((s) => ({ s, v: Number(rows[rows.length - 1][s.key]) || 0 })).sort((a, b) => b.v - a.v);
+  const labelY = {}; let prevY = -99;
+  ends.forEach((e) => { let ly = y(e.v); if (ly < prevY + 14) ly = prevY + 14; labelY[e.s.key] = ly; prevY = ly; });
+
+  series.forEach((s) => {
+    const pts = rows.map((r, i) => [x(i), y(r[s.key])]);
+    if (pts.length >= 2) {
+      svg.appendChild(svgEl('path', { d: 'M' + pts.map((p) => p.join(',')).join(' L'), fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    } else if (pts.length === 1) {
+      svg.appendChild(svgEl('circle', { cx: pts[0][0], cy: pts[0][1], r: 3, fill: s.color }));
+    }
+    const last = rows.length - 1;
+    const dot = svgEl('circle', { cx: x(last), cy: y(rows[last][s.key]), r: 4.5, fill: s.color, stroke: 'var(--surface-1)', 'stroke-width': 2 });
+    svg.appendChild(dot);
+    const lv = svgEl('text', { x: x(last) + 7, y: labelY[s.key] + 4, 'text-anchor': 'start', 'font-size': 11, 'font-weight': 650, fill: s.color, style: 'font-variant-numeric:tabular-nums' });
+    lv.textContent = num(rows[last][s.key]); svg.appendChild(lv);
+  });
+
+  const step = rows.length > 10 ? Math.ceil(rows.length / 10) : 1;
+  rows.forEach((r, i) => {
+    if (i % step === 0 || i === rows.length - 1) {
+      const xl = svgEl('text', { x: x(i), y: H - 12, 'text-anchor': 'middle', 'font-size': 10, fill: 'var(--text-muted)' });
+      xl.textContent = r.label; svg.appendChild(xl);
+    }
+  });
+
+  // crosshair + จุดไฮไลต์ + hover + click
+  const cross = svgEl('line', { x1: 0, x2: 0, y1: padT, y2: padT + cH, stroke: 'var(--baseline)', 'stroke-width': 1, opacity: 0 });
+  svg.appendChild(cross);
+  const markers = series.map((s) => { const c = svgEl('circle', { r: 4.5, fill: s.color, stroke: 'var(--surface-1)', 'stroke-width': 2, opacity: 0 }); svg.appendChild(c); return c; });
+  const bandW = cW / Math.max(rows.length - 1, 1);
+  rows.forEach((r, i) => {
+    const html = `<div class="t-label">${esc(r.label)}</div>` +
+      series.map((s) => `<div class="t-row">${esc(s.name)} <b>${num(r[s.key])} ต้น</b></div>`).join('') +
+      `<div class="t-row" style="border-top:1px solid var(--border);margin-top:5px;padding-top:5px">ค้างส่ง <b>${num((Number(r.ordered) || 0) - (Number(r.delivered) || 0))} ต้น</b></div>` +
+      (onPick ? `<div class="t-row" style="color:var(--text-muted);margin-top:3px">▸ คลิกเพื่อดูรายการ</div>` : '');
+    const hit = svgEl('rect', { x: x(i) - bandW / 2, y: padT, width: Math.max(18, bandW), height: cH, fill: 'transparent' });
+    hit.style.cursor = onPick ? 'pointer' : 'default';
+    const move = (e) => {
+      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity', 1);
+      series.forEach((s, j) => { markers[j].setAttribute('cx', x(i)); markers[j].setAttribute('cy', y(r[s.key])); markers[j].setAttribute('opacity', 1); });
+      showTip(e, html);
+    };
+    hit.addEventListener('mousemove', move);
+    hit.addEventListener('mouseenter', move);
+    hit.addEventListener('mouseleave', () => { cross.setAttribute('opacity', 0); markers.forEach((mk) => mk.setAttribute('opacity', 0)); hideTip(); });
+    if (onPick) hit.addEventListener('click', () => onPick(i));
+    svg.appendChild(hit);
+  });
+  return svg;
+}
+
+// ── สร้างช่วงเวลาแต่ละแบบ ──
+function execMonthPeriods() {
+  const prod = {};
+  (DATA.defect || []).forEach((d) => { prod[d.month_label] = Number(d.produced_qty) || 0; });
+  return (DATA.monthly || []).slice(-monthsWindow).map((m) => ({
+    label: monthLabel(m.month_label), ym: m.month_label,
+    ordered: Number(m.total_qty) || 0,
+    produced: prod[m.month_label] || 0,
+    delivered: Number(m.total_delivered) || 0,
+  }));
+}
+function execYearPeriods() {
+  const agg = {};
+  const bump = (yr) => (agg[yr] = agg[yr] || { year: yr, ordered: 0, produced: 0, delivered: 0 });
+  (DATA.monthly || []).forEach((m) => { const y = String(m.month_label).slice(0, 4); bump(y).ordered += Number(m.total_qty) || 0; agg[y].delivered += Number(m.total_delivered) || 0; });
+  (DATA.defect || []).forEach((d) => { const y = String(d.month_label).slice(0, 4); bump(y).produced += Number(d.produced_qty) || 0; });
+  return Object.values(agg).sort((a, b) => a.year.localeCompare(b.year))
+    .map((a) => ({ label: String(Number(a.year) + 543), year: a.year, ordered: a.ordered, produced: a.produced, delivered: a.delivered }));
+}
+
+async function renderExec(root) {
+  // ── ตัวเลือกช่วงเวลา วัน/เดือน/ปี ──
+  const row = el('div', 'filter-row');
+  const lb = el('span', 'label'); lb.textContent = 'ช่วงเวลา';
+  const seg = el('div', 'seg');
+  [['day', 'วัน'], ['month', 'เดือน'], ['year', 'ปี']].forEach(([g, t]) => {
+    const b = el('button'); b.type = 'button'; b.textContent = t;
+    b.setAttribute('aria-pressed', String(execGran === g));
+    b.addEventListener('click', () => { execGran = g; render(); });
+    seg.appendChild(b);
+  });
+  row.append(lb, seg); root.appendChild(row);
+
+  // ── หา periods ตามช่วงเวลา ──
+  let periods = [], emptyMsg = null;
+  if (execGran === 'month') periods = execMonthPeriods();
+  else if (execGran === 'year') periods = execYearPeriods();
+  else {
+    if (execDaily === null) {
+      try { execDaily = await fetchView(EXEC_DAILY_VIEW, { order: 'day.asc' }); }
+      catch (e) { execDaily = 'ERR'; }
+    }
+    if (Array.isArray(execDaily)) {
+      periods = execDaily.slice(-31).map((d) => ({
+        label: String(d.day).slice(8, 10).replace(/^0/, ''), day: String(d.day).slice(0, 10),
+        ordered: Number(d.ordered) || 0, produced: Number(d.produced) || 0, delivered: Number(d.delivered) || 0,
+      }));
+    } else {
+      emptyMsg = `ดู "รายวัน" ต้องเพิ่มวิว ${EXEC_DAILY_VIEW} ใน Supabase ก่อน (ดูหมายเหตุด้านล่าง)`;
+    }
+  }
+
+  // ── การ์ดกราฟเทียบ ──
+  const card = el('div', 'card');
+  const head = el('div', 'card-head');
+  const h = el('div', 'card-title'); h.textContent = `เทียบ สั่ง · ผลิต · ส่ง (${EXEC_GRAN_TH[execGran]})`;
+  const s = el('div', 'card-sub'); s.textContent = 'จำนวนเสาเข็ม (ต้น) — เอาเมาส์จ่อดูสรุป' + (execGran === 'day' ? '' : ' · คลิกเพื่อเจาะดูรายการ');
+  head.append(h, s); card.appendChild(head);
+
+  if (!periods.length) {
+    const e = el('div', 'empty'); e.textContent = emptyMsg || 'ยังไม่มีข้อมูลในช่วงนี้';
+    card.appendChild(e); root.appendChild(card);
+  } else {
+    const wrap = el('div', 'chart-wrap');
+    const chart = execMultiLine(periods, EXEC_SERIES, execGran === 'day' ? null : (i) => execShowDetail(periods[i]));
+    chart.setAttribute('aria-label', h.textContent);
+    wrap.appendChild(chart); card.appendChild(wrap);
+    const lg = el('div', 'legend'); const last = periods[periods.length - 1];
+    [['สั่ง', 'var(--series-1)', last.ordered], ['ผลิต', 'var(--series-3)', last.produced], ['ส่ง', 'var(--series-2)', last.delivered]].forEach(([lbl, c, v]) => {
+      const it = el('div', 'item'); const sw = el('span', 'swatch'); sw.style.background = c;
+      const tx = document.createElement('span'); tx.textContent = `${lbl} (${num(v)})`;
+      it.append(sw, tx); lg.appendChild(it);
+    });
+    card.appendChild(lg); root.appendChild(card);
+  }
+
+  const dh = el('div'); dh.id = 'execDetail'; root.appendChild(dh);
+
+  const note = el('div');
+  note.style.cssText = 'background:var(--surface-1);border:1px solid var(--border);border-left:3px solid var(--series-1);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text-secondary);line-height:1.6';
+  note.innerHTML =
+    'หน้านี้เทียบ <b>สั่ง</b> (เสาเข็มที่สั่ง = total_qty) · <b>ผลิต</b> (produced_qty) · <b>ส่ง</b> (total_delivered) — ' +
+    '<b>รายเดือน/รายปี</b> ใช้ข้อมูลที่มีอยู่แล้วได้ทันที · ' +
+    `<b>รายวัน</b> ต้องเพิ่มวิว <code class="inline">${EXEC_DAILY_VIEW}</code> และ ` +
+    `<b>คลิกเจาะดูรายการ</b> ต้องเพิ่มวิว <code class="inline">${EXEC_ORDER_VIEW}</code> ใน Supabase`;
+  root.appendChild(note);
+}
+
+function execNextDay(iso) { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); }
+async function fetchOrderLines(from, to) {
+  const qs = new URLSearchParams({ select: '*' });
+  qs.append('order_date', `gte.${from}`);
+  qs.append('order_date', `lt.${to}`);
+  qs.set('order', 'order_date.asc');
+  const res = await fetch(`${API}/rest/v1/${EXEC_ORDER_VIEW}?${qs}`, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${auth.token || SUPABASE_ANON_KEY}`, 'Accept-Profile': 'sud', Accept: 'application/json' },
+  });
+  if (!res.ok) throw new Error('order lines ' + res.status);
+  return res.json();
+}
+
+async function execShowDetail(period) {
+  const host = $('#execDetail'); if (!host) return;
+  host.innerHTML = '<div class="loading">กำลังโหลดรายละเอียด…</div>';
+  let from, to, title;
+  if (period.ym) { const [y, mo] = period.ym.split('-').map(Number); from = `${period.ym}-01`; to = mo === 12 ? `${y + 1}-01-01` : `${y}-${String(mo + 1).padStart(2, '0')}-01`; title = 'เดือน ' + period.label; }
+  else if (period.day) { from = period.day; to = execNextDay(period.day); title = 'วันที่ ' + thaiDate(period.day); }
+  else if (period.year) { from = `${period.year}-01-01`; to = `${Number(period.year) + 1}-01-01`; title = 'ปี ' + period.label; }
+  else { host.innerHTML = ''; return; }
+
+  let rows = null;
+  try { rows = await fetchOrderLines(from, to); } catch (e) { rows = 'ERR'; }
+
+  const box = el('div', 'card');
+  const hd = el('div', 'card-head');
+  const t = el('div', 'card-title'); t.textContent = 'รายละเอียด ' + title;
+  const sp = el('div', 'spacer');
+  const close = el('button', 'toggle-table'); close.textContent = 'ปิด ✕';
+  close.addEventListener('click', () => { host.innerHTML = ''; });
+  hd.append(t, sp, close); box.appendChild(hd);
+
+  if (rows === 'ERR' || !Array.isArray(rows)) {
+    const e = el('div', 'empty'); e.style.textAlign = 'left';
+    e.innerHTML = `ต้องเพิ่มวิว <code class="inline">${EXEC_ORDER_VIEW}</code> ใน Supabase ก่อนถึงจะเจาะดูรายการได้<br>` +
+      'วิวควรมีคอลัมน์: order_num, customer, pile_label, ordered, produced, delivered, status, order_date';
+    box.appendChild(e);
+  } else if (!rows.length) {
+    const e = el('div', 'empty'); e.textContent = 'ไม่มีรายการในช่วงนี้'; box.appendChild(e);
+  } else {
+    const sumO = rows.reduce((a, r) => a + (Number(r.ordered) || 0), 0);
+    const sumP = rows.reduce((a, r) => a + (Number(r.produced) || 0), 0);
+    const sumD = rows.reduce((a, r) => a + (Number(r.delivered) || 0), 0);
+    const sub = el('div', 'card-sub');
+    sub.textContent = `สั่ง ${num(sumO)} · ผลิต ${num(sumP)} · ส่ง ${num(sumD)} · ค้าง ${num(sumO - sumD)} ต้น`;
+    hd.insertBefore(sub, sp);
+    const w = el('div', 'tbl-wrap');
+    w.innerHTML = `<table class="data"><thead><tr>
+      <th>Order</th><th class="txt">ลูกค้า</th><th class="txt">ชนิด</th>
+      <th class="num">สั่ง</th><th class="num">ผลิต</th><th class="num">ส่ง</th><th class="num">ค้าง</th><th class="txt">สถานะ</th>
+      </tr></thead><tbody>${
+      rows.map((r) => `<tr>
+        <td>${esc(r.order_num)}</td><td class="txt">${esc(r.customer || '-')}</td><td class="txt">${esc(r.pile_label || '-')}</td>
+        <td class="num">${num(r.ordered)}</td><td class="num">${num(r.produced)}</td><td class="num">${num(r.delivered)}</td>
+        <td class="num">${num((Number(r.ordered) || 0) - (Number(r.delivered) || 0))}</td><td class="txt">${esc(r.status || '-')}</td></tr>`).join('')
+      }</tbody></table>`;
+    box.appendChild(w);
+  }
+  host.innerHTML = ''; host.appendChild(box);
+  host.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    ROUTER
    ══════════════════════════════════════════════════════════════════════════ */
 const RENDERERS = {
+  exec:       renderExec,
   overview:   renderOverview,
   sales:      renderSales,
   production: renderProduction,
   delivery:   renderDelivery,
   stock:      renderStock,
 };
-let currentTab = 'overview';
+let currentTab = 'exec';
 
 function render() {
   const main = $('#main');
   main.innerHTML = '';
+
+  // เตือนถ้ามีบางวิวโหลดไม่ได้ — แสดงค้างทุกแท็บ (ไม่ล่มทั้งหน้า)
+  if (DATA.failedViews && DATA.failedViews.length) {
+    const warn = el('div', 'setup-warn');
+    warn.innerHTML = `<b>ข้อมูลบางส่วนโหลดไม่สำเร็จ</b> — ` +
+      `${DATA.failedViews.map(esc).join(', ')} · การ์ดที่เกี่ยวข้องอาจว่างหรือไม่ครบ`;
+    main.appendChild(warn);
+  }
 
   // แถวฟิลเตอร์เดียว เหนือทุกกราฟที่มันคุม
   if (['overview', 'sales', 'production', 'delivery'].includes(currentTab)) {
@@ -1350,8 +1694,11 @@ const themeBtn = $('#themeBtn');
 function applyTheme(mode) {
   document.documentElement.setAttribute('data-theme', mode);
   themeBtn.textContent = mode === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด';
+  try { localStorage.setItem('sud_theme', mode); } catch {}
 }
-applyTheme(matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+// จำธีมที่เลือกไว้ ถ้าไม่เคยเลือกค่อยตามระบบ
+const savedTheme = (() => { try { return localStorage.getItem('sud_theme'); } catch { return null; } })();
+applyTheme(savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
 themeBtn.addEventListener('click', () => {
   applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 });
