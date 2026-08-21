@@ -115,6 +115,16 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 
 /* ============================================================ TOOLBAR ============================================================ */
 .toolbar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #F1F5F9;flex-wrap:wrap;}
+
+/* ── หมวดหมู่ตามขนาดเสา (I18 / I22 / I26 / I30 / I35 / I40) ── */
+.pilecat-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 16px 12px;}
+.pilecat-lbl{font-size:11px;font-weight:800;color:#94A3B8;letter-spacing:.04em;margin-right:2px;white-space:nowrap;}
+.pilecat-chip{padding:5px 13px;font-size:12.5px;font-weight:800;border-radius:99px;border:1.5px solid #E2E8F0;background:#F8FAFC;color:#475569;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .12s,border-color .12s,color .12s;}
+.pilecat-chip:hover{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8;}
+.pilecat-chip.on{background:#1E40AF;border-color:#1E40AF;color:#fff;}
+.pilecat-chip.on:hover{background:#1E3A8A;}
+.pilecat-chip .n{margin-left:5px;font-size:11px;font-weight:700;opacity:.65;}
+.pilecat-chip.zero{opacity:.4;}
 .toolbar-note{margin-left:auto;font-size:11px;color:#94A3B8;}
 .search-inp{padding:7px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;outline:none;font-family:inherit;background:#F9FAFB;min-width:180px;}
 .search-inp:focus{border-color:#3B82F6;background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,0.1);}
@@ -322,6 +332,14 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .act-del{background:#FEF2F2;color:#DC2626;border:1.5px solid #FCA5A5;}
 .act-del:hover{background:#FEE2E2;}
 .act-row{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+
+/* แถวออเดอร์: แตะที่พื้นที่ว่างของแถวเพื่อเปิดหน้าแก้ไข */
+tr.row-editable{cursor:pointer;transition:box-shadow .12s,filter .12s;}
+tr.row-editable:hover{filter:brightness(.985);box-shadow:inset 3px 0 0 #1E40AF;}
+tr.row-editable:active{filter:brightness(.96);}
+.mob-oe.row-editable:hover{box-shadow:0 0 0 2px #BFDBFE inset;}
+.edit-del-btn{margin-right:auto;background:#FEF2F2!important;color:#DC2626!important;border:1.5px solid #FCA5A5!important;}
+.edit-del-btn:hover{background:#FEE2E2!important;}
 
 /* ============================================================ EDIT ORDER MODAL ============================================================ */
 .edit-modal{background:#fff;border-radius:16px;width:100%;max-width:820px;box-shadow:0 8px 40px rgba(0,0,0,0.18);overflow:hidden;margin:auto;}
@@ -919,12 +937,12 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
       <div class="card-header">
         <div>
           <div class="card-title">📋 ติดตามสถานะ Order</div>
-          <div class="card-sub">จัดกลุ่มตามชนิดเสา · คลิกตัวเลข "🚚 ส่ง" เพื่ออัปเดตจำนวน</div>
+          <div class="card-sub">จัดกลุ่มตามชนิดเสา · คลิกตัวเลข "🚚 ส่ง" เพื่ออัปเดตจำนวน · แตะที่แถวเพื่อแก้ไข Order · ค้นหาด้วยเลข Order หรือชนิดเสา</div>
         </div>
       </div>
       <div class="toolbar">
         <button class="btn btn-danger btn-sm desk-only-btn" onclick="goTab('shiperr',document.querySelector('[data-tab=shiperr]'))">⚠️ Error ขนส่ง</button>
-        <input type="search" class="search-inp" id="orderSearch" placeholder="🔍 ค้นหาลูกค้า / เลข Order..." oninput="renderOrders()"/>
+        <input type="search" class="search-inp" id="orderSearch" placeholder="🔍 ค้นหา เลข Order / ชนิดเสา..." title="ค้นเฉพาะเลข Order กับชนิดเสา · พิมพ์หลายคำได้ เช่น &quot;69/202 I22&quot; · พิมพ์ 69202 ก็เจอ 69/202" style="min-width:220px;" oninput="renderOrders()"/>
         <select class="filter-sel" id="statusFilter" onchange="renderOrders()">
           <option value="">สถานะ: ทั้งหมด</option>
           <option>รอคอนเฟิร์ม</option>
@@ -937,6 +955,8 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
           <option>ส่งครบแล้ว</option>
         </select>
       </div>
+      <!-- ── หมวดหมู่ตามขนาดเสา ── -->
+      <div class="pilecat-bar" id="pileCatBar"></div>
     </div>
     <!-- ── Pile-grouped cards (desktop) ── -->
     <div id="ordersGrouped"></div>
@@ -3371,6 +3391,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
     <div class="sd-footer">
+      <button class="btn edit-del-btn" id="editOrderDelBtn" onclick="deleteOrderFromEdit()">🗑 ลบ Order นี้</button>
       <button class="btn btn-ghost" onclick="closeEditOrder()">ยกเลิก</button>
       <button class="btn btn-primary" onclick="submitEditOrder()">💾 บันทึกการแก้ไข</button>
     </div>
@@ -5486,6 +5507,107 @@ const PILE_PALETTE = [
   { border:'#14B8A6', bg:'#F0FDFA', text:'#0F766E' },
 ];
 
+// ══════════════════════════════════════════════════════════════
+// ── ค้นหา Order — ค้นเฉพาะ "เลข Order" กับ "ชนิดเสา" เท่านั้น ───
+// พิมพ์หลายคำ = ต้องเจอครบทุกคำ · ไม่สนตัวพิมพ์เล็กใหญ่
+// ไม่สนเครื่องหมายคั่น (พิมพ์ 69202 เจอ 69/202)
+// ══════════════════════════════════════════════════════════════
+function _searchCompact(s) { return s.replace(/[^0-9a-z\u0E00-\u0E7F]/g, ''); }
+
+// เก็บเฉพาะฟิลด์ที่อนุญาตให้ค้น: เลข Order + ชนิดเสาของทุกรายการ
+function orderSearchBlob(o) {
+  const out = [];
+  if (o.orderNum) out.push(String(o.orderNum));
+  if (o.pileType) out.push(String(o.pileType));
+  try {
+    (getOrderItems(o) || []).forEach(it => { if (it && it.pileType) out.push(String(it.pileType)); });
+  } catch (_) {}
+  return out.join(' ').toLowerCase();
+}
+
+function orderMatchesQuery(o, query) {
+  const q = (query || '').trim().toLowerCase();
+  if (!q) return true;
+  const blob    = orderSearchBlob(o);
+  const compact = _searchCompact(blob);
+  return q.split(/\s+/).filter(Boolean).every(term => {
+    if (blob.includes(term)) return true;
+    const ct = _searchCompact(term);
+    return ct.length > 0 && compact.includes(ct);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── หมวดหมู่ตามขนาดเสา ─────────────────────────────────────────
+// I18-S18 · I22-S22 · I26-S26 · I30-S30 · I35-S35 · I40-S50
+// + หมวดหน้าตัดผสม 30x35 (I30x35) และ 35-40 (I35x40-1145)
+// ※ ต้องเช็คหมวดผสมก่อน เพราะ I30x35 / I35x40 ขึ้นต้นเหมือน I30 / I35
+// กดซ้ำที่หมวดเดิม = ยกเลิกตัวกรอง
+// ══════════════════════════════════════════════════════════════
+var PILE_CAT_ETC = 'อื่นๆ';
+var PILE_CATS = [
+  { key:'I18',    label:'I18-S18', re:/^[IS]18/       },
+  { key:'I22',    label:'I22-S22', re:/^[IS]22/       },
+  { key:'I26',    label:'I26-S26', re:/^[IS]26/       },
+  { key:'I30',    label:'I30-S30', re:/^[IS]30/       },
+  { key:'I35',    label:'I35-S35', re:/^[IS]35/       },
+  { key:'I40',    label:'I40-S50', re:/^[IS](40|45|50)/ },
+  { key:'X3035',  label:'30x35',   re:/^[IS]?30X35/   },
+  { key:'X3540',  label:'35-40',   re:/^[IS]?35X40/   },
+];
+// หมวดหน้าตัดผสมต้องถูกเช็คก่อนหมวดปกติเสมอ
+var PILE_CATS_ORDER = ['X3035','X3540','I18','I22','I26','I30','I35','I40'];
+var _pileCat = '';
+
+function _pileCatNorm(pile) { return String(pile || '').trim().toUpperCase().replace(/[\s\-_.()]/g, ''); }
+
+function _pileCatOf(pile) {
+  const p = _pileCatNorm(pile);
+  if (!p) return PILE_CAT_ETC;
+  for (let i = 0; i < PILE_CATS_ORDER.length; i++) {
+    const c = PILE_CATS.find(x => x.key === PILE_CATS_ORDER[i]);
+    if (c && c.re.test(p)) return c.key;
+  }
+  return PILE_CAT_ETC;
+}
+function _pileCatLabel(key) {
+  if (key === PILE_CAT_ETC) return PILE_CAT_ETC;
+  const c = PILE_CATS.find(x => x.key === key);
+  return c ? c.label : key;
+}
+function _pileCatOK(pile)  { return !_pileCat || _pileCatOf(pile) === _pileCat; }
+function _orderInPileCat(o) {
+  if (!_pileCat) return true;
+  const its = (typeof getOrderItems === 'function' ? getOrderItems(o) : (o.items || [])) || [];
+  if (!its.length) return _pileCatOK(o.pileType || '');
+  return its.some(it => _pileCatOK(it.pileType || o.pileType || ''));
+}
+function setPileCat(c) {
+  _pileCat = (_pileCat === c) ? '' : c;
+  renderOrders();
+}
+
+// วาดแถบหมวดหมู่ + จำนวนรายการในแต่ละหมวด (นับจากผลลัพธ์หลังค้นหา/กรองสถานะ)
+function renderPileCatBar(scopeOrders) {
+  const bar = document.getElementById('pileCatBar');
+  if (!bar) return;
+  const counts = {}; let total = 0;
+  PILE_CATS.forEach(c => counts[c.key] = 0);
+  counts[PILE_CAT_ETC] = 0;
+  (scopeOrders || []).forEach(o => {
+    const its = (getOrderItems(o) || []);
+    if (!its.length) { counts[_pileCatOf(o.pileType || '')]++; total++; return; }
+    its.forEach(it => { counts[_pileCatOf(it.pileType || o.pileType || '')]++; total++; });
+  });
+  const chip = (val, label, n) =>
+    `<button class="pilecat-chip${_pileCat === val ? ' on' : ''}${n === 0 ? ' zero' : ''}" onclick="setPileCat('${val}')" title="${label} · ${n} รายการ">${label}<span class="n">${n}</span></button>`;
+  let html = '<span class="pilecat-lbl">หมวดหมู่</span>';
+  html += `<button class="pilecat-chip${_pileCat === '' ? ' on' : ''}" onclick="setPileCat('')">ทั้งหมด<span class="n">${total}</span></button>`;
+  PILE_CATS.forEach(c => { html += chip(c.key, c.label, counts[c.key]); });
+  if (counts[PILE_CAT_ETC] > 0 || _pileCat === PILE_CAT_ETC) html += chip(PILE_CAT_ETC, PILE_CAT_ETC, counts[PILE_CAT_ETC]);
+  bar.innerHTML = html;
+}
+
 function renderOrders() {
   const query    = (document.getElementById('orderSearch')?.value || '').trim().toLowerCase();
   const statusF  = document.getElementById('statusFilter')?.value || '';
@@ -5495,7 +5617,7 @@ function renderOrders() {
   const _cfg     = getConfig();
   let orders     = getOrders();
 
-  if (query)   orders = orders.filter(o => o.customer.toLowerCase().includes(query) || o.orderNum.toLowerCase().includes(query) || (o.tel||'').includes(query));
+  if (query)   orders = orders.filter(o => orderMatchesQuery(o, query));
   if (statusF) orders = orders.filter(o => (o.status || 'รับ Order แล้ว') === statusF);
 
   // ─── แยกออเดอร์ "รอคอนเฟิร์ม" ออกมาแสดงเป็นหมวดบนสุด ───────────
@@ -5506,6 +5628,11 @@ function renderOrders() {
     pendingOrders = pendingOrders.filter(o => ((o.sale || '').toLowerCase() === _myEmail));
   }
   const normalOrders  = orders.filter(o => !isPendingOrder(o));
+
+  // ─── แถบหมวดหมู่ตามขนาดเสา (นับจากผลลัพธ์หลังค้นหา/กรองสถานะ) ───
+  renderPileCatBar(orders);
+  if (_pileCat) pendingOrders = pendingOrders.filter(_orderInPileCat);
+
   const pendingHTML    = _pendingSectionHTML(pendingOrders);
 
   // ─── Desktop: pile-grouped cards ────────────────────────────
@@ -5530,9 +5657,11 @@ function renderOrders() {
         const ai = cfgPiles.indexOf(a), bi = cfgPiles.indexOf(b);
         return (ai===-1?99:ai) - (bi===-1?99:bi);
       });
+      // กรองตามหมวดหมู่ที่เลือก (I18 / I22 / …)
+      const pileShow = pileOrderArr.filter(_pileCatOK);
 
       let html = '';
-      pileOrderArr.forEach((pile, pi) => {
+      pileShow.forEach((pile, pi) => {
         const pal    = PILE_PALETTE[pi % PILE_PALETTE.length];
         const isG    = (pile === 'Girder');
         const u      = isG ? 'ตัว' : 'ต้น';
@@ -5626,26 +5755,28 @@ function renderOrders() {
           const valDisp     = o.orderValue > 0 ? o.orderValue.toLocaleString('th-TH')+' ฿' : '—';
           const rowCls      = deadlineRowClass(o.deliveryDateISO, iPct);
 
-          html += `<tr class="${rowCls}">
+          const _rowEditable = canDo('edit_order');
+          html += `<tr class="${rowCls}${_rowEditable?' row-editable':''}"${_rowEditable?` onclick="orderRowClick(event,'${o.orderNum}')" title="แตะที่แถวเพื่อเปิดหน้าแก้ไข Order"`:''}>
             <td><span class="order-id">${o.orderNum}</span>${isMultiItem?`<br><span style="font-size:10px;color:#94A3B8;">[${idx+1}/${o.items.length}]</span>`:''}</td>
             <td><strong>${_esc(o.customer)}</strong>${o.tel?`<br><span style="font-size:11px;color:#64748B;">${_esc(o.tel)}</span>`:''}</td>
             <td style="font-size:12px;">${lenDisp}</td>
             <td><strong>${it.qty}</strong></td>
             <td style="min-width:140px;"><div style="display:flex;flex-direction:column;gap:6px;">
               <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span style="color:#9A3412;">🏭 ผลิต ${produced}/${it.qty}</span><span style="color:${prodPctC};">${prodPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div></div>
-              <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''} style="color:#1D4ED8;">🚚 ส่ง ${delDisp}/${it.qty}</span><span style="color:${iPctC};">${iPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div><div style="font-size:10px;color:${over>0?'#DC2626':rem>0?'#854D0E':'#166534'};margin-top:1px;">${over>0?'ส่งเกิน '+over:'เหลือ '+rem}</div></div>
+              <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''} style="color:#1D4ED8;">🚚 ส่ง ${delDisp}/${it.qty}</span><span style="color:${iPctC};">${iPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div>${over>0?`<div style="font-size:10px;color:#DC2626;margin-top:1px;">ส่งเกิน ${over}</div>`:''}</div>
             </div></td>
             <td style="font-size:12px;">${o.deliveryDate}${dlBadge}</td>
             <td style="font-size:12px;max-width:180px;">${o.site && o.site!=='-' ? '📍 '+_esc(o.site) : '<span style="color:#CBD5E1;">—</span>'}</td>
             <td style="${noteStyle};font-size:12px;">${_esc(errNote)}
               ${canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='รับ Order แล้ว'?`<br><button onclick="acceptOrder('${o.orderNum}')" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:6px;cursor:pointer;">🏭 รับ</button>`:''}
               ${canDo('change_order_status')&&((o.status||'รับ Order แล้ว')==='ส่งครบ'||o.status==='ส่งครบแล้ว')?`<br><button onclick="closeBill('${o.orderNum}')" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;">🔴 จบบิล</button>`:''}
-              <div class="act-row"><button class="act-btn" style="background:#FEF3C7;color:#92400E;" onclick="openIntakeFor('${o.orderNum}')">📋 ใบรับงาน</button> ${canDo('edit_order')?`<button class="act-btn act-edit" onclick="openEditOrder('${o.orderNum}')">✏️ แก้ไข</button>`:''} ${canDo('delete_order')?`<button class="act-btn act-del" onclick="deleteOrder('${o.orderNum}')">🗑 ลบ</button>`:''}</div>
+              <div class="act-row"><button class="act-btn" style="background:#FEF3C7;color:#92400E;" onclick="openIntakeFor('${o.orderNum}')">📋 ใบรับงาน</button></div>
             </td>
           </tr>`;
         });
         html += '</tbody></table></div></div>';
       });
+      if (!html && !pendingHTML) html = '<div class="card"><div style="text-align:center;padding:40px;color:#94A3B8;font-size:14px;">ไม่พบ Order'+(_pileCat?' ในหมวด <strong style="color:#1E40AF;">'+_pileCatLabel(_pileCat)+'</strong>':'')+' ตอนนี้</div></div>';
       container.innerHTML = pendingHTML + html;
     }
   }
@@ -5673,6 +5804,8 @@ function renderOrders() {
     const ai = mCfgPiles.indexOf(a), bi = mCfgPiles.indexOf(b);
     return (ai===-1?99:ai) - (bi===-1?99:bi);
   });
+  // กรองตามหมวดหมู่ที่เลือก (I18 / I22 / …)
+  const mPileShow = mPileArr.filter(_pileCatOK);
 
   // สเปคย่อสำหรับการ์ดมือถือ
   const _mobSpecOf = (it) => {
@@ -5686,7 +5819,7 @@ function renderOrders() {
   const _canEditB  = canDo('edit_order');
 
   const sections = [];
-  mPileArr.forEach((pile, pi) => {
+  mPileShow.forEach((pile, pi) => {
     const pal  = PILE_PALETTE[pi % PILE_PALETTE.length];
     const isG  = (pile === 'Girder');
     const u    = isG ? 'ตัว' : 'ต้น';
@@ -5760,10 +5893,9 @@ function renderOrders() {
       if (canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='รับ Order แล้ว') btns += `<button onclick="acceptOrder('${o.orderNum}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🏭 รับ</button>`;
       if (canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='ส่งครบ') btns += `<button onclick="closeBill('${o.orderNum}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>`;
       btns += `<button onclick="openIntakeFor('${o.orderNum}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#FEF3C7;color:#92400E;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">📋 ใบรับงาน</button>`;
-      if (_canEditB) btns += `<button onclick="openEditOrder('${o.orderNum}')" style="padding:4px 9px;font-size:11px;background:#EFF6FF;color:#1E40AF;border:none;border-radius:8px;cursor:pointer;">✏️</button>`;
 
       const multiBadge = es.length > 1 ? ` <span style="font-size:10px;color:#64748B;font-weight:700;">· ${es.length} รายการ</span>` : '';
-      return `<div class="mob-oe${hasErr?' err':''}">
+      return `<div class="mob-oe${hasErr?' err':''}${_canEditB?' row-editable':''}"${_canEditB?` onclick="orderRowClick(event,'${o.orderNum}')"`:''}>
         <div class="mob-oe-top"><span><span class="mob-oe-num">${_esc(o.orderNum)}</span>${multiBadge}</span><span class="mob-oc-status status-sel ${stCls}">${stLabel}</span></div>
         <div class="mob-oe-cust">${_esc(o.customer)}${o.tel?`<span class="mob-oc-tel"> · ${_esc(o.tel)}</span>`:''}</div>
         ${o.site && o.site!=='-' ? `<div class="mob-oe-site">📍 ${_esc(o.site)}</div>` : ''}
@@ -5782,6 +5914,7 @@ function renderOrders() {
       ${orderCards}
     </div>`);
   });
+  if (!sections.length && !pendingHTML) sections.push('<div style="text-align:center;padding:40px 20px;color:#94A3B8;">ไม่พบ Order'+(_pileCat?' ในหมวด <strong style="color:#1E40AF;">'+_pileCatLabel(_pileCat)+'</strong>':'')+' ตอนนี้</div>');
   _mobOrd.innerHTML = pendingHTML + sections.join('');
 }
 
@@ -5923,9 +6056,7 @@ function _pendingSectionHTML(pendingOrders) {
     if (canChg) btns += `<button onclick="confirmOrder('${o.orderNum}')" style="padding:6px 14px;font-size:12px;font-weight:800;background:#16A34A;color:#fff;border:none;border-radius:8px;cursor:pointer;">✅ คอนเฟิร์ม + ใส่เลข Order</button>`;
     btns += `<button onclick="openQuotationFor('${o.orderNum}')" style="padding:6px 12px;font-size:12px;font-weight:700;background:#EFF6FF;color:#1D4ED8;border:none;border-radius:8px;cursor:pointer;">📄 ใบเสนอราคา</button>`;
     btns += `<button onclick="openIntakeFor('${o.orderNum}')" style="padding:6px 12px;font-size:12px;font-weight:700;background:#FEF3C7;color:#92400E;border:none;border-radius:8px;cursor:pointer;">📋 ใบรับงาน</button>`;
-    if (canEd)  btns += `<button onclick="openEditOrder('${o.orderNum}')" style="padding:6px 12px;font-size:12px;font-weight:700;background:#F1F5F9;color:#334155;border:none;border-radius:8px;cursor:pointer;">✏️ แก้ไข</button>`;
-    if (canDel) btns += `<button onclick="deleteOrder('${o.orderNum}')" style="padding:6px 12px;font-size:12px;font-weight:700;background:#FEF2F2;color:#B91C1C;border:none;border-radius:8px;cursor:pointer;">🗑 ลบ</button>`;
-    return `<div style="border:1px solid #FED7AA;border-radius:10px;padding:12px;background:#fff;">
+    return `<div class="${canEd?'row-editable':''}"${canEd?` onclick="orderRowClick(event,'${o.orderNum}')" title="แตะที่การ์ดเพื่อเปิดหน้าแก้ไข Order"`:''} style="border:1px solid #FED7AA;border-radius:10px;padding:12px;background:#fff;${canEd?'cursor:pointer;':''}">
       <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline;">
         <div><strong style="font-size:14px;">${_esc(o.customer)}</strong>${o.tel && o.tel!=='-' ? `<span style="font-size:12px;color:#64748B;"> · ${_esc(o.tel)}</span>` : ''}</div>
         <span class="status-sel s-pending">⏳ รอคอนเฟิร์ม</span>
@@ -9564,6 +9695,15 @@ function renderDetailLog() {
 let _editOrderNum = null;
 let _editItemsDraft = [];
 
+// แตะที่พื้นที่ว่างของแถว/การ์ดออเดอร์ → เปิดหน้าแก้ไข
+// (ไม่ทำงานถ้ากดโดนปุ่ม / ลิงก์ / ช่องกรอก / ตัวเลขที่กดแก้ได้ หรือกำลังลากเลือกข้อความอยู่)
+function orderRowClick(e, orderNum) {
+  const t = e.target;
+  if (t && t.closest && t.closest('button,a,select,input,textarea,label,.edit-cell,.mob-oe-del,.status-sel,.mob-oc-note')) return;
+  try { if (String(window.getSelection()).length > 0) return; } catch (_) {}
+  openEditOrder(orderNum);
+}
+
 function openEditOrder(orderNum) {
   if (!canDo('edit_order')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไข Order'); return; }
   const orders = getOrders();
@@ -9592,8 +9732,20 @@ function openEditOrder(orderNum) {
   ['edit_f_weld','edit_f_steel','edit_f_wire','edit_f_ba','edit_f_extra','edit_f_price'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
 
   renderEditItemsTable();
+  // ปุ่มลบอยู่ในหน้าแก้ไข — โชว์เฉพาะคนที่มีสิทธิ์ลบ
+  const _delBtn = document.getElementById('editOrderDelBtn');
+  if (_delBtn) _delBtn.style.display = canDo('delete_order') ? '' : 'none';
   document.getElementById('editOrderOverlay').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+}
+
+// ลบ Order จากในหน้าแก้ไข (ยืนยันก่อนเสมอ · ลบสำเร็จแล้วค่อยปิดหน้าต่าง)
+function deleteOrderFromEdit() {
+  const n = _editOrderNum;
+  if (!n) return;
+  if (!canDo('delete_order')) { showToast('⛔ คุณไม่มีสิทธิ์ลบ Order'); return; }
+  deleteOrder(n);
+  if (!getOrders().some(x => x.orderNum === n)) closeEditOrder();
 }
 
 function renderEditItemsTable() {
