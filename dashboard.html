@@ -376,6 +376,7 @@ code.inline {
     <button role="tab" data-tab="delivery"  aria-selected="false">ฝ่ายขนส่ง</button>
     <button role="tab" data-tab="stock"     aria-selected="false">ฝ่ายสต็อก</button>
     <button role="tab" data-tab="finance"   aria-selected="false">การเงิน</button>
+    <button role="tab" data-tab="weekly"    aria-selected="false">สรุปสัปดาห์</button>
   </nav>
 
   <main id="main">
@@ -1659,6 +1660,94 @@ function renderFinance(root) {
   root.appendChild(card);
 }
 
+/* ───────── สรุปการเงินรายสัปดาห์ (อ่านจาก weekly_summaries.json) ─────────
+   ระบบตั้งเวลาสร้างสรุป 1 แถวต่อสัปดาห์ (เช้าวันจันทร์) แล้ว push ขึ้น repo
+   หน้านี้แค่ดึงไฟล์มาแสดง — ล่าสุดเด่นด้านบน + ย้อนหลังด้านล่าง */
+function wkFmt(v) {
+  const n = Number(v) || 0, a = Math.abs(n);
+  if (a >= 1e6) return (n / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 2 }) + ' ล้าน';
+  return nf.format(Math.round(n));
+}
+function wkDelta(cur, prev) {
+  const box = el('span');
+  box.style.cssText = 'font-size:12px;margin-left:2px';
+  if (prev == null || prev === '' || !isFinite(Number(prev))) return box;
+  const d = (Number(cur) || 0) - (Number(prev) || 0);
+  if (Math.abs(d) < 1) { box.textContent = ' →'; box.style.color = '#94a3b8'; return box; }
+  const up = d > 0;
+  box.textContent = (up ? ' ▲ ' : ' ▼ ') + wkFmt(Math.abs(d));
+  box.style.color = up ? '#16a34a' : '#dc2626';
+  return box;
+}
+function weeklyKpi(label, value, prev) {
+  const c = el('div');
+  c.style.cssText = 'flex:1;min-width:135px;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px';
+  const l = el('div'); l.textContent = label; l.style.cssText = 'font-size:12px;color:#64748b;margin-bottom:4px';
+  const v = el('div'); v.textContent = wkFmt(value); v.style.cssText = 'font-size:20px;font-weight:700';
+  c.append(l, v, wkDelta(value, prev));
+  return c;
+}
+function weeklyCard(item, big) {
+  const m = item.metrics || {};
+  const pm = (item.prev && item.prev.metrics) || {};
+  const card = el('div');
+  card.style.cssText = 'border:1px solid #e2e8f0;border-radius:16px;padding:' + (big ? '20px' : '16px') +
+    ';margin-bottom:14px;' + (big ? 'box-shadow:0 2px 12px rgba(0,0,0,.06)' : '');
+  const head = el('div');
+  head.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:' + (big ? '14px' : '8px');
+  const t = el('div'); t.innerHTML = '<b style="font-size:' + (big ? '17px' : '15px') + '">' + esc(item.week || '') + '</b>';
+  const dt = el('div');
+  dt.textContent = (item.date || '') + (item.period ? (' · งวดบัญชี ' + item.period) : '');
+  dt.style.cssText = 'font-size:12px;color:#64748b';
+  head.append(t, dt); card.appendChild(head);
+  if (big) {
+    const kpis = el('div');
+    kpis.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px';
+    kpis.append(
+      weeklyKpi('รายได้สะสม', m.revenue, pm.revenue),
+      weeklyKpi('กำไร/ขาดทุนสุทธิ', m.netProfit, pm.netProfit),
+      weeklyKpi('ลูกหนี้การค้า', m.receivable, pm.receivable),
+      weeklyKpi('เจ้าหนี้การค้า', m.payable, pm.payable),
+    );
+    card.appendChild(kpis);
+  }
+  if (item.narrative) {
+    const n = el('div');
+    n.style.cssText = 'white-space:pre-wrap;line-height:1.7;font-size:' + (big ? '14.5px' : '13.5px');
+    n.textContent = item.narrative;
+    card.appendChild(n);
+  }
+  return card;
+}
+async function renderWeekly(root) {
+  const wrap = el('div');
+  wrap.style.cssText = 'max-width:900px;margin:0 auto';
+  const h = el('h2'); h.textContent = 'สรุปการเงินรายสัปดาห์'; h.style.cssText = 'margin:8px 0 4px';
+  const sub = el('p');
+  sub.textContent = 'สรุปอัตโนมัติทุกเช้าวันจันทร์ · เก็บย้อนหลังทุกสัปดาห์';
+  sub.style.cssText = 'color:#64748b;margin:0 0 16px;font-size:13px';
+  wrap.append(h, sub); root.appendChild(wrap);
+
+  let list = [];
+  try {
+    const res = await fetch('weekly_summaries.json?t=' + Date.now());
+    if (res.ok) list = await res.json();
+  } catch {}
+  if (!Array.isArray(list) || !list.length) {
+    const empty = el('div');
+    empty.style.cssText = 'padding:24px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;text-align:center';
+    empty.textContent = 'ยังไม่มีสรุป — ระบบจะสร้างให้อัตโนมัติเช้าวันจันทร์';
+    wrap.appendChild(empty); return;
+  }
+  list = list.slice().reverse();                 // ใหม่สุดขึ้นก่อน
+  wrap.appendChild(weeklyCard(list[0], true));
+  if (list.length > 1) {
+    const hh = el('h3'); hh.textContent = 'ย้อนหลัง'; hh.style.cssText = 'margin:24px 0 8px;font-size:15px';
+    wrap.appendChild(hh);
+    list.slice(1).forEach((item) => wrap.appendChild(weeklyCard(item, false)));
+  }
+}
+
 const RENDERERS = {
   exec:       renderExec,
   overview:   renderOverview,
@@ -1667,6 +1756,7 @@ const RENDERERS = {
   delivery:   renderDelivery,
   stock:      renderStock,
   finance:    renderFinance,
+  weekly:     renderWeekly,
 };
 let currentTab = 'exec';
 
