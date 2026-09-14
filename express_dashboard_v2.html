@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finance Demo - สินอุดมคอนกรีต</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{ --bg:#0f172a; --card:#1e293b; --line:#334155; --txt:#e2e8f0; --muted:#94a3b8; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:-apple-system,"Segoe UI",Tahoma,sans-serif; background:var(--bg); color:var(--txt); }
+  header{ padding:18px 24px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  h1{ margin:0; font-size:19px; }
+  .sub{ color:var(--muted); font-size:13px; margin-top:3px; }
+  #fresh{ margin-left:auto; font-size:13px; padding:6px 12px; border-radius:20px; background:#0b1220; border:1px solid var(--line); }
+  #alerts{ padding:10px 24px; display:flex; gap:8px; flex-wrap:wrap; }
+  .flag{ font-size:13px; padding:6px 12px; border-radius:8px; background:#3f1d1d; border:1px solid #7f1d1d; color:#fecaca; }
+  .flag.ok{ background:#14351f; border-color:#166534; color:#bbf7d0; }
+  #summary{ margin:8px 24px; padding:14px 18px; background:#0b1220; border:1px solid var(--line); border-left:3px solid #38bdf8; border-radius:10px; line-height:1.7; font-size:14px; }
+  #summary b{ color:#93c5fd; }
+  .controls{ display:flex; gap:16px; align-items:end; flex-wrap:wrap; padding:14px 24px; background:var(--card);
+             border-top:1px solid var(--line); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  .ctl label{ display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  select{ background:var(--bg); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:14px; }
+  button{ background:#3b82f6; color:#fff; border:0; border-radius:8px; padding:9px 16px; font-size:14px; cursor:pointer; }
+  button.ghost{ background:transparent; border:1px solid var(--line); color:var(--txt); }
+  #status{ color:var(--muted); font-size:13px; margin-left:auto; }
+  .kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:18px 24px 6px; }
+  .kpi{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .kpi .l{ font-size:12px; color:var(--muted); }
+  .kpi .v{ font-size:22px; font-weight:700; margin-top:6px; }
+  .kpi .d{ font-size:12px; margin-top:4px; }
+  h2.sec{ margin:24px 24px 4px; font-size:15px; color:#93c5fd; border-left:3px solid #3b82f6; padding-left:10px; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:8px 24px; }
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .panel.wide{ grid-column:1 / -1; }
+  .panel h3{ margin:0 0 6px; font-size:15px; font-weight:600; }
+  .panel .note{ color:var(--muted); font-size:12px; margin:0 0 10px; }
+  canvas{ max-height:290px; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th,td{ text-align:right; padding:6px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th:first-child,td:first-child,td.l,th.l{ text-align:left; }
+  thead th{ color:var(--muted); position:sticky; top:0; background:var(--card); }
+  .scroll{ max-height:340px; overflow:auto; }
+  .pos{ color:#22c55e; } .neg{ color:#ef4444; }
+  input[type=text]{ background:var(--bg); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:7px 10px; font-size:13px; }
+  .spacer{ height:24px; }
+  @media(max-width:900px){ .grid{ grid-template-columns:1fr; } .kpis{ grid-template-columns:1fr 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- หน้านี้ฝังใน dashboard หลัก (การเงิน) ซึ่งมี Supabase Auth คุมอยู่แล้ว จึงไม่ต้องล็อกอินซ้ำ -->
+
+<header>
+  <div>
+    <h1>แดชบอร์ดการเงิน — บริษัท สินอุดมคอนกรีต จำกัด</h1>
+    <div class="sub">ดึงสดจาก Supabase • หน่วย: ล้านบาท</div>
+  </div>
+  <div id="fresh">⏳ กำลังเช็คความสดของข้อมูล…</div>
+</header>
+
+<div id="alerts"></div>
+<div id="summary">กำลังสร้างบทสรุป…</div>
+
+<div class="controls">
+  <div class="ctl"><label>จากเดือน</label><select id="fromSel"></select></div>
+  <div class="ctl"><label>ถึงเดือน</label><select id="toSel"></select></div>
+  <div class="ctl"><label>สาขา (มีผลกับกราฟกำไร/ขาดทุน)</label>
+    <select id="brSel"><option value="__all__">รวมทุกสาขา</option><option>มีนบุรี</option><option>คลอง 12</option></select></div>
+  <button id="applyBtn">แสดง</button>
+  <button class="ghost" id="allBtn">ทั้งหมด</button>
+  <div id="status">กำลังโหลดข้อมูล…</div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="l">รายได้รวม (ช่วงที่เลือก)</div><div class="v" id="kRev">-</div><div class="d" id="kRevD"></div></div>
+  <div class="kpi"><div class="l">ต้นทุน+ค่าใช้จ่าย</div><div class="v" id="kCost">-</div><div class="d" id="kCostD"></div></div>
+  <div class="kpi"><div class="l">กำไร/ขาดทุน</div><div class="v" id="kProfit">-</div><div class="d" id="kProfitD"></div></div>
+  <div class="kpi"><div class="l">สินทรัพย์รวม (เดือนล่าสุด)</div><div class="v" id="kAsset">-</div><div class="d" id="kAssetD"></div></div>
+</div>
+
+<h2 class="sec">1) ผลประกอบการ</h2>
+<div class="grid">
+  <div class="panel"><h3>รายได้ vs ต้นทุน (เฉพาะเดือน)</h3><p class="note">ยอดแต่ละเดือน (หักสะสมแล้ว)</p><canvas id="cRevCost"></canvas></div>
+  <div class="panel"><h3>กำไร/ขาดทุน สะสม</h3><p class="note">สะสมตั้งแต่ต้นปีถึงสิ้นเดือน</p><canvas id="cProfit"></canvas></div>
+  <div class="panel"><h3>อัตรากำไรขั้นต้น (%)</h3><p class="note">(รายได้−ต้นทุนขาย)/รายได้ ของแต่ละเดือน</p><canvas id="cMargin"></canvas></div>
+  <div class="panel"><h3>โครงสร้างต้นทุน (ช่วงที่เลือก)</h3><p class="note">แท่งติดลบ = ต้นทุนที่โอนเข้างาน (หักกลับ)</p><canvas id="cCostStruct"></canvas></div>
+</div>
+
+<h2 class="sec">2) สินค้า &amp; สาขา</h2>
+<div class="grid">
+  <div class="panel"><h3>สัดส่วนรายได้ตามสินค้า</h3><p class="note">รายได้รวมในช่วง แยกกลุ่มสินค้า</p><canvas id="cProduct"></canvas></div>
+  <div class="panel"><h3>เทียบ 2 สาขา</h3><p class="note">รายได้ vs ต้นทุน แยกสาขา</p><canvas id="cBranch"></canvas></div>
+</div>
+
+<h2 class="sec">3) ฐานะการเงิน</h2>
+<div class="grid">
+  <div class="panel"><h3>สินทรัพย์ / หนี้สิน / ทุน</h3><p class="note">ยอดคงเหลือ ณ สิ้นเดือน</p><canvas id="cBS"></canvas></div>
+  <div class="panel"><h3>สัดส่วนสินทรัพย์ (เดือนล่าสุด)</h3><p class="note">เงินจมอยู่ที่ไหน</p><canvas id="cAssetMix"></canvas></div>
+  <div class="panel"><h3>หนี้สินแยกประเภท (เดือนล่าสุด)</h3><p class="note">เป็นหนี้ใคร/แบบไหน</p><canvas id="cLiabMix"></canvas></div>
+  <div class="panel"><h3>เงินสด / เงินฝากธนาคาร</h3><p class="note">เงินสดในมือรายเดือน (11-01)</p><canvas id="cCash"></canvas></div>
+</div>
+
+<h2 class="sec">4) สภาพคล่อง</h2>
+<div class="grid">
+  <div class="panel"><h3>ลูกหนี้ / สินค้าคงเหลือ</h3><p class="note">เงินจมในลูกหนี้ (11-02) และสต๊อก (11-03)</p><canvas id="cWC"></canvas></div>
+  <div class="panel"><h3>เงินทุนหมุนเวียน</h3><p class="note">ลูกหนี้ + สต๊อก − เจ้าหนี้</p><canvas id="cWorkCap"></canvas></div>
+  <div class="panel"><h3>อัตราส่วน D/E &amp; สภาพคล่อง</h3><p class="note">D/E ต่ำ=เสี่ยงน้อย • สภาพคล่อง >1 = ดี</p><canvas id="cRatio"></canvas></div>
+</div>
+
+<h2 class="sec">5) เชิงลึก</h2>
+<div class="grid">
+  <div class="panel"><h3>Top การเปลี่ยนแปลง (เดือนล่าสุดในช่วง เทียบเดือนก่อน)</h3>
+    <p class="note">บัญชีที่ยอดขยับมากสุด — ไว้จับความผิดปกติ</p>
+    <div class="scroll"><table id="tMovers"><thead><tr><th class="l">รหัส</th><th class="l">ชื่อบัญชี</th><th>เปลี่ยน (ลบ.)</th></tr></thead><tbody></tbody></table></div></div>
+  <div class="panel"><h3>งบกำไรขาดทุน (ช่วงที่เลือก)</h3><p class="note">แบบมาตรฐาน</p>
+    <table id="tPL"><tbody></tbody></table>
+    <div style="margin-top:10px"><h3 style="font-size:14px">งบดุล (เดือนล่าสุดในช่วง)</h3>
+    <table id="tBS"><tbody></tbody></table></div></div>
+  <div class="panel wide"><h3>ตารางเจาะรายบัญชี (เดือนล่าสุดในช่วง)</h3>
+    <p class="note">ค้นหา/เรียงได้ • กด Export เพื่อดาวน์โหลด CSV เปิดใน Excel</p>
+    <div style="display:flex; gap:10px; margin-bottom:10px">
+      <input type="text" id="drillSearch" placeholder="ค้นหารหัส/ชื่อบัญชี…" oninput="renderDrill()">
+      <button onclick="exportCSV()">⬇ Export CSV</button></div>
+    <div class="scroll"><table id="tDrill"><thead><tr><th class="l">รหัส</th><th class="l">ชื่อบัญชี</th><th class="l">หมวด</th><th>ยอดสุทธิ (ลบ.)</th></tr></thead><tbody></tbody></table></div></div>
+</div>
+
+<h2 class="sec">6) เทียบปีต่อปี (YoY) — รายได้รายเดือน</h2>
+<div class="grid">
+  <div class="panel wide"><h3>รายได้รายเดือน แยกตามปี</h3>
+    <p class="note" id="yoyNote">จะเทียบหลายปีอัตโนมัติเมื่อ backfill ปีเก่าเข้ามา</p>
+    <canvas id="cYoY" style="max-height:320px"></canvas></div>
+</div>
+<div class="spacer"></div>
+
+<script>
+const SUPA="https://dmxegqmhxarabyqduikb.supabase.co";
+const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRteGVncW1oeGFyYWJ5cWR1aWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMTA2NjksImV4cCI6MjEwMjY4NjY2OX0.R1NyeKfVmjnp48zGHdMeB6XsChlHd8N5KD67k8RTWI8";
+const TABLE="express_trial_balance", HEAD={apikey:KEY,Authorization:"Bearer "+KEY};
+const THMON={"01":"ม.ค.","02":"ก.พ.","03":"มี.ค.","04":"เม.ย.","05":"พ.ค.","06":"มิ.ย.","07":"ก.ค.","08":"ส.ค.","09":"ก.ย.","10":"ต.ค.","11":"พ.ย.","12":"ธ.ค."};
+const MONNAMES=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const PAL=["#3b82f6","#22c55e","#f59e0b","#a78bfa","#ef4444","#14b8a6","#ec4899","#84cc16","#f97316","#38bdf8"];
+const M=v=>v/1e6, fmt=v=>M(v).toLocaleString("th-TH",{maximumFractionDigits:1}), addk=(o,k,v)=>o[k]=(o[k]||0)+v;
+function prodOf(n){ if(/เสาเข็ม|ตอก/.test(n))return"เสาเข็ม"; if(/ปูนมิกซ์/.test(n))return"ปูนมิกซ์"; if(/คาน/.test(n))return"คานคอนกรีต"; if(/รับเหมา|ก่อสร้าง/.test(n))return"รับเหมาก่อสร้าง"; if(/GRC/.test(n))return"GRC"; return"อื่นๆ"; }
+function branchOf(n){ if(/มีน/.test(n))return"มีนบุรี"; if(/ค\.?\s?12|คลอง/.test(n))return"คลอง 12"; return"ไม่ระบุ"; }
+function costOf(n){ if(/คิดเข้างาน/.test(n))return"โอนเข้างาน(หัก)"; if(/ค่าเสื่อม/.test(n))return"ค่าเสื่อมราคา"; if(/วัตถุดิบ|ต้นทุนขายสินค้า|ซื้อมาขายไป|ต้นทุนขายคาน/.test(n))return"วัตถุดิบ/สินค้า"; if(/ต้นทุนผลิต/.test(n))return"ต้นทุนผลิต"; if(/จ้างเหมา|ผู้รับเหมา/.test(n))return"ค่าจ้างเหมา"; if(/เงินเดือน|ค่าแรง|ค่าจ้างรายวัน/.test(n))return"ค่าแรง/เงินเดือน"; return"ค่าใช้จ่ายผลิตอื่นๆ"; }
+function assetOf(c){ if(c.startsWith("11-01"))return"เงินสด/ธนาคาร"; if(c.startsWith("11-02"))return"ลูกหนี้"; if(c.startsWith("11-03"))return"สินค้าคงเหลือ"; if(c.startsWith("11"))return"สินทรัพย์หมุนเวียนอื่น"; const p=c.slice(0,2); if(p==="13"||p==="15")return"เงินลงทุน"; if(p==="14"||p==="16"||p==="17")return"สินทรัพย์ถาวร(สุทธิ)"; return"สินทรัพย์อื่น"; }
+function liabOf(c){ if(c.startsWith("21-02"))return"เจ้าหนี้การค้า/เช็ค"; if(c.startsWith("21-03"))return"เงินมัดจำ/ภาษี/กองทุน"; if(c.startsWith("22"))return"เงินประกันผลงาน"; return"หนี้สินอื่น"; }
+
+let SERIES=[], ACC={}, charts={}, aIdx=0, bIdx=0;
+
+async function fetchAll(){
+  const cols="period,cat,code,name,net"; let all=[],off=0,pg=1000;
+  while(true){ const rows=await(await fetch(`${SUPA}/rest/v1/${TABLE}?select=${cols}&order=period.asc&limit=${pg}&offset=${off}`,{headers:HEAD})).json();
+    all=all.concat(rows); if(rows.length<pg)break; off+=pg; }
+  return all;
+}
+async function fetchFresh(){
+  try{ const r=await(await fetch(`${SUPA}/rest/v1/${TABLE}?select=synced_at&order=synced_at.desc&limit=1`,{headers:HEAD})).json();
+    return r[0]&&r[0].synced_at?new Date(r[0].synced_at):null; }catch(e){ return null; }
+}
+
+function buildSeries(rows){
+  const byP={};
+  for(const r of rows){
+    const p=r.period;
+    if(!byP[p]) byP[p]={asset:0,liab:0,equity:0,rev:0,cost:0,exp:0,recv:0,inv:0,cash:0,curA:0,curL:0,prod:{},brRev:{},brCost:{},cs:{},aGrp:{},lGrp:{}};
+    const b=byP[p], n=r.net||0, nm=r.name||"", cd=r.code||"";
+    if(!ACC[cd]) ACC[cd]={name:nm,cat:r.cat,byP:{}}; ACC[cd].byP[p]=n;
+    if(r.cat==="asset"){ b.asset+=n; if(cd.startsWith("11"))b.curA+=n; if(cd.startsWith("11-01"))b.cash+=n; if(cd.startsWith("11-02"))b.recv+=n; if(cd.startsWith("11-03"))b.inv+=n; addk(b.aGrp,assetOf(cd),n); }
+    else if(r.cat==="liability"){ b.liab+=n; b.curL+=(-n); addk(b.lGrp,liabOf(cd),-n); }
+    else if(r.cat==="equity"){ b.equity+=n; }
+    else if(r.cat==="revenue"){ b.rev+=n; addk(b.prod,prodOf(nm),-n); addk(b.brRev,branchOf(nm),-n); }
+    else if(r.cat==="cost"){ b.cost+=n; addk(b.cs,costOf(nm),n); addk(b.brCost,branchOf(nm),n); }
+    else if(r.cat==="expense"){ b.exp+=n; addk(b.cs,costOf(nm),n); }
+  }
+  const ps=Object.keys(byP).sort(), s=[];
+  for(let i=0;i<ps.length;i++){ const p=ps[i], b=byP[p], pv=i>0?s[i-1]:null, revCum=-b.rev, costCum=b.cost, expCum=b.exp;
+    s.push({ period:p, label:`${THMON[p.slice(5,7)]} ${p.slice(2,4)}`, year:p.slice(0,4), mon:+p.slice(5,7),
+      asset:b.asset, liab:-b.liab, equity:-b.equity, recv:b.recv, inv:b.inv, cash:b.cash, curA:b.curA, curL:b.curL, payTrade:b.lGrp["เจ้าหนี้การค้า/เช็ค"]||0,
+      revCum, costCum, expCum, profitCum:revCum-costCum-expCum,
+      revM:revCum-(pv?pv.revCum:0), costM:costCum-(pv?pv.costCum:0), expM:expCum-(pv?pv.expCum:0),
+      prod:b.prod, brRev:b.brRev, brCost:b.brCost, cs:b.cs, aGrp:b.aGrp, lGrp:b.lGrp }); }
+  return s;
+}
+function rangeDict(f){ const e=SERIES[bIdx][f]||{}, st=(aIdx>0?SERIES[aIdx-1][f]:{})||{}, o={}; for(const k in e)o[k]=(e[k]||0)-(st[k]||0); return o; }
+const sortE=o=>Object.entries(o).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+function pnl(branch){ return SERIES.map(d=> branch==="__all__" ? {r:d.revCum,c:d.costCum,e:d.expCum} : {r:d.brRev[branch]||0,c:d.brCost[branch]||0,e:0}); }
+
+function populate(){ const f=document.getElementById("fromSel"),t=document.getElementById("toSel"); f.innerHTML=t.innerHTML="";
+  SERIES.forEach((d,i)=>{ f.insertAdjacentHTML("beforeend",`<option value="${i}">${d.label}</option>`); t.insertAdjacentHTML("beforeend",`<option value="${i}">${d.label}</option>`); });
+  f.value=0; t.value=SERIES.length-1; }
+
+function draw(){
+  aIdx=+document.getElementById("fromSel").value; bIdx=+document.getElementById("toSel").value;
+  if(aIdx>bIdx){const t=aIdx;aIdx=bIdx;bIdx=t;}
+  const branch=document.getElementById("brSel").value;
+  const slice=SERIES.slice(aIdx,bIdx+1), labels=slice.map(d=>d.label);
+  const P=pnl(branch); // per-period cumulative for chosen branch
+  const pm=SERIES.map((d,i)=>{ const pv=i>0?P[i-1]:null; return { revM:P[i].r-(pv?pv.r:0), costM:P[i].c-(pv?pv.c:0), expM:P[i].e-(pv?pv.e:0), profitCum:P[i].r-P[i].c-P[i].e }; });
+  const psl=pm.slice(aIdx,bIdx+1);
+
+  // KPI + เทียบช่วงก่อนหน้า (ยาวเท่ากัน)
+  const rev=psl.reduce((s,d)=>s+d.revM,0), cost=psl.reduce((s,d)=>s+d.costM+d.expM,0), prof=rev-cost;
+  const last=slice[slice.length-1], len=bIdx-aIdx+1, pa=Math.max(0,aIdx-len), pb=aIdx-1;
+  let pRev=0,pCost=0;
+  if(pb>=pa){ for(let i=pa;i<=pb;i++){ pRev+=pm[i].revM; pCost+=pm[i].costM+pm[i].expM; } }
+  setKPI("kRev",rev,pRev,"kRevD"); setKPI("kCost",cost,pCost,"kCostD",true);
+  const kp=document.getElementById("kProfit"); kp.textContent=fmt(prof); kp.style.color=prof>=0?"#22c55e":"#ef4444";
+  setDelta("kProfitD",prof-(pRev-pCost));
+  document.getElementById("kAsset").textContent=fmt(last.asset);
+  const prevAsset=aIdx>0?SERIES[bIdx-1]?.asset:null;
+  document.getElementById("kAssetD").textContent="";
+
+  // 1) ผลประกอบการ
+  mkBar("cRevCost",labels,[{label:"รายได้",data:psl.map(d=>M(d.revM)),backgroundColor:"#22c55e"},{label:"ต้นทุน+ค่าใช้จ่าย",data:psl.map(d=>M(d.costM+d.expM)),backgroundColor:"#ef4444"}]);
+  mkLine("cProfit",labels,[{label:"กำไร/ขาดทุนสะสม",data:psl.map(d=>M(d.profitCum)),borderColor:"#f59e0b",fill:true,backgroundColor:"rgba(245,158,11,.15)"}]);
+  mkLine("cMargin",labels,[{label:"อัตรากำไรขั้นต้น %",data:psl.map(d=>d.revM>0?(d.revM-d.costM)/d.revM*100:null),borderColor:"#38bdf8",spanGaps:false}],{y:{ticks:{callback:v=>v+"%"}}});
+  const cs=sortE(rangeDict("cs")); mkHBar("cCostStruct",cs.map(e=>e[0]),cs.map(e=>M(e[1])),"#ef4444");
+
+  // 2) สินค้า & สาขา
+  const pr=sortE(rangeDict("prod")).filter(e=>e[1]>0); mkDonut("cProduct",pr.map(e=>e[0]),pr.map(e=>M(e[1])));
+  const brR=rangeDict("brRev"), brC=rangeDict("brCost"), bk=["มีนบุรี","คลอง 12","ไม่ระบุ"].filter(k=>brR[k]||brC[k]);
+  mkBar("cBranch",bk,[{label:"รายได้",data:bk.map(k=>M(brR[k]||0)),backgroundColor:"#22c55e"},{label:"ต้นทุน",data:bk.map(k=>M(brC[k]||0)),backgroundColor:"#ef4444"}]);
+
+  // 3) ฐานะการเงิน
+  mkLine("cBS",labels,[{label:"สินทรัพย์",data:slice.map(d=>M(d.asset)),borderColor:"#3b82f6"},{label:"หนี้สิน",data:slice.map(d=>M(d.liab)),borderColor:"#ef4444"},{label:"ทุน",data:slice.map(d=>M(d.equity)),borderColor:"#22c55e"}]);
+  const am=sortE(last.aGrp).filter(e=>e[1]>0); mkDonut("cAssetMix",am.map(e=>e[0]),am.map(e=>M(e[1])));
+  const lm=sortE(last.lGrp).filter(e=>e[1]>0); mkDonut("cLiabMix",lm.map(e=>e[0]),lm.map(e=>M(e[1])));
+  mkLine("cCash",labels,[{label:"เงินสด/ธนาคาร",data:slice.map(d=>M(d.cash)),borderColor:"#14b8a6",fill:true,backgroundColor:"rgba(20,184,166,.15)"}]);
+
+  // 4) สภาพคล่อง
+  mkLine("cWC",labels,[{label:"ลูกหนี้",data:slice.map(d=>M(d.recv)),borderColor:"#a78bfa"},{label:"สินค้าคงเหลือ",data:slice.map(d=>M(d.inv)),borderColor:"#f59e0b"}]);
+  mkLine("cWorkCap",labels,[{label:"เงินทุนหมุนเวียน",data:slice.map(d=>M(d.recv+d.inv-d.payTrade)),borderColor:"#ec4899",fill:true,backgroundColor:"rgba(236,72,153,.15)"}]);
+  mkRatio("cRatio",labels,slice.map(d=>d.curL>0?d.curA/d.curL:null),slice.map(d=>d.equity>0?d.liab/d.equity:null));
+
+  // 5) เชิงลึก
+  renderMovers(); renderPL(rev,psl); renderBS(last); renderDrill();
+  // 6) YoY
+  renderYoY();
+}
+
+function setKPI(id,val,prev,did,invert){ document.getElementById(id).textContent=fmt(val); setDelta(did,val-prev,invert); }
+function setDelta(id,diff,invert){ const el=document.getElementById(id); if(!el)return;
+  if(!isFinite(diff)||diff===0){ el.textContent="—"; el.className="d"; return; }
+  const up=diff>0, good=invert?!up:up; el.textContent=(up?"▲ ":"▼ ")+fmt(Math.abs(diff))+" เทียบช่วงก่อน";
+  el.className="d "+(good?"pos":"neg"); }
+
+function renderMovers(){
+  const P=SERIES[bIdx].period, pv=bIdx>0?SERIES[bIdx-1].period:null;
+  const rows=Object.entries(ACC).map(([c,a])=>({c,name:a.name,d:(a.byP[P]||0)-(pv?(a.byP[pv]||0):0)}))
+    .filter(x=>Math.abs(x.d)>1000).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d)).slice(0,10);
+  document.querySelector("#tMovers tbody").innerHTML=rows.map(x=>
+    `<tr><td class="l">${x.c}</td><td class="l">${x.name}</td><td class="${x.d>=0?'pos':'neg'}">${x.d>=0?'+':''}${fmt(x.d)}</td></tr>`).join("")||`<tr><td colspan=3 class="l">ไม่มีข้อมูลเดือนก่อนให้เทียบ</td></tr>`;
+}
+function renderPL(rev,psl){
+  const cogs=psl.reduce((s,d)=>s+d.costM,0), exp=psl.reduce((s,d)=>s+d.expM,0), gp=rev-cogs, np=gp-exp;
+  const row=(l,v,bold)=>`<tr><td class="l"${bold?' style=font-weight:700':''}>${l}</td><td class="${v<0?'neg':''}"${bold?' style=font-weight:700':''}>${fmt(v)}</td></tr>`;
+  document.querySelector("#tPL tbody").innerHTML=row("รายได้รวม",rev)+row("หัก ต้นทุนขาย",-cogs)+row("กำไรขั้นต้น",gp,1)+row("หัก ค่าใช้จ่าย",-exp)+row("กำไร(ขาดทุน)สุทธิ",np,1);
+}
+function renderBS(last){
+  const A=last.asset, L=last.liab, E=last.equity, prof=last.profitCum;
+  const row=(l,v,bold)=>`<tr><td class="l"${bold?' style=font-weight:700':''}>${l}</td><td${bold?' style=font-weight:700':''}>${fmt(v)}</td></tr>`;
+  document.querySelector("#tBS tbody").innerHTML=
+    row("สินทรัพย์รวม",A,1)+row("หนี้สินรวม",L)+row("ส่วนของเจ้าของ",E)+row("กำไร(ขาดทุน)ปีนี้",prof)+row("หนี้สิน+ทุน+ผลงวด",L+E+prof,1);
+}
+let DRILL=[];
+function renderDrill(){
+  const P=SERIES[bIdx].period, q=(document.getElementById("drillSearch").value||"").trim();
+  DRILL=Object.entries(ACC).map(([c,a])=>({c,name:a.name,cat:a.cat,net:a.byP[P]||0})).filter(x=>Math.abs(x.net)>0.005)
+    .filter(x=>!q||x.c.includes(q)||x.name.includes(q)).sort((a,b)=>Math.abs(b.net)-Math.abs(a.net));
+  document.querySelector("#tDrill tbody").innerHTML=DRILL.slice(0,300).map(x=>
+    `<tr><td class="l">${x.c}</td><td class="l">${x.name}</td><td class="l">${x.cat}</td><td class="${x.net<0?'neg':''}">${fmt(x.net)}</td></tr>`).join("");
+}
+function exportCSV(){
+  const P=SERIES[bIdx].period;
+  let csv="﻿รหัส,ชื่อบัญชี,หมวด,ยอดสุทธิ(บาท)\n"+DRILL.map(x=>`${x.c},"${x.name}",${x.cat},${x.net}`).join("\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`trial_balance_${P}.csv`; a.click();
+}
+function renderYoY(){
+  const years={}; SERIES.forEach(d=>{ if(!years[d.year])years[d.year]=Array(12).fill(null); years[d.year][d.mon-1]=M(d.revM); });
+  const ys=Object.keys(years).sort();
+  const ds=ys.map((y,i)=>({label:"พ.ศ. "+y,data:years[y],borderColor:PAL[i%PAL.length],tension:.3,spanGaps:false}));
+  mkLineRaw("cYoY",MONNAMES,ds);
+  document.getElementById("yoyNote").textContent= ys.length>1 ? `เทียบ ${ys.length} ปี` : "ตอนนี้มีปีเดียว — จะเทียบอัตโนมัติเมื่อ backfill ปีเก่าเข้ามา";
+}
+
+// ---- alerts + summary ----
+function activeIdx(){ for(let i=SERIES.length-1;i>=0;i--) if(SERIES[i].revM>1000) return i; return SERIES.length-1; }
+function buildAlerts(){
+  const i=activeIdx(), d=SERIES[i], pv=i>0?SERIES[i-1]:null, out=[];
+  if(d.profitCum<0) out.push(`⚠️ ขาดทุนสะสม ${fmt(-d.profitCum)} ลบ. (ถึง ${d.label})`);
+  if(d.revM>0 && (d.revM-d.costM)<0) out.push(`🚩 ${d.label} ต้นทุนสูงกว่ารายได้ (ขาดทุนขั้นต้น)`);
+  if(pv&&pv.recv>0){ const g=(d.recv-pv.recv)/pv.recv*100; if(g>10) out.push(`🚩 ลูกหนี้เพิ่ม ${g.toFixed(0)}% เป็น ${fmt(d.recv)} ลบ.`); }
+  if(pv&&pv.cash>0){ const g=(d.cash-pv.cash)/pv.cash*100; if(g<-15) out.push(`🚩 เงินสดลด ${Math.abs(g).toFixed(0)}% เหลือ ${fmt(d.cash)} ลบ.`); }
+  const html= out.length ? out.map(t=>`<div class="flag">${t}</div>`).join("") : `<div class="flag ok">✅ ไม่พบสัญญาณผิดปกติเด่นชัด</div>`;
+  document.getElementById("alerts").innerHTML=html;
+}
+function buildSummary(){
+  const i=activeIdx(), d=SERIES[i];
+  const prod=sortE(d.prod).filter(e=>e[1]>0), topProd=prod[0]?prod[0][0]:"-";
+  const mn=fmt(d.brRev["มีนบุรี"]||0), kl=fmt(d.brRev["คลอง 12"]||0);
+  const gm=d.revM>0?((d.revM-d.costM)/d.revM*100).toFixed(1):"-";
+  document.getElementById("summary").innerHTML=
+    `<b>สรุปอัตโนมัติ</b> (ข้อมูลถึง ${d.label}) — บริษัทมี<b>สินทรัพย์รวม ${fmt(d.asset)} ลบ.</b> หนี้สินเพียง ${fmt(d.liab)} ลบ. (แทบไม่มีหนี้ ฐานะแข็งแรง). `+
+    `รายได้สะสมทั้งปี ${fmt(d.revCum)} ลบ. <b>${d.profitCum>=0?"กำไร":"ขาดทุน"}สะสม ${fmt(Math.abs(d.profitCum))} ลบ.</b> `+
+    `สินค้าทำรายได้สูงสุดคือ <b>${topProd}</b>. สาขา: มีนบุรี ${mn} / คลอง 12 ${kl} ลบ. `+
+    `<br><span style="color:#94a3b8">ℹ️ นี่คือบทสรุปแบบเทมเพลต (ตัวอย่าง) — ต่อ AI จริงได้ตามที่คุยไว้ เพื่อให้วิเคราะห์ลึกและเขียนเป็นภาษาคนมากขึ้น</span>`;
+}
+function setFresh(dt){
+  const el=document.getElementById("fresh");
+  if(!dt){ el.textContent="⚠️ อ่านเวลา sync ล่าสุดไม่ได้"; return; }
+  const hrs=(Date.now()-dt.getTime())/3.6e6, t=dt.toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"});
+  const ago= hrs<1?`${Math.round(hrs*60)} นาที`:`${hrs.toFixed(1)} ชม.`;
+  const ok=hrs<=3; el.style.borderColor=ok?"#166534":"#7f1d1d"; el.style.color=ok?"#bbf7d0":"#fecaca";
+  el.textContent=`${ok?"🟢":"🔴"} อัปเดตล่าสุด ${t} (${ago}ที่แล้ว)`;
+}
+
+// ---- chart helpers ----
+const AX={ticks:{color:"#94a3b8"},grid:{color:"#334155"}};
+const COMMON={responsive:true,plugins:{legend:{labels:{color:"#e2e8f0"}}},scales:{x:AX,y:AX}};
+function mkBar(id,l,ds){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(el(id),{type:"bar",data:{labels:l,datasets:ds},options:COMMON}); }
+function mkHBar(id,l,data,c){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(el(id),{type:"bar",data:{labels:l,datasets:[{label:"ล้านบาท",data,backgroundColor:c}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false}},scales:{x:AX,y:AX}}}); }
+function mkLine(id,l,ds,ex){ if(charts[id])charts[id].destroy(); ds.forEach(d=>{d.tension=.3; if(d.fill===undefined)d.fill=false; if(d.spanGaps===undefined)d.spanGaps=true;});
+  const o=JSON.parse(JSON.stringify(COMMON)); if(ex&&ex.y)Object.assign(o.scales.y,ex.y); charts[id]=new Chart(el(id),{type:"line",data:{labels:l,datasets:ds},options:o}); }
+function mkLineRaw(id,l,ds){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(el(id),{type:"line",data:{labels:l,datasets:ds},options:COMMON}); }
+function mkDonut(id,l,data){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(el(id),{type:"doughnut",data:{labels:l,datasets:[{data,backgroundColor:PAL}]},options:{responsive:true,plugins:{legend:{position:"right",labels:{color:"#e2e8f0",font:{size:11}}}}}}); }
+function mkRatio(id,l,cur,de){ if(charts[id])charts[id].destroy(); charts[id]=new Chart(el(id),{type:"line",data:{labels:l,datasets:[{label:"สภาพคล่อง (เท่า)",data:cur,borderColor:"#22c55e",tension:.3,yAxisID:"y"},{label:"D/E (เท่า)",data:de,borderColor:"#ef4444",tension:.3,yAxisID:"y1"}]},options:{responsive:true,plugins:{legend:{labels:{color:"#e2e8f0"}}},scales:{x:AX,y:{position:"left",ticks:{color:"#22c55e"},grid:{color:"#334155"}},y1:{position:"right",ticks:{color:"#ef4444"},grid:{drawOnChartArea:false}}}}}); }
+function el(id){ return document.getElementById(id); }
+
+["applyBtn"].forEach(id=>document.getElementById(id).onclick=draw);
+document.getElementById("brSel").onchange=draw;
+document.getElementById("allBtn").onclick=()=>{ document.getElementById("fromSel").value=0; document.getElementById("toSel").value=SERIES.length-1; draw(); };
+
+(async function init(){
+  try{
+    const [rows,fresh]=await Promise.all([fetchAll(),fetchFresh()]);
+    SERIES=buildSeries(rows); setFresh(fresh); populate(); buildAlerts(); buildSummary(); draw();
+    document.getElementById("status").textContent=`โหลดสำเร็จ • ${SERIES.length} งวด • ${SERIES[0].label} – ${SERIES[SERIES.length-1].label}`;
+  }catch(e){ document.getElementById("status").textContent="โหลดข้อมูลไม่สำเร็จ: "+e.message; }
+})();
+</script>
+</body>
+</html>
