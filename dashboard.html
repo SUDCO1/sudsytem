@@ -364,6 +364,7 @@ code.inline {
     <span class="sync-note" id="syncNote"></span>
     <span class="topbar-spacer"></span>
     <button class="icon-btn" id="refreshBtn">รีเฟรช</button>
+    <button class="icon-btn" id="stockToggleBtn"></button>
     <button class="icon-btn" id="themeBtn">โหมดมืด</button>
     <button class="icon-btn" id="logoutBtn">ออกจากระบบ</button>
   </header>
@@ -412,8 +413,8 @@ const auth = {
   _refreshing: null,                        // กัน refresh ซ้อนกันหลายเส้น (single-flight)
   load() {
     try {
-      this.token        = sessionStorage.getItem('sud_token');
-      this.refreshToken = sessionStorage.getItem('sud_refresh');
+      this.token        = localStorage.getItem('sud_token');
+      this.refreshToken = localStorage.getItem('sud_refresh');
     } catch { /* ปิดคุกกี้ไว้ก็ไม่เป็นไร */ }
     return this.token;
   },
@@ -421,9 +422,9 @@ const auth = {
     this.token = t;
     if (rt !== undefined) this.refreshToken = rt;   // undefined = ไม่แตะ, null = ล้าง
     try {
-      if (t) sessionStorage.setItem('sud_token', t); else sessionStorage.removeItem('sud_token');
-      if (this.refreshToken) sessionStorage.setItem('sud_refresh', this.refreshToken);
-      else sessionStorage.removeItem('sud_refresh');
+      if (t) localStorage.setItem('sud_token', t); else localStorage.removeItem('sud_token');
+      if (this.refreshToken) localStorage.setItem('sud_refresh', this.refreshToken);
+      else localStorage.removeItem('sud_refresh');
     } catch {}
   },
 
@@ -467,7 +468,7 @@ const auth = {
 
   signOut() {
     this.token = null; this.refreshToken = null; this._refreshing = null;
-    try { sessionStorage.removeItem('sud_token'); sessionStorage.removeItem('sud_refresh'); } catch {}
+    try { localStorage.removeItem('sud_token'); localStorage.removeItem('sud_refresh'); } catch {}
   },
 };
 
@@ -1798,6 +1799,40 @@ $('#tabs').addEventListener('click', (e) => {
     b.setAttribute('aria-selected', String(b === btn)));
   render();
 });
+
+/* ───────────── เปิด/ปิดการแสดงข้อมูลสต็อก ─────────────
+   ปุ่มบนหัว dashboard: กดปิด = ซ่อนแท็บ/ข้อมูลฝั่งสต็อก (มาจากแอปที่เทส)
+   ส่วนการเงิน + สรุปสัปดาห์ ยังแสดงปกติ  จำค่าไว้ในเครื่องนี้ (localStorage) */
+const STOCK_TABS = ['exec', 'overview', 'sales', 'production', 'delivery', 'stock'];
+const stockToggleBtn = $('#stockToggleBtn');
+let showStock = (() => { try { return localStorage.getItem('sud_show_stock') !== '0'; } catch { return true; } })();
+
+function applyStockVisibility(doRender) {
+  // ซ่อน/แสดงปุ่มแท็บฝั่งสต็อก
+  [...$('#tabs').children].forEach((b) => {
+    if (STOCK_TABS.includes(b.dataset.tab)) b.classList.toggle('hidden', !showStock);
+  });
+  // ข้อความ + คำอธิบายปุ่ม
+  stockToggleBtn.textContent = showStock ? 'ปิดข้อมูลสต็อก' : '🔒 เปิดข้อมูลสต็อก';
+  stockToggleBtn.title = showStock
+    ? 'กดเพื่อซ่อนข้อมูลสต็อก/ผลิต/ขนส่ง ออกจากหน้านี้ (ใช้ตอนเทสแอป)'
+    : 'ข้อมูลสต็อกถูกซ่อนอยู่ — กดเพื่อแสดงกลับ';
+  // ถ้าปิดอยู่ แต่ค้างอยู่ที่แท็บสต็อก → เด้งไปแท็บการเงิน
+  if (!showStock && STOCK_TABS.includes(currentTab)) {
+    currentTab = 'finance';
+    [...$('#tabs').children].forEach((b) =>
+      b.setAttribute('aria-selected', String(b.dataset.tab === currentTab)));
+  }
+  if (doRender) render();
+}
+
+stockToggleBtn.addEventListener('click', () => {
+  showStock = !showStock;
+  try { localStorage.setItem('sud_show_stock', showStock ? '1' : '0'); } catch {}
+  applyStockVisibility(true);
+});
+
+applyStockVisibility(false);
 
 /* ─────────────────────────── theme ─────────────────────────── */
 const themeBtn = $('#themeBtn');
