@@ -137,7 +137,11 @@
 <script>
 const SUPA="https://dmxegqmhxarabyqduikb.supabase.co";
 const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRteGVncW1oeGFyYWJ5cWR1aWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMTA2NjksImV4cCI6MjEwMjY4NjY2OX0.R1NyeKfVmjnp48zGHdMeB6XsChlHd8N5KD67k8RTWI8";
-const TABLE="express_trial_balance", HEAD={apikey:KEY,Authorization:"Bearer "+KEY};
+const TABLE="express_trial_balance";
+// ดึงข้อมูลแบบใช้ login ของ dashboard (โทเคนถูกแชร์ผ่าน localStorage โดเมนเดียวกัน)
+// ถ้ายังไม่ล็อกอินจะ fallback เป็นกุญแจสาธารณะ (ซึ่งหลังล็อกตารางแล้วจะอ่านไม่ได้ = ต้องล็อกอินก่อน)
+const TOKEN=()=>{ try{ return localStorage.getItem('sud_token'); }catch(e){ return null; } };
+const HEAD=()=>({apikey:KEY, Authorization:"Bearer "+(TOKEN()||KEY)});
 const THMON={"01":"ม.ค.","02":"ก.พ.","03":"มี.ค.","04":"เม.ย.","05":"พ.ค.","06":"มิ.ย.","07":"ก.ค.","08":"ส.ค.","09":"ก.ย.","10":"ต.ค.","11":"พ.ย.","12":"ธ.ค."};
 const MONNAMES=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const PAL=["#3b82f6","#22c55e","#f59e0b","#a78bfa","#ef4444","#14b8a6","#ec4899","#84cc16","#f97316","#38bdf8"];
@@ -152,12 +156,12 @@ let SERIES=[], ACC={}, charts={}, aIdx=0, bIdx=0;
 
 async function fetchAll(){
   const cols="period,cat,code,name,net"; let all=[],off=0,pg=1000;
-  while(true){ const rows=await(await fetch(`${SUPA}/rest/v1/${TABLE}?select=${cols}&order=period.asc&limit=${pg}&offset=${off}`,{headers:HEAD})).json();
+  while(true){ const rows=await(await fetch(`${SUPA}/rest/v1/${TABLE}?select=${cols}&order=period.asc&limit=${pg}&offset=${off}`,{headers:HEAD()})).json();
     all=all.concat(rows); if(rows.length<pg)break; off+=pg; }
   return all;
 }
 async function fetchFresh(){
-  try{ const r=await(await fetch(`${SUPA}/rest/v1/${TABLE}?select=synced_at&order=synced_at.desc&limit=1`,{headers:HEAD})).json();
+  try{ const r=await(await fetch(`${SUPA}/rest/v1/${TABLE}?select=synced_at&order=synced_at.desc&limit=1`,{headers:HEAD()})).json();
     return r[0]&&r[0].synced_at?new Date(r[0].synced_at):null; }catch(e){ return null; }
 }
 
