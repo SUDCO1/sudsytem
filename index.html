@@ -13342,8 +13342,14 @@ function sdPreview() {
     }
   } else if (typeVal === 'out') {
     if (!existing) {
-      msg = '⚠️ ไม่มีสเปค "'+spec+'" หน่วย "'+unit+'" ในระบบ';
-      bgColor='#FEF9C3'; txColor='#854D0E';
+      const _ou = specs.filter(v => _sdSpecMatch(v, spec, weld, steel, ba) && !_unitEq(v.unit, unit));
+      if (_ou.length) {
+        msg = '⚠️ หน่วยไม่ตรง! "'+spec+'" ไม่มีหน่วย "'+unit+'" · มีในหน่วย '+_ou.map(v=>v.unit+' '+v.qty).join(', ')+' — เปลี่ยนหน่วยให้ตรง';
+        bgColor='#FEE2E2'; txColor='#991B1B';
+      } else {
+        msg = '⚠️ ไม่มีสเปค "'+spec+'" หน่วย "'+unit+'" ในระบบ';
+        bgColor='#FEF9C3'; txColor='#854D0E';
+      }
     } else if (existing.qty < qty) {
       msg = '🚨 สเปค "'+spec+'" มีแค่ '+existing.qty+' '+unit+' ไม่พอเบิก '+qty+' '+unit;
       bgColor='#FEE2E2'; txColor='#991B1B';
@@ -13408,7 +13414,12 @@ function submitSdLog() {
     typeLabel  = '📥 รับเข้า (ผลิตเสร็จ)';
 
   } else if (typeVal === 'out') {
-    if (!existing)           { showToast('⚠️ ไม่มีสเปค "'+spec+'" หน่วย "'+unit+'" ในระบบ'); return; }
+    if (!existing) {
+      // เตือนกรณี "หน่วยไม่ตรง" — สเปคนี้มีจริงแต่เป็นอีกหน่วย (โรงงานใช้ทั้ง ต้น/ท่อน)
+      const _ou = specs.filter(v => _sdSpecMatch(v, spec, weld, steel, ba) && !_unitEq(v.unit, unit));
+      if (_ou.length) { showToast('⚠️ หน่วยไม่ตรง! สเปค "'+spec+'" ไม่มีหน่วย "'+unit+'" · มีในหน่วย '+_ou.map(v=>v.unit+' '+v.qty).join(', ')+' — เปลี่ยนหน่วยให้ตรงก่อนเบิก'); return; }
+      showToast('⚠️ ไม่มีสเปค "'+spec+'" หน่วย "'+unit+'" ในระบบ'); return;
+    }
     if (existing.qty < qty)  { showToast('⚠️ สเปค "'+spec+'" มีแค่ '+existing.qty+' '+unit); return; }
     newMain    = _cpApply(name, _key, -qty).total;
     qtyDisplay = '-'+qty;
