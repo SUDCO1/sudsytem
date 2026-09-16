@@ -5596,7 +5596,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="sd-section-title">📝 บันทึกรับเข้า / เบิกออก</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="field">
-            <label class="field-label">ประเภท <span class="req">*</span></label>
+            <label class="field-label">ประเภท <span class="req">*</span>
+              <label id="sd_logtypeLockWrap" style="float:right;font-weight:400;color:#64748B;cursor:pointer;user-select:none;font-size:11px;" title="ล็อกไว้ ประเภทจะไม่รีเซ็ตหลังบันทึก เวลาคีย์หลายรายการ">
+                <input type="checkbox" id="sd_logtypeLock" style="vertical-align:middle;margin-right:3px;"/>🔒 ล็อกประเภท
+              </label>
+            </label>
             <select id="sd_logtype" onchange="sdPreview()">
               <option value="">— เลือก —</option>
               <option value="in">📥 รับเข้า (ผลิตเสร็จ)</option>
@@ -13460,7 +13464,11 @@ function dominantUnit(pileName) {
 
 function clearSdLog() {
   ['sd_logqty','sd_lognote','sd_logspec','sd_logweld','sd_logsteel','sd_logwire','sd_logba'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-  const t=document.getElementById('sd_logtype'); if(t) t.selectedIndex=0;
+  // ถ้าติ๊ก "ล็อกประเภท" ไว้ ให้คงประเภทเดิม ไม่รีเซ็ต (เวลาคีย์หลายรายการ)
+  const _lockType = document.getElementById('sd_logtypeLock');
+  if (!(_lockType && _lockType.checked)) {
+    const t=document.getElementById('sd_logtype'); if(t) t.selectedIndex=0;
+  }
   // [FIX#B20] ช่องหน่วยเดิมมีแค่ ต้น/ท่อน → รับเข้า Girder แล้วได้การ์ดหน่วย "ต้น"
   // ปนกับการ์ดหน่วย "ตัว" ที่มาจากงานผลิต · พอจะเบิกออกก็ฟ้อง "มีแค่ 4 ต้น"
   // ทั้งที่หน้าจอโชว์ 9 ตัว · ตอนนี้กอง Girder มีตัวเลือก "ตัว" และตั้งเป็นค่าเริ่มต้น
