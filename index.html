@@ -10739,7 +10739,9 @@ function _ensureCpgStyle() {
     + '.cpg-leg{display:flex;gap:14px;font-size:10.5px;color:#64748B;margin:0 2px 8px;align-items:center}'
     + '.cpg-leg span{display:inline-flex;align-items:center;gap:4px}'
     + '.cpg-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}'
-    + '.cpg-dot.p{background:#22C55E}.cpg-dot.s{background:#3B82F6}'
+    + '.cpg-dot.p{background:#22C55E}.cpg-dot.s{background:#3B82F6}.cpg-dot.w{background:#F59E0B}'
+    + '.cpg-short{color:#B45309;font-weight:800}'
+    + '.cpg-row.cpg-wait{background:#FFFBEB}'
     + '.cpg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}'
     + '@media(max-width:640px){.cpg-grid{grid-template-columns:1fr}}'
     + '.cpg-card{border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;background:#fff;align-self:start}'
@@ -10766,9 +10768,10 @@ function _cpgChips(m) {
 }
 function _renderCpOnlineGrouped(el, list, pileName, emptyMsg) {
   _ensureCpgStyle();
-  // แสดงเฉพาะแถวที่มีของจริง (ออเดอร์ที่ยังไม่มีของ ไปโชว์ที่แผง "งาน/ออเดอร์ของกองนี้" อยู่แล้ว)
-  const real = list.filter(m => !m.virtual && (m.qty || 0) > 0);
-  if (!real.length) { el.innerHTML = '<div class="sdc-empty">' + emptyMsg + '</div>'; return; }
+  const _isWait = m => m.virtual || (m.qty || 0) <= 0;
+  // แสดงทุกออเดอร์ รวมออเดอร์ที่ยังไม่มีของ (รอผลิต) ด้วย
+  const shown = list.filter(m => (m.qty || 0) > 0 || (m.ordQty || 0) > 0);
+  if (!shown.length) { el.innerHTML = '<div class="sdc-empty">' + emptyMsg + '</div>'; return; }
 
   // map เลขออเดอร์ → ชื่อลูกค้า
   const custMap = {};
@@ -10779,7 +10782,7 @@ function _renderCpOnlineGrouped(el, list, pileName, emptyMsg) {
 
   // จัดกลุ่มตามเลขออเดอร์
   const groups = {};
-  real.forEach(m => {
+  shown.forEach(m => {
     const on = String(m.orderNum || 'ไม่ระบุ').trim() || 'ไม่ระบุ';
     (groups[on] = groups[on] || []).push(m);
   });
@@ -10794,12 +10797,27 @@ function _renderCpOnlineGrouped(el, list, pileName, emptyMsg) {
       return na - nb;
     });
     const cust = custMap[on] || '';
+    const realRows = rows.filter(m => !_isWait(m));
+    let shortSum = 0;
+    rows.forEach(m => { if (_isWait(m)) shortSum += Math.max(0, (m.ordQty || 0) - (m.ordDel || 0)); });
+    const tot = realRows.length
+      ? 'รวม ' + _cpSumByUnit(realRows) + (shortSum > 0 ? ' <span class="cpg-short">· ขาด ' + shortSum + '</span>' : '')
+      : '<span class="cpg-short">ขาด ' + shortSum + ' ท่อน</span>';
     const head = '<div class="cpg-hd">'
       + '<span class="cpg-badge">' + escHtml(on) + '</span>'
       + '<span class="cpg-cust">' + escHtml(cust) + '</span>'
-      + '<span class="cpg-tot" data-unit-lock>รวม ' + _cpSumByUnit(rows) + '</span>'
+      + '<span class="cpg-tot" data-unit-lock>' + tot + '</span>'
       + '</div>';
     const body = rows.map(m => {
+      if (_isWait(m)) {
+        const rem = Math.max(0, (m.ordQty || 0) - (m.ordDel || 0));
+        return '<div class="cpg-row cpg-wait">'
+          + '<span class="cpg-dot w"></span>'
+          + '<span class="cpg-len">' + _cpLenHtml(_cpParts(m).base) + '</span>'
+          + _cpgChips(m)
+          + '<span class="cpg-qty cpg-short" data-unit-lock>ขาด ' + rem + ' ' + _unitOf(m.unit) + '</span>'
+          + '</div>';
+      }
       const dotCls = (m.src === 'S') ? 's' : 'p';   // S = สต็อกเก่า(ฟ้า), P = ผลิตให้(เขียว)
       return '<div class="cpg-row">'
         + '<span class="cpg-dot ' + dotCls + '"></span>'
@@ -10816,6 +10834,7 @@ function _renderCpOnlineGrouped(el, list, pileName, emptyMsg) {
     + '<div class="cpg-leg">'
     + '<span><span class="cpg-dot p"></span>ผลิตให้</span>'
     + '<span><span class="cpg-dot s"></span>สต็อกเก่า</span>'
+    + '<span><span class="cpg-dot w"></span>รอผลิต</span>'
     + '</div>'
     + '<div class="cpg-grid">' + orderKeys.map(cardHtml).join('') + '</div>';
 }
