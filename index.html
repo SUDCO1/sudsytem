@@ -10730,9 +10730,100 @@ function setSdCpSort(s) {
   renderSdCustPoles();
 }
 
+// ── [NEW UI] เสาลูกค้า (online) — จัดกลุ่มตามออเดอร์ + วาง 2 คอลัมน์ + จุดสีบอกที่มา ──
+function _ensureCpgStyle() {
+  if (document.getElementById('cpgStyle')) return;
+  const st = document.createElement('style');
+  st.id = 'cpgStyle';
+  st.textContent = ''
+    + '.cpg-leg{display:flex;gap:14px;font-size:10.5px;color:#64748B;margin:0 2px 8px;align-items:center}'
+    + '.cpg-leg span{display:inline-flex;align-items:center;gap:4px}'
+    + '.cpg-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}'
+    + '.cpg-dot.p{background:#22C55E}.cpg-dot.s{background:#3B82F6}'
+    + '.cpg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}'
+    + '@media(max-width:640px){.cpg-grid{grid-template-columns:1fr}}'
+    + '.cpg-card{border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;background:#fff;align-self:start}'
+    + '.cpg-hd{display:flex;align-items:center;gap:6px;padding:5px 9px;background:#F8FAFC;border-bottom:1px solid #EEF2F6}'
+    + '.cpg-badge{background:#1E293B;color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;white-space:nowrap}'
+    + '.cpg-cust{font-size:12px;font-weight:700;flex:1;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    + '.cpg-tot{font-size:11px;font-weight:800;color:#0369A1;white-space:nowrap}'
+    + '.cpg-row{display:flex;align-items:center;gap:6px;padding:3px 9px;border-top:1px solid #F5F7FA;font-size:12px;line-height:1.15}'
+    + '.cpg-row:first-child{border-top:none}'
+    + '.cpg-len{font-weight:800;color:#0F172A;flex:none;min-width:46px}'
+    + '.cpg-len i{font-weight:600;color:#64748B;font-style:normal;font-size:10px;margin-left:2px}'
+    + '.cpg-chips{flex:1;display:flex;gap:3px;flex-wrap:wrap;min-width:0}'
+    + '.cpg-chip{font-size:10px;background:#F1F5F9;color:#475569;padding:0 5px;border-radius:5px;font-weight:600;white-space:nowrap}'
+    + '.cpg-qty{font-weight:800;font-size:12px;color:#0F172A;white-space:nowrap;flex:none}'
+    + '.cpg-card .sdc-acts{flex:none}';
+  document.head.appendChild(st);
+}
+function _cpgChips(m) {
+  const f = _cpParts(m), t = [];
+  if (f.weld)  t.push('<span class="cpg-chip">' + escHtml(f.weld) + ' ช</span>');
+  if (f.steel) t.push('<span class="cpg-chip">สล ' + escHtml(f.steel) + '</span>');
+  if (f.ba)    t.push('<span class="cpg-chip">บ่า ' + escHtml(f.ba) + '</span>');
+  return '<div class="cpg-chips">' + t.join('') + '</div>';
+}
+function _renderCpOnlineGrouped(el, list, pileName, emptyMsg) {
+  _ensureCpgStyle();
+  // แสดงเฉพาะแถวที่มีของจริง (ออเดอร์ที่ยังไม่มีของ ไปโชว์ที่แผง "งาน/ออเดอร์ของกองนี้" อยู่แล้ว)
+  const real = list.filter(m => !m.virtual && (m.qty || 0) > 0);
+  if (!real.length) { el.innerHTML = '<div class="sdc-empty">' + emptyMsg + '</div>'; return; }
+
+  // map เลขออเดอร์ → ชื่อลูกค้า
+  const custMap = {};
+  (getOrders() || []).forEach(o => {
+    const on = String(o.orderNum || '').trim();
+    if (on) custMap[on] = o.customer || '';
+  });
+
+  // จัดกลุ่มตามเลขออเดอร์
+  const groups = {};
+  real.forEach(m => {
+    const on = String(m.orderNum || 'ไม่ระบุ').trim() || 'ไม่ระบุ';
+    (groups[on] = groups[on] || []).push(m);
+  });
+  const orderKeys = Object.keys(groups).sort((a, b) => a.localeCompare(b, 'th'));
+
+  const cardHtml = on => {
+    const rows = groups[on].slice().sort((a, b) => {
+      const na = parseFloat(_cpParts(a).base), nb = parseFloat(_cpParts(b).base);
+      if (isNaN(na) && isNaN(nb)) return 0;
+      if (isNaN(na)) return 1;
+      if (isNaN(nb)) return -1;
+      return na - nb;
+    });
+    const cust = custMap[on] || '';
+    const head = '<div class="cpg-hd">'
+      + '<span class="cpg-badge">' + escHtml(on) + '</span>'
+      + '<span class="cpg-cust">' + escHtml(cust) + '</span>'
+      + '<span class="cpg-tot" data-unit-lock>รวม ' + _cpSumByUnit(rows) + '</span>'
+      + '</div>';
+    const body = rows.map(m => {
+      const dotCls = (m.src === 'S') ? 's' : 'p';   // S = สต็อกเก่า(ฟ้า), P = ผลิตให้(เขียว)
+      return '<div class="cpg-row">'
+        + '<span class="cpg-dot ' + dotCls + '"></span>'
+        + '<span class="cpg-len">' + _cpLenHtml(_cpParts(m).base) + '</span>'
+        + _cpgChips(m)
+        + '<span class="cpg-qty" data-unit-lock>' + (m.qty || 0).toLocaleString() + ' ' + _unitOf(m.unit) + '</span>'
+        + _cpActs(m, 'online', pileName)
+        + '</div>';
+    }).join('');
+    return '<div class="cpg-card">' + head + body + '</div>';
+  };
+
+  el.innerHTML = ''
+    + '<div class="cpg-leg">'
+    + '<span><span class="cpg-dot p"></span>ผลิตให้</span>'
+    + '<span><span class="cpg-dot s"></span>สต็อกเก่า</span>'
+    + '</div>'
+    + '<div class="cpg-grid">' + orderKeys.map(cardHtml).join('') + '</div>';
+}
+
 // วาดหนึ่งพาเนล (online / offline) ด้วยดีไซน์การ์ดใหม่
 function _renderCpPanel(el, list, panel, pileName, emptyMsg) {
   if (!el) return;
+  if (panel === 'online') { _renderCpOnlineGrouped(el, list, pileName, emptyMsg); return; }
   if (!list.length) { el.innerHTML = '<div class="sdc-empty">' + emptyMsg + '</div>'; return; }
   const sorted = _sortByCpOrder(list, pileName, panel);
   const isOn   = (panel === 'online');
