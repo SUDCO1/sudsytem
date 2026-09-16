@@ -5062,8 +5062,8 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
 
-    <!-- [NEW] ตรวจข้อมูล: การ์ดเสา vs สเปคในระบบ (อ่านอย่างเดียว) -->
-    <div class="card">
+    <!-- [NEW] ตรวจข้อมูล: การ์ดเสา vs สเปคในระบบ (อ่านอย่างเดียว) — เฉพาะ admin -->
+    <div class="card" id="stockAuditCard" style="display:none;">
       <div class="card-header">
         <div>
           <div class="card-title">🔎 ตรวจข้อมูลสต็อก</div>
@@ -7625,6 +7625,9 @@ function _applyNav() {
   if (_sdLogForm) _sdLogForm.style.display = canDo('edit_stock') ? '' : 'none';
   showNav('nav-summary',   canDo('view_summary'));
   showNav('nav-stock',     canDo('view_stock'));
+  // ตรวจข้อมูลสต็อก — เฉพาะ admin เท่านั้น
+  const _sAudit = document.getElementById('stockAuditCard');
+  if (_sAudit) _sAudit.style.display = (_currentRole === 'admin') ? '' : 'none';
   showNav('nav-customers', canDo('view_customers'));
   showNav('nav-audit',     canDo('view_audit'));
   showNav('nav-settings',  canDo('view_settings'));
@@ -11405,7 +11408,7 @@ function renderStockAudit() {
 
 // ปรับ stock[] ให้เท่ากับผลรวมการ์ดจริง (การ์ด = แหล่งข้อมูลจริง)
 function fixStockTotals() {
-  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขข้อมูลสต็อก'); return; }
+  if (_currentRole !== 'admin') { showToast('⛔ เฉพาะแอดมินเท่านั้น'); return; }
   const bad = buildStockAudit().filter(p => p.diff !== 0);
   if (!bad.length) { showToast('✅ ทุกกองตรงกันอยู่แล้ว'); return; }
   const list = bad.map(p => '• ' + p.pile + ': ' + p.saved + ' → ' + p.card).join('\n');
@@ -11461,7 +11464,7 @@ function scanGhostStock() {
 }
 
 function sweepGhostStock() {
-  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขข้อมูลสต็อก'); return; }
+  if (_currentRole !== 'admin') { showToast('⛔ เฉพาะแอดมินเท่านั้น'); return; }
   const g = scanGhostStock();
   if (!g.any) { showToast('✅ ไม่พบสต็อกผี — ทุกอย่างตรงหมด'); return; }
   const sum = arr => arr.reduce((s, c) => s + (c.qty || 0), 0);
