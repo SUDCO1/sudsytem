@@ -10798,11 +10798,17 @@ function _renderCpOnlineGrouped(el, list, pileName, emptyMsg) {
     });
     const cust = custMap[on] || '';
     const realRows = rows.filter(m => !_isWait(m));
-    let shortSum = 0;
-    rows.forEach(m => { if (_isWait(m)) shortSum += Math.max(0, (m.ordQty || 0) - (m.ordDel || 0)); });
+    const shortByUnit = {};
+    rows.forEach(m => {
+      if (!_isWait(m)) return;
+      const rem = Math.max(0, (m.ordQty || 0) - (m.ordDel || 0));
+      if (rem > 0) { const u = _unitOf(m.unit); shortByUnit[u] = (shortByUnit[u] || 0) + rem; }
+    });
+    const shortSum = Object.values(shortByUnit).reduce((a, b) => a + b, 0);
+    const shortTxt = Object.keys(shortByUnit).map(u => shortByUnit[u] + ' ' + u).join(' + ');
     const tot = realRows.length
-      ? 'รวม ' + _cpSumByUnit(realRows) + (shortSum > 0 ? ' <span class="cpg-short">· ขาด ' + shortSum + '</span>' : '')
-      : '<span class="cpg-short">ขาด ' + shortSum + ' ท่อน</span>';
+      ? 'รวม ' + _cpSumByUnit(realRows) + (shortSum > 0 ? ' <span class="cpg-short">· ขาด ' + shortTxt + '</span>' : '')
+      : '<span class="cpg-short">ขาด ' + shortTxt + '</span>';
     const head = '<div class="cpg-hd">'
       + '<span class="cpg-badge">' + escHtml(on) + '</span>'
       + '<span class="cpg-cust">' + escHtml(cust) + '</span>'
