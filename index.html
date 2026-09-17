@@ -3302,6 +3302,10 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
             <label class="field-label">ท้อง</label>
             <input type="text" id="spf_tong" placeholder="เช่น มี, ไม่มี"/>
           </div>
+          <div class="field">
+            <label class="field-label">ลวด</label>
+            <input type="text" id="spf_wire" placeholder="เช่น 4มม. x 7, 5มม."/>
+          </div>
           <div class="field full-col">
             <label class="field-label">ลูกตั้ง</label>
             <div style="display:flex;flex-direction:column;gap:6px;">
@@ -3555,6 +3559,10 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
             <div class="field">
               <label class="field-label">ท้อง</label>
               <input type="text" id="fprod_tong" placeholder="เช่น มี, ไม่มี"/>
+            </div>
+            <div class="field">
+              <label class="field-label">ลวด</label>
+              <input type="text" id="fprod_wire" placeholder="เช่น 4มม. x 7, 5มม."/>
             </div>
             <div class="field full-col">
               <label class="field-label">ลูกตั้ง</label>
@@ -9417,6 +9425,7 @@ function openFreeProdForm(kind) {
   document.getElementById('fprod_note').value       = '';
   document.getElementById('fprod_lane').value       = '';
   document.getElementById('fprod_tong').value       = '';
+  document.getElementById('fprod_wire').value       = '';
   document.getElementById('fprod_stand_qty').value  = '';
   document.getElementById('fprod_stand_size').value = '';
   document.getElementById('fprod_stand_qty2').value  = '';
@@ -9466,6 +9475,7 @@ function submitFreeProd() {
   const _fpStartedAt = (() => { try { const d = new Date(prodDate + 'T' + (_fpTime || new Date().toTimeString().slice(0,5)) + ':00'); return isNaN(d) ? Date.now() : d.getTime(); } catch(e) { return Date.now(); } })();
   const lane      = document.getElementById('fprod_lane').value.trim();
   const tong      = document.getElementById('fprod_tong').value.trim();
+  const wire      = document.getElementById('fprod_wire').value.trim();
   const standQty  = parseInt(document.getElementById('fprod_stand_qty').value) || 0;
   const standSize = document.getElementById('fprod_stand_size').value.trim();
   const standQty2  = parseInt(document.getElementById('fprod_stand_qty2').value) || 0;
@@ -9483,7 +9493,7 @@ function submitFreeProd() {
     orderNum: 'STOCK',
     isStockProd: true,
     unit: u,
-    pileType, length, weld, steel, ba, qtyRequired: 0, qtyCasting: qty, note, prodDate, lane, tong, standQty, standSize, standRows,
+    pileType, length, weld, steel, ba, qtyRequired: 0, qtyCasting: qty, note, prodDate, lane, tong, wire, standQty, standSize, standRows,
     startedAt: _fpStartedAt,
     startedBy: (_currentUser && _currentUser.email) || '-'
   };
@@ -9511,6 +9521,7 @@ function openStartProdForm(orderNum, pileType, qtyRequired, length, itemIdx) {
   document.getElementById('spf_note').value       = '';
   document.getElementById('spf_lane').value       = '';
   document.getElementById('spf_tong').value       = '';
+  document.getElementById('spf_wire').value       = '';
   document.getElementById('spf_stand_qty').value  = '';
   document.getElementById('spf_stand_size').value = '';
   document.getElementById('spf_stand_qty2').value  = '';
@@ -9548,6 +9559,7 @@ function submitStartProd() {
   const _startedAt = (() => { try { const d = new Date(prodDate + 'T' + (_spfTime || new Date().toTimeString().slice(0,5)) + ':00'); return isNaN(d) ? Date.now() : d.getTime(); } catch(e) { return Date.now(); } })();
   const lane       = document.getElementById('spf_lane').value.trim();
   const tong       = document.getElementById('spf_tong').value.trim();
+  const wire       = document.getElementById('spf_wire').value.trim();
   const standQty   = parseInt(document.getElementById('spf_stand_qty').value) || 0;
   const standSize  = document.getElementById('spf_stand_size').value.trim();
   const standQty2  = parseInt(document.getElementById('spf_stand_qty2').value) || 0;
@@ -9575,7 +9587,7 @@ function submitStartProd() {
       }
     }
   } catch(e) {}
-  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, unit: _prodUnit, note, prodDate, lane, tong, standQty, standSize, standRows, startedAt: _startedAt, startedBy: (_currentUser && _currentUser.email) || '-', ..._gExtra, ...(_itemIdxNum !== undefined ? { itemIdx: _itemIdxNum } : {}) });
+  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, unit: _prodUnit, note, prodDate, lane, tong, wire, standQty, standSize, standRows, startedAt: _startedAt, startedBy: (_currentUser && _currentUser.email) || '-', ..._gExtra, ...(_itemIdxNum !== undefined ? { itemIdx: _itemIdxNum } : {}) });
   saveProdActive(list);
   // อัปเดตสถานะออเดอร์ → กำลังผลิต
   const orders = getOrders();
@@ -9680,7 +9692,7 @@ function submitFinishProd() {
     qtyRequired: required, qtyProduced: qty,
     qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0,
     unit: (a.productType === 'girder' ? 'ตัว' : _unitOf(a.unit)),
-    lane: a.lane||'', tong: a.tong||'', standRows: a.standRows||[], ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}) };
+    lane: a.lane||'', tong: a.tong||'', wire: a.wire||'', standRows: a.standRows||[], ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}) };
   if (a.productType === 'girder') _newLog.productType = 'girder';
   // [หน่วย] Girder นับเป็น "ตัว" · เสาเข็มใช้หน่วยที่ติดมากับงานผลิต (สืบทอดจากรายการออเดอร์)
   const _u = a.productType === 'girder' ? 'ตัว' : _unitOf(a.unit);
@@ -9958,6 +9970,7 @@ function renderProdLogHistory() {
     const prodParts = [
       l.lane && l.lane!=='' ? '<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;font-size:10px;">🏗️ เลน '+l.lane+'</span>' : null,
       l.tong && l.tong!=='' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:1px 6px;border-radius:4px;font-size:10px;">⬜ ท้อง '+l.tong+'</span>' : null,
+      l.wire && l.wire!=='' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">〰 ลวด '+l.wire+'</span>' : null,
       ...standParts,
     ].filter(Boolean);
     const detailCell = specParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+specParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
@@ -10057,6 +10070,7 @@ function openProdLogDetail(idx) {
   const prodParts = [
     l.lane && l.lane!=='' ? '<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:5px;font-size:11px;">🏗️ เลน '+l.lane+'</span>' : null,
     l.tong && l.tong!=='' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:2px 8px;border-radius:5px;font-size:11px;">⬜ ท้อง '+l.tong+'</span>' : null,
+    l.wire && l.wire!=='' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">〰 ลวด '+l.wire+'</span>' : null,
     ...standParts,
   ].filter(Boolean);
   const _fmtDT = ts => new Date(ts).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' น.';
@@ -15198,6 +15212,7 @@ function openProdDetail(id) {
     + '<div class="pdm-row"><span class="pdm-label">จำนวนในราง</span><span class="pdm-val">'+(a.qtyCasting||a.qtyRequired)+' ต้น</span></div>'
     + '<div class="pdm-row"><span class="pdm-label">เลน</span><span class="pdm-val">'+fmt(a.lane)+'</span></div>'
     + '<div class="pdm-row"><span class="pdm-label">ท้อง</span><span class="pdm-val">'+fmt(a.tong)+'</span></div>'
+    + '<div class="pdm-row"><span class="pdm-label">ลวด</span><span class="pdm-val">'+fmt(a.wire)+'</span></div>'
     + standHtml
     + '<div class="pdm-row"><span class="pdm-label">วันที่ผลิต</span><span class="pdm-val">'+fmt(a.prodDate)+'</span></div>'
     + '<div class="pdm-row"><span class="pdm-label">เริ่มเทเมื่อ</span><span class="pdm-val">'+startTime+'</span></div>'
