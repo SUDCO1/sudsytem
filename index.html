@@ -10798,11 +10798,18 @@ function _renderCpOnlineGrouped(el, list, pileName, emptyMsg) {
     });
     const cust = custMap[on] || '';
     const realRows = rows.filter(m => !_isWait(m));
-    const shortByUnit = {};
+    // ยอดที่ออเดอร์ต้องการ (ต่อหน่วย) − ยอดที่ผลิต/จองได้แล้ว = ยังขาดอีกเท่าไร
+    // ครอบคลุมเคสผลิตไม่ครบด้วย (แถวเขียวมีของบางส่วน แต่ ordQty ยังบอกยอดเต็มของออเดอร์)
+    const needByUnit = {}, resvByUnit = {};
     rows.forEach(m => {
-      if (!_isWait(m)) return;
-      const rem = Math.max(0, (m.ordQty || 0) - (m.ordDel || 0));
-      if (rem > 0) { const u = _unitOf(m.unit); shortByUnit[u] = (shortByUnit[u] || 0) + rem; }
+      const u = _unitOf(m.unit);
+      if ((m.ordQty || 0) > 0) needByUnit[u] = (needByUnit[u] || 0) + Math.max(0, (m.ordQty || 0) - (m.ordDel || 0));
+      if (!_isWait(m))         resvByUnit[u] = (resvByUnit[u] || 0) + (m.qty || 0);
+    });
+    const shortByUnit = {};
+    Object.keys(needByUnit).forEach(u => {
+      const s = Math.max(0, needByUnit[u] - (resvByUnit[u] || 0));
+      if (s > 0) shortByUnit[u] = s;
     });
     const shortSum = Object.values(shortByUnit).reduce((a, b) => a + b, 0);
     const shortTxt = Object.keys(shortByUnit).map(u => shortByUnit[u] + ' ' + u).join(' + ');
