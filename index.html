@@ -9959,7 +9959,7 @@ function renderProdLogHistory() {
       ? '<span style="font-size:11px;background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-weight:700;">✅ เพิ่มสต็อกแล้ว</span>'
       : '<span style="color:#94A3B8;">-</span>';
     const standRowsData = l.standRows && l.standRows.length ? l.standRows : (l.standQty > 0 ? [{qty:l.standQty,size:l.standSize}] : []);
-    const standParts = standRowsData.filter(r=>r.qty>0||r.size).map(r=>'<span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:10px;">🪝 ลูกตั้ง '+r.qty+(r.size?' '+r.size:'')+'</span>');
+    const standParts = standRowsData.filter(r=>r.qty>0||r.size).map(r=>'<span style="background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;">🪝 ลูกตั้ง '+r.qty+(r.size?' '+r.size:'')+'</span>');
     const specParts = [
       l.length && l.length!=='-' ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">'+_fmtLen(l.length)+'</span>' : null,
       l.weld   && l.weld  !=='-' ? '<span style="background:#FEF9C3;color:#854D0E;padding:1px 6px;border-radius:4px;font-size:10px;">ช:'+l.weld  +'</span>' : null,
@@ -9968,9 +9968,9 @@ function renderProdLogHistory() {
       l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;">📝 '+l.extra +'</span>' : null,
     ].filter(Boolean);
     const prodParts = [
-      l.lane && l.lane!=='' ? '<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;font-size:10px;">🏗️ เลน '+l.lane+'</span>' : null,
-      l.tong && l.tong!=='' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:1px 6px;border-radius:4px;font-size:10px;">⬜ ท้อง '+l.tong+'</span>' : null,
-      l.wire && l.wire!=='' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:1px 6px;border-radius:4px;font-size:10px;">〰 ลวด '+l.wire+'</span>' : null,
+      l.lane && l.lane!=='' ? '<span style="background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;">🏗️ เลน '+l.lane+'</span>' : null,
+      l.tong && l.tong!=='' ? '<span style="background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;">⬜ ท้อง '+l.tong+'</span>' : null,
+      l.wire && l.wire!=='' ? '<span style="background:#F1F5F9;color:#475569;padding:1px 6px;border-radius:4px;font-size:10px;">〰 ลวด '+l.wire+'</span>' : null,
       ...standParts,
     ].filter(Boolean);
     const detailCell = specParts.length ? '<div style="display:flex;flex-direction:column;gap:3px;">'+specParts.join('')+'</div>' : '<span style="color:#CBD5E1;">—</span>';
@@ -10066,11 +10066,11 @@ function openProdLogDetail(idx) {
     l.extra  && l.extra !=='-' ? '<span style="background:#F1F5F9;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;">📝 '+l.extra +'</span>' : null,
   ].filter(Boolean);
   const standRowsData = l.standRows && l.standRows.length ? l.standRows : (l.standQty > 0 ? [{qty:l.standQty,size:l.standSize}] : []);
-  const standParts = standRowsData.filter(r=>r.qty>0||r.size).map(r=>'<span style="background:#DCFCE7;color:#166534;padding:2px 8px;border-radius:5px;font-size:11px;">🪝 ลูกตั้ง '+r.qty+(r.size?' '+r.size:'')+'</span>');
+  const standParts = standRowsData.filter(r=>r.qty>0||r.size).map(r=>'<span style="background:#F1F5F9;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;">🪝 ลูกตั้ง '+r.qty+(r.size?' '+r.size:'')+'</span>');
   const prodParts = [
-    l.lane && l.lane!=='' ? '<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:5px;font-size:11px;">🏗️ เลน '+l.lane+'</span>' : null,
-    l.tong && l.tong!=='' ? '<span style="background:#F3E8FF;color:#6D28D9;padding:2px 8px;border-radius:5px;font-size:11px;">⬜ ท้อง '+l.tong+'</span>' : null,
-    l.wire && l.wire!=='' ? '<span style="background:#DBEAFE;color:#1D4ED8;padding:2px 8px;border-radius:5px;font-size:11px;">〰 ลวด '+l.wire+'</span>' : null,
+    l.lane && l.lane!=='' ? '<span style="background:#F1F5F9;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;">🏗️ เลน '+l.lane+'</span>' : null,
+    l.tong && l.tong!=='' ? '<span style="background:#F1F5F9;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;">⬜ ท้อง '+l.tong+'</span>' : null,
+    l.wire && l.wire!=='' ? '<span style="background:#F1F5F9;color:#475569;padding:2px 8px;border-radius:5px;font-size:11px;">〰 ลวด '+l.wire+'</span>' : null,
     ...standParts,
   ].filter(Boolean);
   const _fmtDT = ts => new Date(ts).toLocaleString('th-TH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' น.';
