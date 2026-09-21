@@ -10414,6 +10414,8 @@ function renderHistorySummary() {
   const cards = [];
   orders.forEach(o => {
     const items = (o._done && o.archivedItems) ? o.archivedItems : getOrderItems(o);
+    const _isDone = o._done || autoSumStatus(o, items) === 'จบงาน';   // [FIX#B35] ออเดอร์ที่จบแล้ว
+    const _tlBtn = _isDone ? `<div style="padding:0 12px 10px;"><button onclick="openOrderTimeline(${_jsq(o.orderNum)})" style="width:100%;padding:7px;font-size:12px;font-weight:700;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:8px;cursor:pointer;">🕒 ดูไทม์ไลน์</button></div>` : '';
     const dateStr = o.orderDate || (o.orderDateISO ? isoToThai(o.orderDateISO) : '') || o.closedAt || '-';
     const doneStyle = o._done ? 'background:#F0FDF4;border-color:#86EFAC;' : 'background:#fff;border-color:#E2E8F0;';
     const multiBadge = items.length > 1 ? `<span style="font-size:10px;color:#64748B;font-weight:700;">· ${items.length} รายการ</span>` : '';
@@ -10454,6 +10456,7 @@ function renderHistorySummary() {
       <div style="padding:0 12px 2px;font-size:12px;font-weight:700;color:#1E293B;">${_esc(o.customer||'-')}${o.tel?`<span style="color:#94A3B8;font-weight:600;"> · ${_esc(o.tel)}</span>`:''}</div>
       <div style="padding:0 12px 6px;font-size:11px;color:#64748B;">📅 ${dateStr}</div>
       <div style="padding:0 12px 10px;">${itemsHtml}</div>
+      ${_tlBtn}
     </div>`);
   });
   box.innerHTML = cards.join('');
@@ -10463,6 +10466,8 @@ function renderHistorySummary() {
     const rows = [];
     orders.forEach(o => {
       const items = (o._done && o.archivedItems) ? o.archivedItems : getOrderItems(o);
+      const _isDone = o._done || autoSumStatus(o, items) === 'จบงาน';   // [FIX#B35]
+      const _tlBtnT = _isDone ? `<div style="margin-top:6px;"><button onclick="openOrderTimeline(${_jsq(o.orderNum)})" style="padding:4px 10px;font-size:11px;font-weight:700;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:8px;cursor:pointer;white-space:nowrap;">🕒 ดูไทม์ไลน์</button></div>` : '';
       const dateStr = o.orderDate || (o.orderDateISO ? isoToThai(o.orderDateISO) : '') || o.closedAt || '-';
       const rowBg = o._done ? 'background:#F0FDF4;' : '';
       const span = items.length;
@@ -10487,7 +10492,7 @@ function renderHistorySummary() {
             <td style="font-weight:700;">${qty} ต้น</td>
             <td>${prodCell}</td>
             <td>${deliveredBar(del, qty)}</td>
-            <td rowspan="${span}" style="vertical-align:middle;">${statusBadge(o)}</td>
+            <td rowspan="${span}" style="vertical-align:middle;">${statusBadge(o)}${_tlBtnT}</td>
           </tr>`);
         } else {
           rows.push(`<tr style="${rowBg}">
@@ -10501,6 +10506,111 @@ function renderHistorySummary() {
     });
     tbody.innerHTML = rows.join('');
   }
+}
+
+// ── [FIX#B35] ไทม์ไลน์ในออเดอร์ (หน้าสรุปภาพรวม) ─────────────────
+// ดึงเหตุการณ์ทั้งหมดของออเดอร์จาก audit log แล้วจัดเป็นไทม์ไลน์
+function _tlIcon(action){
+  const a = String(action||'');
+  if (a.indexOf('สร้างออเดอร์')>=0) return '🆕';
+  if (a.indexOf('คอนเฟิร์ม')>=0 || a.indexOf('รับออเดอร์')>=0) return '📋';
+  if (a.indexOf('ผลิต')>=0) return '🏭';
+  if (a.indexOf('ส่งจบ')>=0) return '✅';
+  if (a.indexOf('จองรถ')>=0 || a.indexOf('นัดส่ง')>=0) return '🚚';
+  if (a.indexOf('จบบิล')>=0 || a.indexOf('คืนเสาที่เหลือ')>=0) return '🎉';
+  if (a.indexOf('แก้ไข')>=0) return '✏️';
+  if (a.indexOf('ลบ')>=0) return '🗑️';
+  if (a.indexOf('สต็อก')>=0 || a.indexOf('ย้าย')>=0 || a.indexOf('คืน')>=0) return '📦';
+  return '•';
+}
+function _tlFmtTime(ts){
+  const d = new Date(ts||0);
+  const th = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return d.getDate()+' '+th[d.getMonth()]+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function _tlActor(e){
+  if (e.email && e.email !== '-') return e.email;
+  if (e.role && e.role !== '-') { try { return getRoleLabel(e.role) || e.role; } catch(x){ return e.role; } }
+  return 'ระบบ';
+}
+function openOrderTimeline(orderNum){
+  // สร้าง modal ถ้ายังไม่มี
+  let ov = document.getElementById('orderTimelineOverlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'orderTimelineOverlay';
+    ov.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.55);align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto;';
+    ov.onclick = function(ev){ if (ev.target === ov) closeOrderTimeline(); };
+    ov.innerHTML =
+      '<div style="background:#fff;border-radius:14px;max-width:640px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.25);overflow:hidden;">'
+      + '<div style="background:#1E40AF;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+      +   '<div style="font-size:15px;font-weight:800;" id="otlTitle">🕒 ไทม์ไลน์ออเดอร์</div>'
+      +   '<button onclick="closeOrderTimeline()" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:8px;width:30px;height:30px;font-size:18px;cursor:pointer;line-height:1;">✕</button>'
+      + '</div>'
+      + '<div id="otlSummary" style="padding:12px 18px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:12px;color:#334155;"></div>'
+      + '<div id="otlBody" style="padding:14px 18px 20px;max-height:60vh;overflow-y:auto;"></div>'
+      + '</div>';
+    document.body.appendChild(ov);
+  }
+  document.getElementById('otlTitle').textContent = '🕒 ไทม์ไลน์ ' + orderNum;
+  document.getElementById('otlSummary').innerHTML = '';
+  document.getElementById('otlBody').innerHTML = '<div style="text-align:center;color:#94A3B8;padding:30px 0;font-size:13px;">⏳ กำลังโหลด...</div>';
+  ov.style.display = 'flex';
+  // ดึง audit ล่าสุด (ตรงจาก Firebase เพื่อความสด ไม่พึ่ง cache)
+  try { auditAttachListener(); } catch(e){}
+  db.ref(K_AUDIT).orderByChild('ts').limitToLast(AUDIT_FETCH_LIMIT).once('value').then(function(snap){
+    const v = snap.val() || {};
+    const rows = Object.keys(v).map(k => v[k])
+      .filter(e => String(e.target||'') === String(orderNum))
+      .sort((a,b) => (a.ts||0)-(b.ts||0));
+    _renderOrderTimeline(orderNum, rows);
+  }).catch(function(){
+    document.getElementById('otlBody').innerHTML = '<div style="text-align:center;color:#DC2626;padding:30px 0;font-size:13px;">⚠️ โหลดไทม์ไลน์ไม่ได้ ลองใหม่อีกครั้ง</div>';
+  });
+}
+function _renderOrderTimeline(orderNum, rows){
+  const body = document.getElementById('otlBody');
+  const sumEl = document.getElementById('otlSummary');
+  if (!rows.length) {
+    if (sumEl) sumEl.innerHTML = '';
+    body.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:30px 0;font-size:13px;">ยังไม่มีเหตุการณ์บันทึกไว้สำหรับออเดอร์นี้<br><span style="font-size:11px;">(อาจเป็นออเดอร์เก่ากว่าช่วงที่ระบบเก็บ log ล่าสุด)</span></div>';
+    return;
+  }
+  // สรุปหัวตาราง
+  const prodCount = rows.filter(e => String(e.action||'').indexOf('บันทึกผลิต')>=0).length;
+  const shipCount = rows.filter(e => String(e.action||'').indexOf('ส่งจบ')>=0).length;
+  const first = rows[0], last = rows[rows.length-1];
+  if (sumEl) {
+    sumEl.innerHTML =
+      '<div style="display:flex;flex-wrap:wrap;gap:8px 16px;">'
+      + '<span>📅 เริ่ม <b>' + _tlFmtTime(first.ts) + '</b></span>'
+      + '<span>🏁 ล่าสุด <b>' + _tlFmtTime(last.ts) + '</b></span>'
+      + '<span>🏭 ผลิต <b>' + prodCount + '</b> รอบ</span>'
+      + '<span>🚚 ส่ง <b>' + shipCount + '</b> รอบ</span>'
+      + '<span>📝 รวม <b>' + rows.length + '</b> เหตุการณ์</span>'
+      + '</div>';
+  }
+  // รายการเหตุการณ์
+  const html = rows.map(function(e, i){
+    const icon = _tlIcon(e.action);
+    const isLast = i === rows.length - 1;
+    return '<div style="display:flex;gap:10px;">'
+      + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">'
+      +   '<div style="width:28px;height:28px;border-radius:50%;background:#EFF6FF;border:1.5px solid #BFDBFE;display:flex;align-items:center;justify-content:center;font-size:14px;">' + icon + '</div>'
+      +   (isLast ? '' : '<div style="width:2px;flex:1;background:#E2E8F0;min-height:12px;"></div>')
+      + '</div>'
+      + '<div style="padding-bottom:' + (isLast?'0':'14px') + ';flex:1;min-width:0;">'
+      +   '<div style="font-size:11px;color:#94A3B8;">' + _tlFmtTime(e.ts) + ' · ' + _esc(_tlActor(e)) + '</div>'
+      +   '<div style="font-size:13px;font-weight:800;color:#1E293B;margin:1px 0;">' + _esc(e.action||'-') + '</div>'
+      +   (e.detail ? '<div style="font-size:12px;color:#475569;line-height:1.5;">' + _esc(e.detail) + '</div>' : '')
+      + '</div>'
+      + '</div>';
+  }).join('');
+  body.innerHTML = html;
+}
+function closeOrderTimeline(){
+  const ov = document.getElementById('orderTimelineOverlay');
+  if (ov) ov.style.display = 'none';
 }
 
 function exportHistoryCSV() {
