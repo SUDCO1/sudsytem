@@ -14,7 +14,7 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .hdr-info{flex:1;min-width:0;}
 .hdr-title{font-size:15px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .hdr-sub{font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;}
-.hdr-badge{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;}
+.hdr-badge{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;}
 
 /* DEMO BAR */
 .demo-bar{background:#FEF9C3;border-bottom:2px solid #FDE047;padding:8px 24px;font-size:12px;color:#713F12;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
@@ -28,7 +28,7 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .nav-tab.active{color:#fff;border-bottom-color:#60A5FA;background:rgba(255,255,255,0.08);}
 
 /* LAYOUT */
-.app-content{padding:24px;max-width:1200px;margin:0 auto;}
+.app-content{padding:24px;max-width:1100px;margin:0 auto;}
 .section{display:none;}
 .section.active{display:block;}
 .page-title{font-size:20px;font-weight:800;color:#0F172A;margin-bottom:4px;}
@@ -36,69 +36,81 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 
 /* CARD */
 .card{background:#fff;border-radius:12px;border:1px solid #E2E8F0;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden;margin-bottom:20px;}
-.card-head{padding:16px 20px;border-bottom:1px solid #E2E8F0;font-size:15px;font-weight:800;color:#0F172A;display:flex;align-items:center;gap:8px;}
-.card-body{padding:20px;}
+.card-header{padding:16px 20px;border-bottom:1px solid #E2E8F0;}
+.card-title{font-size:15px;font-weight:800;color:#0F172A;}
+.card-sub{font-size:12px;color:#64748B;margin-top:3px;}
+.card-body{padding:16px;}
 
-/* FORM */
-.fld-label{font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;display:block;}
-.fld-input{width:100%;padding:10px 12px;border:1px solid #CBD5E1;border-radius:8px;font-family:inherit;font-size:14px;color:#1E293B;background:#F8FAFC;}
-.fld-input[readonly]{background:#F1F5F9;color:#334155;}
-.fld-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;}
-.btn-primary{padding:11px 20px;background:linear-gradient(135deg,#1E40AF,#1D4ED8);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;}
-.btn-primary:hover{filter:brightness(1.08);}
+/* free prod buttons */
+.freeprod{display:flex;gap:8px;margin-top:12px;}
+.freeprod .lbl{font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;}
+.btn-sm{flex:1;padding:9px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.b-pile{background:#EFF6FF;color:#1D4ED8;border:1.5px solid #93C5FD;}
+.b-gird{background:#F3E8FF;color:#7C3AED;border:1.5px solid #C4B5FD;}
 
-/* SPEC BADGE */
-.spec-badge{display:inline-block;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-right:5px;margin-top:3px;}
-.sb-blue{background:#DBEAFE;color:#1D4ED8;}
-.sb-amber{background:#FEF3C7;color:#92400E;}
-.sb-green{background:#D1FAE5;color:#065F46;}
-.sb-purple{background:#EDE9FE;color:#6D28D9;}
+/* PROD ORDER CARD (faithful to real app) */
+.po-card{border:1.5px solid #E2E8F0;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+.po-head{background:#DBEAFE;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.po-num{font-size:15px;font-weight:900;color:#1E40AF;}
+.po-stat{background:#fff;color:#1D4ED8;border:1.5px solid #1D4ED840;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;}
+.po-cust{font-size:13px;font-weight:700;color:#1E293B;}
+.po-tel{font-size:11px;color:#64748B;}
+.po-count{margin-left:auto;background:#fff;color:#1E40AF;border:1.5px solid #1E40AF40;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:800;}
+.po-body{padding:14px;background:#fff;}
 
-/* TICKET (restaurant slip look) */
-.ticket{background:#FFFDF5;border:2px dashed #F59E0B;border-radius:12px;padding:18px 20px;}
-.ticket-top{font-size:12px;color:#92400E;font-weight:700;letter-spacing:0.05em;margin-bottom:10px;text-transform:uppercase;}
-.ticket-code{font-size:22px;font-weight:900;color:#0F172A;}
-.ticket-note{margin-top:12px;padding:10px 12px;background:#FEF9C3;border-radius:8px;font-size:13px;color:#713F12;}
+/* item sub-card */
+.pi{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px;}
+.pi-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.pi-name{font-size:16px;font-weight:800;color:#1E293B;}
+.pi-remain{font-size:12px;font-weight:700;color:#1E40AF;}
+.ptag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;margin-right:4px;}
+.pt-blue{background:#EFF6FF;color:#1D4ED8;}
+.pt-amber{background:#FEF9C3;color:#854D0E;}
+.pt-purple{background:#F3E8FF;color:#6D28D9;}
 
-/* METHOD CHIPS */
-.chip-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;}
-.chip{border:2px solid #E2E8F0;background:#fff;border-radius:12px;padding:14px 16px;cursor:pointer;transition:all 0.15s;min-width:150px;flex:1;}
-.chip:hover{border-color:#93C5FD;background:#F8FAFC;}
-.chip.sel{border-color:#1D4ED8;background:#EFF6FF;box-shadow:0 2px 8px rgba(29,78,216,0.15);}
-.chip-title{font-size:15px;font-weight:800;color:#0F172A;}
-.chip-desc{font-size:12px;color:#64748B;margin-top:4px;}
-.chip.sel .chip-title{color:#1D4ED8;}
+.pi-order{margin-top:10px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 10px;font-size:12px;color:#1E40AF;}
+.pi-order b{font-weight:800;}
 
-/* STEPPER */
-.stepper{display:flex;align-items:center;gap:0;border:2px solid #E2E8F0;border-radius:12px;overflow:hidden;width:fit-content;margin-top:6px;}
-.stepper button{width:44px;height:44px;border:none;background:#F1F5F9;font-size:22px;font-weight:800;color:#1D4ED8;cursor:pointer;}
-.stepper button:hover{background:#E0E7FF;}
-.stepper .val{min-width:64px;text-align:center;font-size:18px;font-weight:900;color:#0F172A;}
+/* METHOD CHOOSER */
+.method{margin-top:12px;background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:10px;padding:12px;}
+.method-lbl{font-size:12px;font-weight:800;color:#9A3412;margin-bottom:8px;}
+.chip-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{border:2px solid #E2E8F0;background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer;transition:all 0.12s;flex:1;min-width:120px;}
+.chip:hover{border-color:#FDBA74;}
+.chip.sel{border-color:#EA580C;background:#FFEDD5;}
+.chip-t{font-size:13px;font-weight:800;color:#0F172A;}
+.chip-d{font-size:11px;color:#64748B;margin-top:2px;}
+.chip.sel .chip-t{color:#C2410C;}
+.stepper{display:flex;align-items:center;border:2px solid #FED7AA;border-radius:10px;overflow:hidden;width:fit-content;margin-top:10px;}
+.stepper button{width:38px;height:38px;border:none;background:#FFEDD5;font-size:20px;font-weight:800;color:#C2410C;cursor:pointer;}
+.stepper button:hover{background:#FED7AA;}
+.stepper .val{min-width:52px;text-align:center;font-size:16px;font-weight:900;color:#0F172A;}
+.stepper-lbl{font-size:11px;color:#9A3412;margin-top:10px;font-weight:700;}
+.method-res{margin-top:10px;font-size:13px;color:#7C2D12;background:#fff;border:1px dashed #FDBA74;border-radius:8px;padding:8px 10px;}
+.method-res b{color:#EA580C;font-weight:900;font-size:15px;}
 
-/* RESULT PREVIEW */
-.result-box{margin-top:18px;padding:16px 18px;background:linear-gradient(180deg,#FFF7ED,#fff 70%);border:1px solid #FED7AA;border-radius:12px;}
-.result-line{font-size:14px;color:#7C2D12;margin:2px 0;}
-.result-big{font-size:26px;font-weight:900;color:#EA580C;}
+/* progress */
+.pi-prog-txt{display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin:12px 0 4px;}
+.prog{height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;}
+.prog>i{display:block;height:100%;background:#F59E0B;border-radius:4px;transition:width .3s;}
+.btn-cast{width:100%;margin-top:12px;background:#D1FAE5;color:#065F46;border:1.5px solid #6EE7B7;padding:9px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;}
+.btn-cast:hover{background:#A7F3D0;}
 
-/* SUMMARY CARDS */
+/* SUMMARY CARDS (status page) */
 .sum-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;}
 .sum-card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:16px 18px;border-top:5px solid;box-shadow:0 2px 8px rgba(15,23,42,0.06);}
 .sum-card.blue{border-top-color:#3B82F6;background:linear-gradient(180deg,#EFF6FF,#fff 55%);}
 .sum-card.orange{border-top-color:#F59E0B;background:linear-gradient(180deg,#FFFBEB,#fff 55%);}
 .sum-card.green{border-top-color:#22C55E;background:linear-gradient(180deg,#F0FDF4,#fff 55%);}
-.sum-label{font-size:11px;font-weight:800;color:#475569;letter-spacing:0.03em;margin-bottom:6px;}
-.sum-val{font-size:36px;font-weight:900;color:#0F172A;line-height:1;letter-spacing:-0.5px;}
+.sum-label{font-size:11px;font-weight:800;color:#475569;margin-bottom:6px;}
+.sum-val{font-size:36px;font-weight:900;color:#0F172A;line-height:1;}
 .sum-sub{font-size:11px;color:#64748B;margin-top:6px;font-weight:600;}
-
-/* STATUS TABLE */
 .st-table{width:100%;border-collapse:collapse;font-size:13px;}
 .st-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:800;color:#64748B;border-bottom:2px solid #E2E8F0;}
 .st-table td{padding:14px 12px;border-bottom:1px solid #F1F5F9;vertical-align:top;}
 .unit-tag{display:inline-block;font-size:10px;font-weight:800;padding:1px 7px;border-radius:20px;margin-left:4px;}
 .ut-ton{background:#DBEAFE;color:#1D4ED8;}
 .ut-ton2{background:#FFEDD5;color:#C2410C;}
-.prog{height:8px;background:#E2E8F0;border-radius:20px;overflow:hidden;margin-top:6px;}
-.prog>i{display:block;height:100%;background:#F59E0B;border-radius:20px;}
 
 .note-yellow{background:#FEFCE8;border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;font-size:13px;color:#713F12;margin-top:14px;}
 .note-yellow b{font-weight:800;}
@@ -116,103 +128,104 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 </div>
 
 <div class="demo-bar">
-  <b>🧪 นี่คือหน้าเดโม</b> — ไม่ใช่ระบบจริง กดเล่นได้เต็มที่ ข้อมูลเป็นตัวอย่าง ลองกดสลับหน้า ฝ่ายขาย → ฝ่ายผลิต → สถานะ Order ตามลำดับ
+  <b>🧪 นี่คือหน้าเดโม</b> — ไม่ใช่ระบบจริง กดเล่นได้เต็มที่ นี่คือหน้า <b>ฝ่ายผลิต</b> ที่ใส่ตัวเลือก ต้น/ท่อน เข้าไปในการ์ดออเดอร์
 </div>
 
 <div class="app-nav">
   <div class="nav-tab" data-sec="none">🏠 หน้าแรก</div>
   <div class="nav-tab" data-sec="none">📊 สรุปภาพรวม</div>
-  <div class="nav-tab active" data-sec="sales">📇 ฝ่ายขาย</div>
-  <div class="nav-tab" data-sec="prod">🏗️ ฝ่ายผลิต</div>
+  <div class="nav-tab" data-sec="none">📇 ฝ่ายขาย</div>
+  <div class="nav-tab active" data-sec="prod">🏗️ ฝ่ายผลิต</div>
   <div class="nav-tab" data-sec="status">📋 สถานะ Order</div>
   <div class="nav-tab" data-sec="none">🚛 ฝ่ายขนส่ง</div>
   <div class="nav-tab" data-sec="none">📦 ฝ่ายสต็อก</div>
-  <div class="nav-tab" data-sec="none">👥 ลูกค้า</div>
 </div>
 
 <div class="app-content">
 
-  <!-- ========== ฝ่ายขาย ========== -->
-  <div class="section active" id="sec-sales">
-    <div class="page-title">📇 ฝ่ายขาย — เปิดออเดอร์</div>
-    <div class="page-sub">ฝ่ายขายกรอกแค่ว่าลูกค้าสั่งอะไร กี่ต้น ไม่ต้องคิดเรื่องแบ่งท่อน</div>
+  <!-- ========== ฝ่ายผลิต (หน้าจริง) ========== -->
+  <div class="section active" id="sec-prod">
+    <div class="page-title">🏗️ ฝ่ายผลิต</div>
+    <div class="page-sub">หน้านี้คือหน้าฝ่ายผลิตจริง เพิ่มแค่กล่องสีส้ม "วิธีผลิต" เข้าไปในการ์ดออเดอร์</div>
 
     <div class="card">
-      <div class="card-head">🧾 รายละเอียดที่ลูกค้าสั่ง</div>
+      <div class="card-header">
+        <div class="card-title">🏗️ ออเดอร์สำหรับฝ่ายผลิต</div>
+        <div class="card-sub">ออเดอร์ที่ฝ่ายผลิตรับแล้ว — กด "🏭 เริ่มเท" เมื่อเทลงราง → กด "✅ ผลิตเสร็จ" เมื่อยกออกจากราง</div>
+        <div style="margin-top:12px;">
+          <div class="freeprod-lbl" style="font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;">➕ ผลิตเพิ่มสต็อก</div>
+          <div class="freeprod">
+            <button class="btn-sm b-pile">📦 เสาเข็ม</button>
+            <button class="btn-sm b-gird">🌉 Girder</button>
+          </div>
+        </div>
+      </div>
       <div class="card-body">
-        <div class="fld-row">
-          <div><label class="fld-label">ชนิดเสา</label><input class="fld-input" value="I18-207" readonly></div>
-          <div><label class="fld-label">ความยาว (เมตร)</label><input class="fld-input" value="18.00" readonly></div>
-          <div><label class="fld-label">จำนวน</label><input class="fld-input" value="50 ต้น" readonly></div>
+
+        <div class="po-card">
+          <div class="po-head">
+            <span class="po-num">70/001</span>
+            <span class="po-stat">รับออเดอร์</span>
+            <span class="po-cust">บ้านพักอาศัย ไร่ขิง</span>
+            <span class="po-tel">📞 0925469591</span>
+            <span class="po-count">1 รายการ ▾</span>
+          </div>
+          <div class="po-body">
+            <div class="pi">
+              <div class="pi-top">
+                <span class="pi-name">I18-207</span>
+                <span class="pi-remain">เหลือผลิต <b id="piRemain">100</b> ท่อน</span>
+              </div>
+              <div>
+                <span class="ptag pt-blue">18.00ม.</span>
+              </div>
+
+              <div class="pi-order">📦 ลูกค้าสั่ง: <b>50 ต้น</b> (เสายาวเต็ม 18.00 ม.)</div>
+
+              <div class="method">
+                <div class="method-lbl">⚙️ วิธีผลิต — ฝ่ายผลิตเลือกว่าจะแบ่งเสา 1 ต้น เป็นกี่ท่อน</div>
+                <div class="chip-grid">
+                  <div class="chip" data-seg="1" onclick="setSeg(1)">
+                    <div class="chip-t">หล่อยาวเต็ม</div>
+                    <div class="chip-d">1 ท่อน · 18.00ม. · ไม่เชื่อม</div>
+                  </div>
+                  <div class="chip sel" data-seg="2" onclick="setSeg(2)">
+                    <div class="chip-t">แบ่ง 2 ท่อน</div>
+                    <div class="chip-d">9.00ม. · เชื่อม 1</div>
+                  </div>
+                  <div class="chip" data-seg="3" onclick="setSeg(3)">
+                    <div class="chip-t">แบ่ง 3 ท่อน</div>
+                    <div class="chip-d">6.00ม. · เชื่อม 2</div>
+                  </div>
+                </div>
+                <div class="stepper-lbl">หรือกำหนดเอง — แบ่ง 1 ต้น เป็นกี่ท่อน</div>
+                <div class="stepper">
+                  <button onclick="stepSeg(-1)">−</button>
+                  <div class="val" id="segVal">2</div>
+                  <button onclick="stepSeg(1)">+</button>
+                </div>
+                <div class="method-res">
+                  → ลูกค้าสั่ง 50 ต้น · เมื่อแบ่ง <b id="rSeg">2</b> ท่อน ต้องผลิตจริง <b id="rTon">100</b> ท่อน
+                  <span id="rSpec">(ท่อนละ 9.00ม. · เชื่อม 1)</span>
+                </div>
+              </div>
+
+              <div class="pi-prog-txt">
+                <span>ผลิตแล้ว <strong id="piDone" style="color:#1E293B;">0</strong> / <span id="piTonG">100</span> ท่อน</span>
+                <span style="font-weight:700;color:#92400E;" id="piPct">0%</span>
+              </div>
+              <div class="prog"><i id="piBar" style="width:0%;"></i></div>
+
+              <button class="btn-cast" onclick="goSec('status')">🏭 เริ่มเท (นับเป็นท่อน) → ดูหน้าสถานะ</button>
+            </div>
+          </div>
         </div>
-        <div style="margin-bottom:16px;">
-          <label class="fld-label">📝 โน๊ตถึงฝ่ายผลิต (สเปคที่ลูกค้าต้องการ)</label>
-          <input class="fld-input" value="เสา I18-207 ยาว 18 เมตร 50 ต้น ส่งไซต์ไร่ขิง" readonly>
-        </div>
+
         <div class="note-yellow">
-          💡 <b>จุดสำคัญ:</b> ฝ่ายขายลงหน่วยเป็น <b>ต้น</b> เท่านั้น (50 ต้น) แล้วส่งเป็นโน๊ตไปให้ฝ่ายผลิต
-          เหมือนใบออเดอร์ในร้านอาหาร ส่วนจะแบ่งท่อนยังไง <b>ให้ฝ่ายผลิตตัดสินใจเอง</b>
-        </div>
-        <div style="margin-top:18px;">
-          <button class="btn-primary" onclick="goSec('prod')">ส่งให้ฝ่ายผลิต →</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== ฝ่ายผลิต ========== -->
-  <div class="section" id="sec-prod">
-    <div class="page-title">🏗️ ฝ่ายผลิต — เลือกวิธีผลิต</div>
-    <div class="page-sub">ฝ่ายผลิตรับใบสั่ง แล้วเลือกเองว่าจะหล่อยาวเต็ม หรือแบ่งเป็นกี่ท่อน</div>
-
-    <div class="card">
-      <div class="card-head">📨 ใบสั่งเข้ามาจากฝ่ายขาย</div>
-      <div class="card-body">
-        <div class="ticket">
-          <div class="ticket-top">ใบสั่งผลิต · จากฝ่ายขาย</div>
-          <div class="ticket-code">I18-207 · 18.00 ม. · <span style="color:#1D4ED8;">50 ต้น</span></div>
-          <div class="ticket-note">📝 เสา I18-207 ยาว 18 เมตร 50 ต้น ส่งไซต์ไร่ขิง</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-head">⚙️ เลือกวิธีผลิต</div>
-      <div class="card-body">
-        <label class="fld-label">แบบสำเร็จรูป (กดเลือกได้เลย)</label>
-        <div class="chip-grid">
-          <div class="chip" data-seg="1" onclick="setSeg(1)">
-            <div class="chip-title">หล่อยาวเต็ม</div>
-            <div class="chip-desc">1 ท่อน · 18.00 ม. · ไม่มีเชื่อม</div>
-          </div>
-          <div class="chip sel" data-seg="2" onclick="setSeg(2)">
-            <div class="chip-title">แบ่ง 2 ท่อน</div>
-            <div class="chip-desc">9.00 ม. · เชื่อม 1</div>
-          </div>
-          <div class="chip" data-seg="3" onclick="setSeg(3)">
-            <div class="chip-title">แบ่ง 3 ท่อน</div>
-            <div class="chip-desc">6.00 ม. · เชื่อม 2</div>
-          </div>
+          💡 <b>กล่องสีส้ม "วิธีผลิต" คือของใหม่</b> — ฝ่ายขายส่งมาแค่ 50 ต้น 18 เมตร ฝ่ายผลิตมากดเลือกตรงนี้เองว่าจะแบ่งกี่ท่อน
+          พอเลือกแล้ว ช่อง "เหลือผลิต" กับแถบความคืบหน้าจะเปลี่ยนเป็นนับ <b>ท่อน</b> อัตโนมัติ ลองกดสลับดูได้เลย
         </div>
 
-        <div style="margin-top:20px;">
-          <label class="fld-label">หรือกำหนดเอง — แบ่งเป็นกี่ท่อนต่อ 1 ต้น</label>
-          <div class="stepper">
-            <button onclick="stepSeg(-1)">−</button>
-            <div class="val" id="segVal">2</div>
-            <button onclick="stepSeg(1)">+</button>
-          </div>
-        </div>
-
-        <div class="result-box">
-          <div class="result-line">จากที่ลูกค้าสั่ง <b>50 ต้น</b> · เมื่อแบ่ง <b id="rSeg">2</b> ท่อน จะต้องผลิตจริง</div>
-          <div class="result-big"><span id="rTon">100</span> ท่อน</div>
-          <div class="result-line" id="rSpec">ท่อนละ 9.00 ม. · เชื่อม 1 จุด</div>
-        </div>
-
-        <div style="margin-top:18px;">
-          <button class="btn-primary" onclick="goSec('status')">ยืนยันวิธีผลิต → ดูหน้าสถานะ</button>
-        </div>
       </div>
     </div>
   </div>
@@ -235,23 +248,19 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
       </div>
       <div class="sum-card green">
         <div class="sum-label">✅ ผลิตแล้ว</div>
-        <div class="sum-val" id="sDone">80</div>
-        <div class="sum-sub" id="sDoneSub">ท่อน · เหลืออีก 20 ท่อน</div>
+        <div class="sum-val" id="sDone">0</div>
+        <div class="sum-sub" id="sDoneSub">ท่อน · เพิ่งเริ่ม</div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-head">📋 รายการออเดอร์</div>
-      <div class="card-body" style="padding:8px 8px;overflow-x:auto;">
+      <div class="card-header"><div class="card-title">📋 รายการออเดอร์</div></div>
+      <div class="card-body" style="padding:8px;overflow-x:auto;">
         <table class="st-table">
           <thead>
             <tr>
-              <th>เลข Order</th>
-              <th>ชื่อ / เบอร์</th>
-              <th>รายการ</th>
-              <th>ลูกค้าสั่ง</th>
-              <th>ต้องผลิต (ท่อน)</th>
-              <th>ความคืบหน้า</th>
+              <th>เลข Order</th><th>ชื่อ / เบอร์</th><th>รายการ</th>
+              <th>ลูกค้าสั่ง</th><th>ต้องผลิต (ท่อน)</th><th>ความคืบหน้า</th>
             </tr>
           </thead>
           <tbody>
@@ -260,15 +269,15 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
               <td><b>บ้านพักอาศัย ไร่ขิง</b><br><span style="color:#94A3B8;font-size:11px;">0925469591</span></td>
               <td>
                 <b>I18-207</b><br>
-                <span class="spec-badge sb-blue">18.00ม.</span>
-                <span class="spec-badge sb-amber" id="tSpecLen">9.00ม./ท่อน</span>
-                <span class="spec-badge sb-green" id="tSpecWeld">ช:1</span>
+                <span class="ptag pt-blue">18.00ม.</span>
+                <span class="ptag pt-amber" id="tSpecLen">9.00ม./ท่อน</span>
+                <span class="ptag pt-purple" id="tSpecWeld">ช:1</span>
               </td>
               <td><b style="font-size:16px;">50</b> <span class="unit-tag ut-ton">ต้น</span></td>
               <td><b style="font-size:16px;color:#C2410C;" id="tTon">100</b> <span class="unit-tag ut-ton2">ท่อน</span></td>
-              <td style="min-width:180px;">
-                <span id="tProgTxt"><b style="color:#EA580C;">80</b> / 100 ท่อน</span>
-                <div class="prog"><i id="tProgBar" style="width:80%;"></i></div>
+              <td style="min-width:170px;">
+                <span id="tProgTxt"><b style="color:#EA580C;">0</b> / 100 ท่อน</span>
+                <div class="prog" style="margin-top:6px;"><i id="tBar" style="width:0%;"></i></div>
               </td>
             </tr>
           </tbody>
@@ -277,10 +286,8 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
     </div>
 
     <div class="note-yellow">
-      💡 <b>สิ่งที่เปลี่ยนไป:</b> ในหน้าสถานะจะเห็น 2 ตัวเลขคู่กันเสมอ —
-      <b style="color:#1D4ED8;">ลูกค้าสั่ง (ต้น)</b> ไว้เทียบกับที่ตกลงขาย และ
-      <b style="color:#C2410C;">ต้องผลิตจริง (ท่อน)</b> ไว้ให้ฝ่ายผลิตกับขนส่งใช้นับของจริง
-      ลองกลับไปหน้าฝ่ายผลิตแล้วเปลี่ยนวิธีแบ่งท่อน ตัวเลขตรงนี้จะขยับตาม
+      💡 ในหน้าสถานะจะเห็น 2 ตัวเลขคู่กัน — <b style="color:#1D4ED8;">ลูกค้าสั่ง (ต้น)</b> ไว้เทียบกับที่ตกลงขาย
+      และ <b style="color:#C2410C;">ต้องผลิตจริง (ท่อน)</b> ไว้ให้ฝ่ายผลิตกับขนส่งนับของจริง
     </div>
   </div>
 
@@ -288,41 +295,41 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 
 <script>
 var LEN_FULL = 18, TON = 50, seg = 2;
-
 function fmtLen(n){ return (Math.round(n*100)/100).toFixed(2); }
 
 function render(){
   var lenPer = LEN_FULL / seg;
   var welds = seg - 1;
   var tonPieces = TON * seg;
-  var done = Math.round(tonPieces * 0.8);
-  var remain = tonPieces - done;
-  var pct = Math.round(done / tonPieces * 100);
+  var done = 0;
+  var pct = 0;
+  var specTxt = (seg === 1) ? '(หล่อยาวเต็ม 18.00ม. · ไม่เชื่อม)'
+                            : '(ท่อนละ ' + fmtLen(lenPer) + 'ม. · เชื่อม ' + welds + ')';
 
+  // production card
   document.getElementById('segVal').textContent = seg;
   document.getElementById('rSeg').textContent = seg;
   document.getElementById('rTon').textContent = tonPieces;
-  document.getElementById('rSpec').textContent =
-    (seg === 1) ? 'ท่อนละ ' + fmtLen(lenPer) + ' ม. · ไม่มีเชื่อม (หล่อยาวเต็ม)'
-                : 'ท่อนละ ' + fmtLen(lenPer) + ' ม. · เชื่อม ' + welds + ' จุด';
-
+  document.getElementById('rSpec').textContent = specTxt;
+  document.getElementById('piRemain').textContent = tonPieces;
+  document.getElementById('piTonG').textContent = tonPieces;
+  document.getElementById('piDone').textContent = done;
+  document.getElementById('piPct').textContent = pct + '%';
+  document.getElementById('piBar').style.width = pct + '%';
   document.querySelectorAll('.chip').forEach(function(c){
     c.classList.toggle('sel', Number(c.getAttribute('data-seg')) === seg);
   });
 
+  // status page
   document.getElementById('sTon').textContent = tonPieces;
   document.getElementById('sTonSub').textContent =
-    (seg === 1) ? 'ท่อน (หล่อยาวเต็ม · 18.00 ม.)'
-                : 'ท่อน (แบ่ง ' + seg + ' · ' + fmtLen(lenPer) + ' ม.)';
+    (seg === 1) ? 'ท่อน (หล่อยาวเต็ม · 18.00 ม.)' : 'ท่อน (แบ่ง ' + seg + ' · ' + fmtLen(lenPer) + ' ม.)';
   document.getElementById('sDone').textContent = done;
-  document.getElementById('sDoneSub').textContent = 'ท่อน · เหลืออีก ' + remain + ' ท่อน';
-
   document.getElementById('tTon').textContent = tonPieces;
   document.getElementById('tSpecLen').textContent = fmtLen(lenPer) + 'ม./ท่อน';
   document.getElementById('tSpecWeld').textContent = (welds === 0) ? 'ไม่เชื่อม' : ('ช:' + welds);
-  document.getElementById('tProgTxt').innerHTML =
-    '<b style="color:#EA580C;">' + done + '</b> / ' + tonPieces + ' ท่อน';
-  document.getElementById('tProgBar').style.width = pct + '%';
+  document.getElementById('tProgTxt').innerHTML = '<b style="color:#EA580C;">' + done + '</b> / ' + tonPieces + ' ท่อน';
+  document.getElementById('tBar').style.width = pct + '%';
 }
 
 function setSeg(v){ seg = v; render(); }
@@ -336,23 +343,18 @@ function goSec(name){
   window.scrollTo(0,0);
 }
 function showSection(name){
-  var map = {sales:'sec-sales', prod:'sec-prod', status:'sec-status'};
+  var map = {prod:'sec-prod', status:'sec-status'};
   Object.keys(map).forEach(function(k){
     document.getElementById(map[k]).classList.toggle('active', k === name);
   });
 }
-
 document.querySelectorAll('.nav-tab').forEach(function(t){
   t.addEventListener('click', function(){
     var sec = t.getAttribute('data-sec');
-    if(sec === 'none'){
-      alert('หน้านี้เป็นแค่ตัวอย่างหน้าตา\nเดโมนี้โชว์เฉพาะ 3 หน้า: ฝ่ายขาย · ฝ่ายผลิต · สถานะ Order');
-      return;
-    }
+    if(sec === 'none'){ alert('หน้านี้เป็นแค่ตัวอย่างหน้าตา\nเดโมนี้โชว์ 2 หน้า: ฝ่ายผลิต · สถานะ Order'); return; }
     goSec(sec);
   });
 });
-
 render();
 </script>
 </body>
