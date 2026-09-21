@@ -8372,11 +8372,12 @@ function editItemDelivered(orderNum, itemIdx) {
 function editLength(orderNum) {
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
+  const _oldLen = (o.length && o.length !== '-') ? o.length : 'ไม่ระบุ';   // [FIX#B34] เก็บค่าเดิม
   const newVal = prompt('รายละเอียดเสา — ' + orderNum + '\nพิมพ์อิสระ เช่น 6, 6/9/12', o.length || '');
   if (newVal === null) return;
   o.length = newVal.trim() || '-';
   saveOrders(orders); renderOrders();
-  try { logAudit('แก้ไขรายละเอียดเสา', orderNum, (o.customer||'') + ' · รายละเอียดเสา → ' + (o.length === '-' ? 'ไม่ระบุ' : o.length)); } catch(e){}
+  try { logAudit('แก้ไขรายละเอียดเสา', orderNum, (o.customer||'') + ' · รายละเอียดเสา ' + _oldLen + ' → ' + (o.length === '-' ? 'ไม่ระบุ' : o.length)); } catch(e){}   // [FIX#B34] ก่อน→หลัง
   showToast('✅ ' + orderNum + ': รายละเอียดเสา ' + (o.length === '-' ? 'ไม่ระบุ' : o.length + ''));
 }
 
@@ -8814,6 +8815,7 @@ function setSumStatus(orderNum, selectEl) {
   ];
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
+  const _oldSumStatus = o._sumStatus || o.status || '-';   // [FIX#B34] เก็บสถานะเดิมไว้ทำ audit ก่อน→หลัง
   o._sumStatus = selectEl.value;
   o._sumStatusManual = true;   // mark as manually set
   saveOrders(orders);
@@ -8823,7 +8825,7 @@ function setSumStatus(orderNum, selectEl) {
     selectEl.style.color = s.color;
     selectEl.style.borderColor = s.border;
   }
-  logAudit('เปลี่ยนสถานะ (สรุป)', orderNum, (o.customer||'') + ' → ' + selectEl.value);
+  logAudit('เปลี่ยนสถานะ (สรุป)', orderNum, (o.customer||'') + ' · สถานะ ' + _oldSumStatus + ' → ' + selectEl.value);   // [FIX#B34] ก่อน→หลัง
   showToast(`📋 ${orderNum}: ${selectEl.value}`);
 }
 
@@ -12452,6 +12454,35 @@ function _permToggleSwitch(roleId, secId, val) {
 // ชื่อเดิม — เก็บไว้เผื่อโค้ดเก่าเรียก (default = ฝ่ายขาย)
 function _permToggleSale(roleId, val) { _permToggleSwitch(roleId, 'sale', val); }
 
+// [FIX#B34] baseline สำหรับเทียบสิทธิ์ ก่อน→หลัง ตอนบันทึก audit
+let _permBaseline = null;
+const _PERM_LV_TH = { view:'ดู', edit:'แก้ไข', delete:'ลบ' };
+function _permLevelsText(v){
+  if (v === true)  return 'เปิด';
+  if (v === false || v == null) return 'ปิด';
+  if (Array.isArray(v)) return v.length ? v.map(l => _PERM_LV_TH[l]||l).join('+') : 'ไม่มี';
+  return String(v);
+}
+// คืนข้อความสรุปว่ามี role/หัวข้อไหนถูกเปลี่ยนสิทธิ์บ้าง (เดิม→ใหม่)
+function _permDiffText(oldP, newP){
+  oldP = oldP || {}; newP = newP || {};
+  const roleIds = Array.from(new Set([...Object.keys(oldP), ...Object.keys(newP)]));
+  const lines = [];
+  roleIds.forEach(rid => {
+    const role = _permRoles.find(r => r.id === rid);
+    const rLabel = role ? (role.label || rid) : rid;
+    const o = oldP[rid] || {}, n = newP[rid] || {};
+    const parts = [];
+    PERM_SECTIONS.forEach(s => {
+      const ov = _permLevelsText(o[s.id]);
+      const nv = _permLevelsText(n[s.id]);
+      if (ov !== nv) parts.push(s.label + ' ' + ov + '→' + nv);
+    });
+    if (parts.length) lines.push(rLabel + ': ' + parts.join(', '));
+  });
+  return lines.join(' | ');
+}
+
 function saveRolePerms(auto) {
   const statusEl = document.getElementById('permSaveStatus');
   // Collect current state from _savedRolePerms (already updated live)
@@ -12479,7 +12510,14 @@ function saveRolePerms(auto) {
     if (_currentRole !== 'admin') applyPermissions();
     const statusEl = document.getElementById('permSaveStatus');
     if (statusEl) { statusEl.textContent = '✅ บันทึกแล้ว'; statusEl.style.color = '#16A34A'; setTimeout(()=>{ if(statusEl) statusEl.textContent=''; }, 2500); }
-    if (!auto) { logAudit('บันทึกสิทธิ์ (role)', editableRoles.map(r=>r.label||r.id).join(', '), 'จำนวน role: ' + editableRoles.length); showToast('✅ บันทึกสิทธิ์เรียบร้อย!'); }
+    if (!auto) {
+      // [FIX#B34] audit ละเอียด: บอกว่า role ไหน หัวข้อไหน สิทธิ์เดิม→ใหม่
+      let _permChg = '';
+      try { _permChg = _permDiffText(_permBaseline, newPerms); } catch(e){}
+      logAudit('บันทึกสิทธิ์ (role)', editableRoles.map(r=>r.label||r.id).join(', '), _permChg ? 'แก้ ' + _permChg : 'จำนวน role: ' + editableRoles.length + ' · (ไม่มีการเปลี่ยนแปลง)');
+      showToast('✅ บันทึกสิทธิ์เรียบร้อย!');
+    }
+    try { _permBaseline = JSON.parse(JSON.stringify(newPerms)); } catch(e){}   // [FIX#B34] อัปเดต baseline หลังบันทึก
   }).catch(err => {
     console.error('saveRolePerms error:', err);
     const statusEl = document.getElementById('permSaveStatus');
@@ -12521,6 +12559,7 @@ function loadRolePerms(cb) {
         _permRoles = [...lockedRoles, ...custom];
       }
     }
+    try { _permBaseline = JSON.parse(JSON.stringify(_savedRolePerms || {})); } catch(e){}   // [FIX#B34] เก็บ baseline สิทธิ์ตอนโหลด
     if (cb) cb();
   }).catch(() => {
     if (cb) cb();
@@ -12740,20 +12779,28 @@ function umChangeRole(uid) {
   const newRole = sel.value;
   const _umEmail = (sel.getAttribute('data-email')) || uid;
   const _roleLbl = newRole ? getRoleLabel(newRole) : 'ไม่มีตำแหน่ง';
+  // [FIX#B34] หา role เดิม (option ที่ถูก selected ตอน render) เพื่อบันทึก audit ก่อน→หลัง
+  const _oldOpt = sel.querySelector('option[selected]');
+  const _oldRoleVal = _oldOpt ? _oldOpt.value : '';
+  const _oldRoleLbl = _oldRoleVal ? getRoleLabel(_oldRoleVal) : 'ไม่มีตำแหน่ง';
   // ค่าว่าง = ไม่มีตำแหน่ง → ลบ field role ทิ้ง, ไม่งั้น set ตามที่เลือก
   const _op = newRole
     ? db.ref(K_USER_ROLES + '/' + uid + '/role').set(newRole)
     : db.ref(K_USER_ROLES + '/' + uid + '/role').remove();
   _op
-    .then(() => { logAudit('เปลี่ยนสิทธิ์ผู้ใช้', _umEmail, 'สิทธิ์ใหม่: ' + _roleLbl); showToast('✅ เปลี่ยนสิทธิ์เรียบร้อย'); umRefresh(); })
+    .then(() => { logAudit('เปลี่ยนสิทธิ์ผู้ใช้', _umEmail, 'สิทธิ์ ' + _oldRoleLbl + ' → ' + _roleLbl); showToast('✅ เปลี่ยนสิทธิ์เรียบร้อย'); umRefresh(); })   // [FIX#B34] ก่อน→หลัง
     .catch(() => showToast('⚠️ เปลี่ยนสิทธิ์ไม่ได้ ลองใหม่'));
 }
 
 function umDeleteUser(uid, email) {
   if (_currentRole !== 'admin') return;
   if (!confirm(`ลบผู้ใช้ "${email}" ออกจากระบบใช่ไหม?\n\nหมายเหตุ: บัญชี Firebase จะยังอยู่ แต่จะเข้าระบบไม่ได้ (role ถูกลบแล้ว)`)) return;
+  // [FIX#B34] เก็บ role เดิมของคนที่ถูกลบ เพื่อบันทึก audit
+  const _delSel = document.getElementById('rolesel_' + uid);
+  const _delOpt = _delSel ? _delSel.querySelector('option[selected]') : null;
+  const _delRoleLbl = (_delOpt && _delOpt.value) ? getRoleLabel(_delOpt.value) : 'ไม่มีตำแหน่ง';
   db.ref(K_USER_ROLES + '/' + uid).remove()
-    .then(() => { logAudit('ลบผู้ใช้', email, ''); showToast('🗑 ลบผู้ใช้เรียบร้อย'); umRefresh(); })
+    .then(() => { logAudit('ลบผู้ใช้', email, 'สิทธิ์เดิม: ' + _delRoleLbl); showToast('🗑 ลบผู้ใช้เรียบร้อย'); umRefresh(); })   // [FIX#B34]
     .catch(() => showToast('⚠️ ลบไม่ได้ ลองใหม่'));
 }
 
@@ -14565,6 +14612,8 @@ function saveEditProdErr() {
   if (!cause) { showToast('⚠️ กรุณากรอกสาเหตุ'); return; }
   const errs = getProdErrs();
   if (!errs[idx]) { showToast('⚠️ ไม่พบรายการ'); return; }
+  // [FIX#B34] เก็บค่าเดิมไว้ทำ audit ก่อน→หลัง
+  const _peOld = { qty: errs[idx].qty||0, cause: errs[idx].cause||'-', fix: (errs[idx].fix&&errs[idx].fix!=='-')?errs[idx].fix:'-', date: errs[idx].date||'-' };
   errs[idx].qty   = qty;
   errs[idx].cause = cause;
   errs[idx].fix   = fix || '-';
@@ -14572,7 +14621,13 @@ function saveEditProdErr() {
   saveProdErrs(errs);
   closeEditProdErr();
   renderProdErrHistory();
-  logAudit('แก้ไข Error ผลิต', errs[idx].order || '-', (errs[idx].errorType||'') + ' · ' + cause);
+  // [FIX#B34] audit ละเอียด: บอกว่าแก้ฟิลด์ไหน จากอะไรเป็นอะไร
+  const _peChg = [];
+  if (_peOld.qty   !== errs[idx].qty)   _peChg.push('จำนวน: ' + _peOld.qty + '→' + errs[idx].qty);
+  if (_peOld.cause !== cause)           _peChg.push('สาเหตุ: "' + _peOld.cause + '"→"' + cause + '"');
+  if (_peOld.fix   !== (fix||'-'))      _peChg.push('การแก้ไข: "' + _peOld.fix + '"→"' + (fix||'-') + '"');
+  if (dateISO && _peOld.date !== errs[idx].date) _peChg.push('วันที่: ' + _peOld.date + '→' + errs[idx].date);
+  logAudit('แก้ไข Error ผลิต', errs[idx].order || '-', (errs[idx].errorType||'') + ' · ' + cause + (_peChg.length ? ' · แก้ ' + _peChg.join(' · ') : '')); // [FIX#B34]
   showToast('✅ แก้ไข Error ผลิตแล้ว');
 }
 // ════════════════════════════════════════════════════════════════
