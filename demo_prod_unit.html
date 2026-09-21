@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เดโม ต้น/ท่อน — แบบ 1</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", "Sarabun", sans-serif; background: #F1F5F9; color: #1E293B; padding-bottom: 40px; }
+  .topbar { background: #1E40AF; color: #fff; padding: 14px 18px; }
+  .topbar h1 { font-size: 16px; font-weight: 800; }
+  .topbar p { font-size: 12px; opacity: .85; margin-top: 2px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px 12px; }
+  .card { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 14px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .card-head { padding: 11px 16px; font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 7px; border-bottom: 1px solid #EEF2F7; }
+  .card-body { padding: 14px 16px; }
+  .sales .card-head { background: #EFF6FF; color: #1D4ED8; }
+  .prod  .card-head { background: #FFF7ED; color: #C2410C; }
+  .status .card-head{ background: #F0FDF4; color: #15803D; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
+  .row .k { color: #64748B; }
+  .row .v { font-weight: 700; }
+  .ticket { background: #FFFBEB; border: 1.5px dashed #FCD34D; border-radius: 10px; padding: 12px 14px; }
+  .ticket .big { font-size: 20px; font-weight: 900; color: #0F172A; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 999px; }
+  .b-blue { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+  .b-orange { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
+  .b-green { background: #F0FDF4; color: #15803D; border: 1px solid #86EFAC; }
+  .hint { font-size: 11px; color: #94A3B8; margin-top: 4px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+  .choice { flex: 1; min-width: 130px; border: 1.5px solid #E2E8F0; background: #fff; border-radius: 10px; padding: 10px; cursor: pointer; text-align: center; transition: all .12s; }
+  .choice:hover { border-color: #FDBA74; }
+  .choice.on { border-color: #EA580C; background: #FFF7ED; box-shadow: 0 0 0 3px rgba(234,88,12,.12); }
+  .choice .t { font-size: 13px; font-weight: 800; color: #9A3412; }
+  .choice .s { font-size: 11px; color: #64748B; margin-top: 3px; }
+  .custom { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #F8FAFC; border-radius: 10px; border: 1px solid #E2E8F0; }
+  .custom label { font-size: 12px; font-weight: 700; color: #475569; }
+  .custom input { width: 70px; padding: 6px 8px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 14px; font-weight: 700; text-align: center; font-family: inherit; }
+  .stepper { display: flex; align-items: center; gap: 0; }
+  .stepper button { width: 30px; height: 32px; border: 1.5px solid #CBD5E1; background: #fff; font-size: 16px; font-weight: 800; cursor: pointer; color: #475569; }
+  .stepper button:first-child { border-radius: 8px 0 0 8px; }
+  .stepper button:last-child { border-radius: 0 8px 8px 0; }
+  .stepper input { width: 54px; height: 32px; border: 1.5px solid #CBD5E1; border-left: none; border-right: none; text-align: center; font-size: 15px; font-weight: 800; font-family: inherit; }
+  .result-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 12px 14px; margin-top: 6px; }
+  .arrow { text-align: center; color: #CBD5E1; font-size: 18px; margin: 2px 0; }
+  .statline { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #E5E7EB; }
+  .statline:last-child { border-bottom: none; }
+  .statline .label { font-size: 12px; color: #64748B; }
+  .statline .num { font-size: 18px; font-weight: 900; }
+  .statline .num small { font-size: 12px; font-weight: 700; color: #94A3B8; margin-left: 3px; }
+  .bar { height: 8px; background: #E2E8F0; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+  .bar > div { height: 100%; border-radius: 4px; }
+  .note-demo { font-size: 11px; color: #B45309; background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 8px 11px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>🧪 เดโม ระบบสั่งผลิต แบบ 1</h1>
+    <p>ฝ่ายขายลงเป็นต้น · ฝ่ายผลิตเลือกวิธีแบ่งท่อนเอง · หน้าสถานะโชว์ทั้งสองหน่วย</p>
+  </div>
+  <div class="wrap">
+    <div class="note-demo">นี่คือหน้าเดโมสำหรับดูแนวคิดเท่านั้น ยังไม่เชื่อมกับระบบจริง ลองกดเลือกวิธีผลิตดูได้เลย ตัวเลขด้านล่างจะเปลี่ยนตาม</div>
+
+    <!-- 1. ใบสั่งจากฝ่ายขาย -->
+    <div class="card sales">
+      <div class="card-head">🛒 ใบสั่งจากฝ่ายขาย (เหมือนกระดาษแปะให้เชฟ)</div>
+      <div class="card-body">
+        <div class="row"><span class="k">ลูกค้า</span><span class="v">บ้านพักอาศัย ไร่ขิง</span></div>
+        <div class="row"><span class="k">ชนิดเสา</span><span class="v">I18-207 <span class="badge b-blue">เสาเข็ม</span></span></div>
+        <div class="ticket" style="margin-top:8px;">
+          <div style="font-size:11px;color:#92400E;font-weight:700;margin-bottom:4px;">ลูกค้าต้องการ</div>
+          <div class="big">18.00 ม. · 50 ต้น</div>
+          <div class="hint">ฝ่ายขายลงแค่ว่าลูกค้าอยากได้เสายาว 18 เมตร จำนวน 50 ต้น · ไม่ต้องบอกว่าจะแบ่งท่อนยังไง</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. ฝ่ายผลิตเลือกวิธี -->
+    <div class="card prod">
+      <div class="card-head">🏭 ฝ่ายผลิตเลือกวิธีผลิต (เชฟตัดสินใจเอง)</div>
+      <div class="card-body">
+        <div class="hint" style="margin-bottom:8px;">พื้นที่ผลิตไม่พอหล่อยาว 18 ม. เลือกได้ว่าจะแบ่งกี่ท่อน</div>
+        <div class="choices" id="choices">
+          <div class="choice" data-seg="1"><div class="t">หล่อยาวเต็ม</div><div class="s">18.00 ม. · ไม่มีเชื่อม</div></div>
+          <div class="choice on" data-seg="2"><div class="t">แบ่ง 2 ท่อน</div><div class="s">9.00 ม. · 1 เชื่อม</div></div>
+          <div class="choice" data-seg="3"><div class="t">แบ่ง 3 ท่อน</div><div class="s">6.00 ม. · 2 เชื่อม</div></div>
+        </div>
+        <div class="custom">
+          <label>หรือกำหนดเอง แบ่งเป็น</label>
+          <div class="stepper">
+            <button onclick="stepSeg(-1)">−</button>
+            <input id="segInput" type="number" min="1" max="6" value="2" onchange="setSeg(this.value)">
+            <button onclick="stepSeg(1)">+</button>
+          </div>
+          <label>ท่อน / ต้น</label>
+        </div>
+        <div class="result-box" id="prodResult"></div>
+      </div>
+    </div>
+
+    <!-- 3. หน้าสถานะ (ผลลัพธ์) -->
+    <div class="card status">
+      <div class="card-head">📋 หน้าสถานะ (โชว์ทั้งต้นและท่อน)</div>
+      <div class="card-body">
+        <div class="row"><span class="k">ออเดอร์</span><span class="v">69/212 · I18-207</span></div>
+        <div class="row"><span class="k">วิธีผลิต</span><span class="v" id="stMethod"></span></div>
+
+        <div style="margin-top:10px;">
+          <div class="statline">
+            <div>
+              <div class="label">👤 ลูกค้าสั่ง (นับเป็นต้น)</div>
+              <div class="num" style="color:#1D4ED8;" id="stTon">50 <small>ต้น</small></div>
+            </div>
+            <span class="badge b-blue">ยอดลูกค้า</span>
+          </div>
+          <div class="statline">
+            <div>
+              <div class="label">🏭 ต้องผลิตจริง (นับเป็นท่อน)</div>
+              <div class="num" style="color:#C2410C;" id="stTon2">100 <small>ท่อน</small></div>
+            </div>
+            <span class="badge b-orange">ยอดผลิต</span>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:2px;">
+            <span style="color:#9A3412;">🏭 ผลิตแล้ว <span id="prodDoneT">40</span>/<span id="prodTotT">100</span> ท่อน</span>
+            <span id="prodPctT" style="color:#9A3412;">40%</span>
+          </div>
+          <div class="bar"><div id="prodBarT" style="width:40%;background:#F97316;"></div></div>
+          <div class="hint" id="prodEquiv"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hint" style="text-align:center;">เดโมนี้สมมติผลิตไปแล้ว 40 ท่อน เพื่อให้เห็นแถบความคืบหน้า</div>
+  </div>
+
+<script>
+  var LEN_FULL = 18;      // ความยาวเต็มที่ลูกค้าสั่ง (ม.)
+  var TON = 50;           // ลูกค้าสั่งกี่ต้น
+  var DONE_TON = 40;      // สมมติผลิตไปแล้วกี่ท่อน (เดโม)
+  var seg = 2;            // แบ่งกี่ท่อนต่อต้น
+
+  function fmt(n){ return (Math.round(n*100)/100).toString(); }
+
+  function render(){
+    var lenPer = LEN_FULL / seg;          // ความยาวต่อท่อน
+    var welds  = seg - 1;                  // จำนวนเชื่อม
+    var tonPieces = TON * seg;             // ท่อนรวมที่ต้องผลิต
+    var methodTxt = (seg === 1)
+      ? 'หล่อยาวเต็ม ' + fmt(LEN_FULL) + ' ม. (ไม่มีเชื่อม)'
+      : 'แบ่ง ' + seg + ' ท่อน · ท่อนละ ' + fmt(lenPer) + ' ม. · ' + welds + ' เชื่อม';
+
+    // กล่องสรุปฝ่ายผลิต
+    document.getElementById('prodResult').innerHTML =
+      '<div style="font-size:12px;color:#64748B;margin-bottom:6px;">สรุปที่เชฟเลือก</div>'
+      + '<div class="row" style="padding:3px 0;"><span class="k">ความยาวต่อท่อน</span><span class="v">' + fmt(lenPer) + ' ม.</span></div>'
+      + '<div class="row" style="padding:3px 0;"><span class="k">จำนวนเชื่อม</span><span class="v">' + welds + ' เชื่อม</span></div>'
+      + '<div class="arrow">↓</div>'
+      + '<div style="text-align:center;font-size:13px;">50 ต้น × ' + seg + ' ท่อน = <b style="font-size:17px;color:#C2410C;">' + tonPieces + ' ท่อน</b></div>';
+
+    // หน้าสถานะ
+    document.getElementById('stMethod').textContent = methodTxt;
+    document.getElementById('stTon').innerHTML  = TON + ' <small>ต้น</small>';
+    document.getElementById('stTon2').innerHTML = tonPieces + ' <small>ท่อน</small>';
+
+    var done = Math.min(DONE_TON, tonPieces);
+    var pct  = tonPieces > 0 ? Math.round(done / tonPieces * 100) : 0;
+    document.getElementById('prodDoneT').textContent = done;
+    document.getElementById('prodTotT').textContent  = tonPieces;
+    document.getElementById('prodPctT').textContent  = pct + '%';
+    document.getElementById('prodBarT').style.width   = pct + '%';
+    var equivTon = seg > 0 ? (done / seg) : 0;
+    document.getElementById('prodEquiv').textContent =
+      'เทียบเป็นเสาเสร็จ = ' + fmt(equivTon) + ' ต้น จาก ' + TON + ' ต้น (ต้องได้ครบ ' + seg + ' ท่อนถึงจะนับเป็น 1 ต้นเสร็จ)';
+
+    // ไฮไลต์ปุ่มที่เลือก
+    var chs = document.querySelectorAll('.choice');
+    chs.forEach(function(c){ c.classList.toggle('on', parseInt(c.dataset.seg) === seg); });
+    document.getElementById('segInput').value = seg;
+  }
+
+  function setSeg(v){ v = parseInt(v)||1; if(v<1)v=1; if(v>6)v=6; seg=v; render(); }
+  function stepSeg(d){ setSeg(seg + d); }
+
+  document.getElementById('choices').addEventListener('click', function(e){
+    var c = e.target.closest('.choice'); if(!c) return; setSeg(c.dataset.seg);
+  });
+
+  render();
+</script>
+</body>
+</html>
