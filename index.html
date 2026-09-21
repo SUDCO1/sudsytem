@@ -10436,8 +10436,8 @@ function renderHistorySummary() {
   const cards = [];
   orders.forEach(o => {
     const items = (o._done && o.archivedItems) ? o.archivedItems : getOrderItems(o);
-    const _isDone = o._done || autoSumStatus(o, items) === 'จบงาน';   // [FIX#B35] ออเดอร์ที่จบแล้ว
-    const _tlBtn = _isDone ? `<div style="padding:0 12px 10px;"><button onclick="openOrderTimeline(${_jsq(o.orderNum)})" style="width:100%;padding:7px;font-size:12px;font-weight:700;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:8px;cursor:pointer;">🕒 ดูไทม์ไลน์</button></div>` : '';
+    // [FIX#B37] แสดงปุ่มไทม์ไลน์ทุกออเดอร์ (เดิมแสดงเฉพาะที่จบแล้ว)
+    const _tlBtn = `<div style="padding:0 12px 10px;"><button onclick="openOrderTimeline(${_jsq(o.orderNum)})" style="width:100%;padding:7px;font-size:12px;font-weight:700;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:8px;cursor:pointer;">🕒 ดูไทม์ไลน์</button></div>`;
     const dateStr = o.orderDate || (o.orderDateISO ? isoToThai(o.orderDateISO) : '') || o.closedAt || '-';
     const doneStyle = o._done ? 'background:#F0FDF4;border-color:#86EFAC;' : 'background:#fff;border-color:#E2E8F0;';
     const multiBadge = items.length > 1 ? `<span style="font-size:10px;color:#64748B;font-weight:700;">· ${items.length} รายการ</span>` : '';
@@ -10488,8 +10488,8 @@ function renderHistorySummary() {
     const rows = [];
     orders.forEach(o => {
       const items = (o._done && o.archivedItems) ? o.archivedItems : getOrderItems(o);
-      const _isDone = o._done || autoSumStatus(o, items) === 'จบงาน';   // [FIX#B35]
-      const _tlBtnT = _isDone ? `<div style="margin-top:6px;"><button onclick="openOrderTimeline(${_jsq(o.orderNum)})" style="padding:4px 10px;font-size:11px;font-weight:700;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:8px;cursor:pointer;white-space:nowrap;">🕒 ดูไทม์ไลน์</button></div>` : '';
+      // [FIX#B37] แสดงปุ่มไทม์ไลน์ทุกออเดอร์ (เดิมแสดงเฉพาะที่จบแล้ว)
+      const _tlBtnT = `<div style="margin-top:6px;"><button onclick="openOrderTimeline(${_jsq(o.orderNum)})" style="padding:4px 10px;font-size:11px;font-weight:700;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:8px;cursor:pointer;white-space:nowrap;">🕒 ดูไทม์ไลน์</button></div>`;
       const dateStr = o.orderDate || (o.orderDateISO ? isoToThai(o.orderDateISO) : '') || o.closedAt || '-';
       const rowBg = o._done ? 'background:#F0FDF4;' : '';
       const span = items.length;
