@@ -4784,12 +4784,34 @@ function tcFinalizeDelivery(entry) {
       // 4) fallback สุดท้าย: pileType เดียวกันที่ยังไม่ถูกใช้ ถ้าไม่มีค่อยใช้ตัวแรก
       if (!it) it = o.items.find(x => x.pileType === si.pileType && !_usedItems.has(_idxOf(x))) || o.items.find(x => x.pileType === si.pileType);
       if (it) {
-        _usedItems.add(_idxOf(it));
-        // อนุญาตให้ส่งเกินที่สั่งได้ (บันทึกจริงเพื่อโชว์เป็น 6(+3))
-        it.delivered = (it.delivered||0) + sendQty;
-        if (fromStockSent > 0) {
-          it.stockDelivered = (it.stockDelivered||0) + fromStockSent;
+        // [FIX#B36] กระจายจำนวนส่งข้ามรายการสเปคเดียวกัน (เติมทีละใบจนเต็มก่อนค่อยล้นใบถัดไป)
+        // เดิม: ยัดทั้งก้อนลงรายการเดียว → รายการแรกเกิน รายการหลังขาด ทั้งที่รวมแล้วครบ
+        const _sameSpec = o.items.filter(x =>
+          x.pileType === it.pileType &&
+          _cpStyle(x)   === _cpStyle(it) &&
+          _fullStyle(x) === _fullStyle(it)
+        );
+        // เติมรายการที่ยัง "ขาด" มากที่สุดก่อน เพื่อกลบช่องว่างให้เท่ากัน
+        const _fillOrder = _sameSpec.slice().sort((a,b) =>
+          ((b.qty||0)-(b.delivered||0)) - ((a.qty||0)-(a.delivered||0))
+        );
+        let _remain = sendQty, _stockRemain = fromStockSent;
+        for (let _k = 0; _k < _fillOrder.length && _remain > 0; _k++) {
+          const _t = _fillOrder[_k];
+          const _room = Math.max(0, (_t.qty||0) - (_t.delivered||0));
+          if (_room <= 0) continue;
+          const _put = Math.min(_room, _remain);
+          _t.delivered = (_t.delivered||0) + _put;
+          if (_stockRemain > 0) { const _sp = Math.min(_stockRemain, _put); _t.stockDelivered = (_t.stockDelivered||0) + _sp; _stockRemain -= _sp; }
+          _remain -= _put;
+          _usedItems.add(_idxOf(_t));
         }
+        // ที่เหลือ (ส่งเกินที่สั่งจริง ๆ) ยัดลงตัวที่จับคู่ได้ (โชว์เป็น 6(+3))
+        if (_remain > 0) {
+          it.delivered = (it.delivered||0) + _remain;
+          if (_stockRemain > 0) it.stockDelivered = (it.stockDelivered||0) + _stockRemain;
+        }
+        _usedItems.add(_idxOf(it));
       }
     }
   });
