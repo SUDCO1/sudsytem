@@ -11424,6 +11424,14 @@ function submitCpEdit() {
   if (!_cpEditIds.length) { closeCpEditModal(); return; }
   // [หน่วย] คงหน่วยเดิมของใบที่แก้ไว้ (แก้สเปคไม่ได้แปลว่าเปลี่ยนวิธีนับ)
   const _keepUnit = (function(){ const c = getCustPoles().find(x => x.id === _cpEditIds[0]); return _unitOf(c && c.unit); })();
+  // [FIX#B33] เก็บสเปคเดิมไว้ เพื่อบันทึก audit แบบ ก่อน→หลัง
+  const _cpOldItem = getCustPoles().find(x => x.id === _cpEditIds[0]);
+  const _cpOldSpec = _cpOldItem ? ([
+      (_cpOldItem.base  && _cpOldItem.base  !== '-') ? _cpOldItem.base  : null,
+      (_cpOldItem.weld  && _cpOldItem.weld  !== '-') ? _cpOldItem.weld  : null,
+      (_cpOldItem.steel && _cpOldItem.steel !== '-') ? _cpOldItem.steel : null,
+      (_cpOldItem.ba    && _cpOldItem.ba    !== '-') ? _cpOldItem.ba    : null,
+    ].filter(Boolean).join('/') || (_cpOldItem.spec || '-')) : '-';
   const base  = document.getElementById('cpe_base').value.trim();
   const weld  = document.getElementById('cpe_weld').value.trim()  || '-';
   const steel = document.getElementById('cpe_steel').value.trim() || '-';
@@ -11492,7 +11500,12 @@ function submitCpEdit() {
     saveStockLog(log);
   }
 
-  try { logAudit('แก้ไขเสาค้างสต็อก', _cpEditPile, '[' + specLabel + '] ' + qty + ' ' + _keepUnit + (delta !== 0 ? ' · สต็อก ' + (delta>0?'+':'') + delta : '')); } catch(e){}   // [FIX#S12]
+  try {
+    const _cpChg = [];
+    if (_cpOldSpec !== specLabel)     _cpChg.push('สเปค: ' + _cpOldSpec + '→' + specLabel);
+    if (_cpEditOldQty !== qty)        _cpChg.push('จำนวน: ' + _cpEditOldQty + '→' + qty + ' ' + _keepUnit);
+    logAudit('แก้ไขเสาค้างสต็อก', _cpEditPile, '[' + specLabel + '] ' + qty + ' ' + _keepUnit + (delta !== 0 ? ' · สต็อก ' + (delta>0?'+':'') + delta : '') + (_cpChg.length ? ' · แก้ ' + _cpChg.join(' · ') : ''));   // [FIX#S12][FIX#B33]
+  } catch(e){}
   closeCpEditModal();
   if (_sdCurrentPile) { renderSdCustPoles(); openStockDetail(_sdCurrentPile); }
   renderStockCards();
@@ -13965,6 +13978,14 @@ function submitEditOrder() {
   const o = orders.find(x => x.orderNum === _editOrderNum);
   if (!o) return;
 
+  // [FIX#B33] เก็บค่าเดิมไว้ก่อนเขียนทับ เพื่อบันทึก audit แบบละเอียด (ก่อน→หลัง)
+  const _obf = {
+    customer: o.customer||'', tel: o.tel||'', sale: o.sale||'', site: o.site||'',
+    custAddr: o.custAddr||'', date: o.deliveryDateISO||'', note: (o.note||'-'),
+    qty: o.qty||0, val: o.orderValue||0,
+    items: (o.items||[]).map(it => (it.pileType||'') + ' ' + (it.length||'') + ' x' + (it.qty||0))
+  };
+
   o.customer       = customer;
   o.tel            = tel;
   o.sale           = sale;
@@ -13994,7 +14015,21 @@ function submitEditOrder() {
   // (ระบบจองอัตโนมัติปลดให้เฉพาะการ์ด ⚡ ที่มันจองเอง — การ์ดจากงานผลิตไม่ถูกแตะเลย)
   try { _releaseCardsNotNeeded(_editOrderNum); } catch (e) {}
   autoSaveCustomer(customer, tel, custAddr);
-  logAudit('แก้ไขออเดอร์', _editOrderNum, customer + ' · รวม ' + o.qty + ' ต้น');
+  // [FIX#B33] audit ละเอียด: ระบุว่าแก้ฟิลด์ไหน จากอะไรเป็นอะไร
+  const _chg = [];
+  if (_obf.customer !== customer)                 _chg.push('ลูกค้า: ' + (_obf.customer||'-') + '→' + (customer||'-'));
+  if (_obf.tel !== tel)                           _chg.push('เบอร์: ' + (_obf.tel||'-') + '→' + (tel||'-'));
+  if (_obf.sale !== sale)                         _chg.push('Sale: ' + (_obf.sale||'-') + '→' + (sale||'-'));
+  if (_obf.site !== site)                         _chg.push('ไซต์งาน: ' + (_obf.site||'-') + '→' + (site||'-'));
+  if (_obf.custAddr !== custAddr)                 _chg.push('ที่อยู่: ' + (_obf.custAddr||'-') + '→' + (custAddr||'-'));
+  if (_obf.date !== dateRaw)                      _chg.push('วันส่ง: ' + (isoToThai(_obf.date)||'-') + '→' + (isoToThai(dateRaw)||'-'));
+  if (_obf.note !== (note||'-'))                  _chg.push('หมายเหตุ: "' + _obf.note + '"→"' + (note||'-') + '"');
+  if (_obf.qty !== o.qty)                         _chg.push('จำนวนรวม: ' + _obf.qty + '→' + o.qty + ' ต้น');
+  if (_obf.val !== o.orderValue)                  _chg.push('มูลค่า: ' + _obf.val + '→' + o.orderValue);
+  const _oaf = (o.items||[]).map(it => (it.pileType||'') + ' ' + (it.length||'') + ' x' + (it.qty||0));
+  if (JSON.stringify(_obf.items) !== JSON.stringify(_oaf))
+    _chg.push('รายการเสา: [' + _obf.items.join(', ') + '] → [' + _oaf.join(', ') + ']');
+  logAudit('แก้ไขออเดอร์', _editOrderNum, customer + ' · รวม ' + o.qty + ' ต้น' + (_chg.length ? ' · แก้ ' + _chg.join(' · ') : ' · (ไม่มีการเปลี่ยนแปลง)'));
   closeEditOrder();
   renderOrders();
   renderSummary();
