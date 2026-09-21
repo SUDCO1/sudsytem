@@ -73,7 +73,7 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .chip.sel .chip-t{color:#C2410C;}
 
 .custom-lbl{font-size:11px;color:#9A3412;margin-top:12px;margin-bottom:4px;font-weight:700;}
-.segrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px;color:#7C2D12;font-weight:700;}
+.segrow{display:flex;align-items:center;gap:6px;margin:6px 0;font-size:13px;color:#7C2D12;font-weight:700;flex-wrap:wrap;}
 .segrow input{width:84px;padding:6px 8px;border:1.5px solid #FDBA74;border-radius:8px;font-size:14px;font-weight:800;text-align:center;color:#0F172A;font-family:inherit;}
 .segrow .del{border:none;background:#FEE2E2;color:#B91C1C;width:26px;height:26px;border-radius:6px;cursor:pointer;font-weight:800;}
 .addseg-btn{margin-top:6px;background:#FFEDD5;color:#C2410C;border:1.5px dashed #FDBA74;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;}
@@ -277,38 +277,32 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 
 <script>
 var LEN_FULL = 18, TON = 50, mode = 'half';
-var segLens = [10, 8];
+var segs = [{len:10, qty:50}, {len:8, qty:50}];
 
 function fmtLen(n){ return (Math.round(n*100)/100).toFixed(2); }
-function segList(){ return (mode === 'half') ? [LEN_FULL/2, LEN_FULL/2] : segLens.slice(); }
-
-function breakdown(list){
-  var order = [], groups = {};
-  list.forEach(function(L){
-    var k = fmtLen(L);
-    if(groups[k] === undefined){ groups[k] = 0; order.push(k); }
-    groups[k] += 1;
-  });
-  return order.map(function(k){ return { len:k, count:groups[k]*TON }; });
+function activeSegs(){
+  return (mode === 'half')
+    ? [{len:LEN_FULL/2, qty:TON}, {len:LEN_FULL/2, qty:TON}]
+    : segs;
 }
 
 function renderSegRows(){
   var box = document.getElementById('segRows');
-  box.innerHTML = segLens.map(function(L, i){
-    return '<div class="segrow">ท่อนที่ ' + (i+1) + ' &nbsp;'
-      + '<input type="number" step="0.5" value="' + L + '" oninput="setSegLen(' + i + ',this.value)"> ม. '
-      + (segLens.length > 2 ? '<button class="del" onclick="delSeg(' + i + ')">✕</button>' : '')
+  box.innerHTML = segs.map(function(s, i){
+    return '<div class="segrow"><span>ท่อนที่ ' + (i+1) + '</span> ยาว '
+      + '<input type="number" step="0.5" value="' + s.len + '" oninput="setSegLen(' + i + ',this.value)"> ม. · ผลิต '
+      + '<input type="number" step="1" value="' + s.qty + '" oninput="setSegQty(' + i + ',this.value)"> ท่อน '
+      + (segs.length > 2 ? '<button class="del" onclick="delSeg(' + i + ')">✕</button>' : '')
       + '</div>';
   }).join('');
 }
 
 function render(){
-  var list = segList();
+  var list = activeSegs();
   var segCount = list.length;
   var welds = segCount - 1;
-  var tonPieces = TON * segCount;
-  var sumLen = list.reduce(function(a,b){ return a + b; }, 0);
-  var bd = breakdown(list);
+  var tonPieces = list.reduce(function(a,s){ return a + (s.qty||0); }, 0);
+  var sumLen = list.reduce(function(a,s){ return a + (s.len||0); }, 0);
   var done = 0, pct = 0;
 
   document.getElementById('chipHalf').classList.toggle('sel', mode === 'half');
@@ -321,8 +315,8 @@ function render(){
   document.getElementById('piPct').textContent = pct + '%';
   document.getElementById('piBar').style.width = pct + '%';
 
-  var lensStr = list.map(function(L){ return fmtLen(L) + 'ม.'; }).join(' + ');
-  var bdStr = bd.map(function(b){ return b.count + ' ท่อน ยาว ' + b.len + 'ม.'; }).join(' + ');
+  var lensStr = list.map(function(s){ return fmtLen(s.len) + 'ม.'; }).join(' + ');
+  var bdStr = list.map(function(s){ return (s.qty||0) + ' ท่อน ยาว ' + fmtLen(s.len) + 'ม.'; }).join(' + ');
   var res = '→ ลูกค้าสั่ง 50 ต้น · แบ่งเป็น <b>' + segCount + '</b> ท่อน (' + lensStr + ')'
           + '<br>ต้องผลิตจริง <b>' + tonPieces + '</b> ท่อน = ' + bdStr
           + ' · เชื่อม ' + welds + ' จุด/ต้น';
@@ -343,8 +337,8 @@ function render(){
   document.getElementById('tProgTxt').innerHTML = '<b style="color:#EA580C;">' + done + '</b> / ' + tonPieces + ' ท่อน';
   document.getElementById('tBar').style.width = pct + '%';
 
-  var specHtml = bd.map(function(b){
-    return '<span class="ptag pt-amber">' + b.count + '×' + b.len + 'ม.</span>';
+  var specHtml = list.map(function(s){
+    return '<span class="ptag pt-amber">' + (s.qty||0) + '×' + fmtLen(s.len) + 'ม.</span>';
   }).join('') + '<span class="ptag pt-purple">ช:' + welds + '</span>';
   document.getElementById('tSpec').innerHTML = specHtml;
 }
@@ -354,16 +348,17 @@ function pickMode(m){
   if(m === 'custom') renderSegRows();
   render();
 }
-function setSegLen(i, v){ segLens[i] = parseFloat(v) || 0; render(); }
+function setSegLen(i, v){ segs[i].len = parseFloat(v) || 0; render(); }
+function setSegQty(i, v){ segs[i].qty = parseInt(v, 10) || 0; render(); }
 function addSeg(){
-  var used = segLens.reduce(function(a,b){ return a + b; }, 0);
+  var used = segs.reduce(function(a,s){ return a + (s.len||0); }, 0);
   var remain = Math.max(0, LEN_FULL - used);
-  segLens.push(remain > 0 ? remain : 0);
+  segs.push({len: remain > 0 ? remain : 0, qty: 50});
   renderSegRows(); render();
 }
 function delSeg(i){
-  if(segLens.length <= 2) return;
-  segLens.splice(i, 1);
+  if(segs.length <= 2) return;
+  segs.splice(i, 1);
   renderSegRows(); render();
 }
 
