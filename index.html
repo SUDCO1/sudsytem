@@ -4559,21 +4559,39 @@ function _tcCpRowsHtml(orderNum, savedItems) {
   // ชี้ไปที่รายการสั่งเดียวกัน) — โควตาจะถูกแบ่งกันผ่าน budget
   function _tcMatchItem(pileType, spec, allowUsed) {
     const sp   = String(spec||'');
-    const pool = allowUsed ? itemPool : itemPool.filter(it => !it.used);
-    // 1) ตรงเป๊ะแบบ cp-style (ตัด extra) 2) ตรงเป๊ะกับ full spec
-    let best = pool.find(it => it.pileType === pileType && it.cpStyle === sp)
-           || pool.find(it => it.pileType === pileType && it.fullStyle === sp);
-    if (!best) {
-      // 3) fallback: token overlap มากสุด (เลือกตัวจำเพาะสุดเมื่อคะแนนเท่ากัน)
-      const gTokens = sp.split('/').filter(Boolean);
-      let bestScore = -1;
-      pool.forEach(it => {
-        if (it.pileType !== pileType) return;
-        let score = 0;
-        gTokens.forEach(t => { if (it.specTokens.includes(t)) score++; });
-        if (score > bestScore || (score === bestScore && best && it.specTokens.length < best.specTokens.length)) { bestScore = score; best = it; }
-      });
+    // [FIX#B32] ออเดอร์เดียวมีหลายรายการ "สเปคเหมือนกันเป๊ะ" (เช่น 9.00/1 สองรายการ)
+    // → การ์ดถูกรวมเป็นแถวเดียว แต่ของเดิมจับคู่ได้แค่ "รายการเดียว" (mark used)
+    // ถ้ารายการแรกส่งครบแล้ว แถวจะขึ้น "เหลือส่ง 0" แล้วรายการที่เพิ่มทีหลังส่งไม่ได้ (เด้ง "ส่งเกิน")
+    // แก้: รวมทุกรายการที่สเปคตรงเป๊ะเข้าด้วยกัน คิดยอด ordered/shipped/budget เป็นผลรวม
+    // budget เป็น getter/setter → หักโควตากระจายลงแต่ละรายการ ให้หลายกอง (ผลิต+สต็อกเก่า) แบ่งกันได้เหมือนเดิม
+    const exact = itemPool.filter(it => it.pileType === pileType && (it.cpStyle === sp || it.fullStyle === sp));
+    if (exact.length) {
+      exact.forEach(it => { it.used = true; });
+      return {
+        _items: exact,
+        ordered: exact.reduce((s,i) => s + i.ordered, 0),
+        shipped: exact.reduce((s,i) => s + i.shipped, 0),
+        unit:    exact[0].unit,
+        get budget() { return exact.reduce((s,i) => s + Math.max(0, i.budget), 0); },
+        set budget(v) {
+          let need = exact.reduce((s,i) => s + Math.max(0, i.budget), 0) - Math.max(0, v);
+          for (let k = 0; k < exact.length && need > 0; k++) {
+            const take = Math.min(exact[k].budget, need);
+            exact[k].budget -= take; need -= take;
+          }
+        }
+      };
     }
+    // ไม่มีตัวตรงเป๊ะ → fallback token overlap มากสุด (รายการเดียว, เคารพ used เหมือนเดิม)
+    const pool = allowUsed ? itemPool : itemPool.filter(it => !it.used);
+    const gTokens = sp.split('/').filter(Boolean);
+    let best = null, bestScore = -1;
+    pool.forEach(it => {
+      if (it.pileType !== pileType) return;
+      let score = 0;
+      gTokens.forEach(t => { if (it.specTokens.includes(t)) score++; });
+      if (score > bestScore || (score === bestScore && best && it.specTokens.length < best.specTokens.length)) { bestScore = score; best = it; }
+    });
     if (best) { best.used = true; return best; }
     return null;
   }
