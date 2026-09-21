@@ -185,24 +185,22 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
               <div class="method">
                 <div class="method-lbl">⚙️ วิธีผลิต — ฝ่ายผลิตเลือกว่าจะแบ่งเสา 1 ต้น เป็นกี่ท่อน</div>
                 <div class="chip-grid">
-                  <div class="chip" data-seg="1" onclick="setSeg(1)">
-                    <div class="chip-t">หล่อยาวเต็ม</div>
-                    <div class="chip-d">1 ท่อน · 18.00ม. · ไม่เชื่อม</div>
+                  <div class="chip sel" id="chipHalf" onclick="pickMode('half')">
+                    <div class="chip-t">หารสอง</div>
+                    <div class="chip-d">แบ่ง 2 ท่อน · 9.00ม. · เชื่อม 1</div>
                   </div>
-                  <div class="chip sel" data-seg="2" onclick="setSeg(2)">
-                    <div class="chip-t">แบ่ง 2 ท่อน</div>
-                    <div class="chip-d">9.00ม. · เชื่อม 1</div>
-                  </div>
-                  <div class="chip" data-seg="3" onclick="setSeg(3)">
-                    <div class="chip-t">แบ่ง 3 ท่อน</div>
-                    <div class="chip-d">6.00ม. · เชื่อม 2</div>
+                  <div class="chip" id="chipCustom" onclick="pickMode('custom')">
+                    <div class="chip-t">เลือกเอง</div>
+                    <div class="chip-d">กำหนดจำนวนท่อนเอง</div>
                   </div>
                 </div>
-                <div class="stepper-lbl">หรือกำหนดเอง — แบ่ง 1 ต้น เป็นกี่ท่อน</div>
-                <div class="stepper">
-                  <button onclick="stepSeg(-1)">−</button>
-                  <div class="val" id="segVal">2</div>
-                  <button onclick="stepSeg(1)">+</button>
+                <div id="customBox" style="display:none;">
+                  <div class="stepper-lbl">แบ่ง 1 ต้น เป็นกี่ท่อน</div>
+                  <div class="stepper">
+                    <button onclick="stepSeg(-1)">−</button>
+                    <div class="val" id="segVal">2</div>
+                    <button onclick="stepSeg(1)">+</button>
+                  </div>
                 </div>
                 <div class="method-res">
                   → ลูกค้าสั่ง 50 ต้น · เมื่อแบ่ง <b id="rSeg">2</b> ท่อน ต้องผลิตจริง <b id="rTon">100</b> ท่อน
@@ -294,7 +292,7 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 </div>
 
 <script>
-var LEN_FULL = 18, TON = 50, seg = 2;
+var LEN_FULL = 18, TON = 50, seg = 2, mode = 'half';
 function fmtLen(n){ return (Math.round(n*100)/100).toFixed(2); }
 
 function render(){
@@ -316,9 +314,9 @@ function render(){
   document.getElementById('piDone').textContent = done;
   document.getElementById('piPct').textContent = pct + '%';
   document.getElementById('piBar').style.width = pct + '%';
-  document.querySelectorAll('.chip').forEach(function(c){
-    c.classList.toggle('sel', Number(c.getAttribute('data-seg')) === seg);
-  });
+  document.getElementById('chipHalf').classList.toggle('sel', mode === 'half');
+  document.getElementById('chipCustom').classList.toggle('sel', mode === 'custom');
+  document.getElementById('customBox').style.display = (mode === 'custom') ? 'block' : 'none';
 
   // status page
   document.getElementById('sTon').textContent = tonPieces;
@@ -332,8 +330,12 @@ function render(){
   document.getElementById('tBar').style.width = pct + '%';
 }
 
-function setSeg(v){ seg = v; render(); }
-function stepSeg(d){ seg = Math.max(1, Math.min(6, seg + d)); render(); }
+function pickMode(m){
+  mode = m;
+  if(m === 'half'){ seg = 2; }
+  render();
+}
+function stepSeg(d){ mode = 'custom'; seg = Math.max(2, Math.min(8, seg + d)); render(); }
 
 function goSec(name){
   showSection(name);
