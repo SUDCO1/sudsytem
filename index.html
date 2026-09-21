@@ -3295,6 +3295,10 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
             <label class="field-label">เลน <span class="req">*</span></label>
             <input type="text" id="spf_lane" placeholder="เช่น 1, 2, A"/>
           </div>
+          <div class="field" id="spf_seg_field" style="display:none;">
+            <label class="field-label">เลือกท่อนที่จะเท <span class="req">*</span></label>
+            <select id="spf_seg" onchange="spfSegChange()" style="width:100%;padding:8px 10px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;"></select>
+          </div>
           <div class="field">
             <label class="field-label">จำนวนที่เทลงราง <span id="spfUnitPile"><select id="spf_unit" class="unit-pick-local" title="หน่วยของรายการนี้"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></span><span id="spfUnitGirder" style="display:none;font-weight:700;color:#7C3AED;">ตัว</span> <span class="req">*</span></label>
             <input type="number" id="spf_qty" min="1" placeholder="เช่น 50"/>
@@ -3434,6 +3438,43 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <div style="display:flex;gap:10px;margin-top:18px;">
           <button onclick="saveEditActiveProd()" class="btn btn-primary" style="flex:1;">💾 บันทึก</button>
           <button onclick="closeEditActiveProd()" class="btn btn-ghost" style="flex:1;">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Modal วิธีผลิต (ต้นเต็ม / แบ่งท่อน) ── -->
+    <div id="prodPlanModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:min(520px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:15px;font-weight:800;color:#1E293B;">⚙️ วิธีผลิต</div>
+          <button onclick="closeProdPlan()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#94A3B8;">✕</button>
+        </div>
+        <div id="pp_sub" style="font-size:12px;color:#64748B;margin-bottom:14px;">—</div>
+        <input type="hidden" id="pp_order"/>
+        <input type="hidden" id="pp_item_idx"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div id="pp_chip_whole" onclick="ppSetMode('whole')" style="cursor:pointer;border:2px solid #E2E8F0;border-radius:10px;padding:12px;">
+            <div style="font-size:13px;font-weight:800;color:#1E293B;">ต้นเต็ม</div>
+            <div style="font-size:11px;color:#64748B;margin-top:2px;">ผลิตเป็นต้นเดียวเต็มความยาว นับเป็นต้น</div>
+          </div>
+          <div id="pp_chip_split" onclick="ppSetMode('split')" style="cursor:pointer;border:2px solid #E2E8F0;border-radius:10px;padding:12px;">
+            <div style="font-size:13px;font-weight:800;color:#1E293B;">แบ่งท่อน</div>
+            <div style="font-size:11px;color:#64748B;margin-top:2px;">แบ่งเป็นท่อนสั้นๆ แล้วเชื่อม นับเป็นท่อน</div>
+          </div>
+        </div>
+        <div id="pp_split_box" style="display:none;background:#FFF7ED;border:1.5px solid #FDBA74;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+            <div style="font-size:12px;font-weight:800;color:#9A3412;">คีย์ความยาวและจำนวนแต่ละท่อน</div>
+            <button onclick="ppHalf()" style="background:#FED7AA;color:#9A3412;border:1px solid #FB923C;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;">↔ หารสอง</button>
+          </div>
+          <div id="pp_seg_rows"></div>
+          <button onclick="ppAddSeg()" style="margin-top:8px;background:#fff;color:#9A3412;border:1.5px dashed #FB923C;border-radius:7px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">➕ เพิ่มท่อน</button>
+          <div id="pp_warn" style="display:none;margin-top:8px;font-size:11px;font-weight:700;color:#B91C1C;"></div>
+        </div>
+        <div id="pp_res" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:10px 12px;font-size:12px;color:#334155;margin-bottom:16px;">—</div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="saveProdPlan()" class="btn btn-primary" style="flex:1;">💾 บันทึกวิธีผลิต</button>
+          <button onclick="closeProdPlan()" class="btn btn-ghost" style="flex:1;">ยกเลิก</button>
         </div>
       </div>
     </div>
@@ -7373,6 +7414,36 @@ function getOrderItems(o) {
   if (o.items && o.items.length > 0) return o.items;
   return [{ pileType: o.pileType||'-', qty: o.qty||0, length: o.length||'-', value: o.orderValue||0, delivered: o.delivered||0 }];
 }
+// ── วิธีผลิต ต้นเต็ม / แบ่งท่อน (แบบ 1) ──────────────────────────
+// ดึงตัวเลขความยาวจากสตริง เช่น "18.00ม." หรือ "6m" → 18 / 6
+function _prodLenNum(s) {
+  if (typeof s === 'number') return s;
+  var m = String(s || '').replace(/,/g, '').match(/\d+(\.\d+)?/);
+  return m ? parseFloat(m[0]) : 0;
+}
+// โหมดผลิตของรายการ: 'split' = แบ่งท่อน, ไม่งั้น = 'whole' (ต้นเต็ม, ค่าเริ่มต้น)
+function getItemProdMode(it) { return (it && it.prodMode === 'split') ? 'split' : 'whole'; }
+// ท่อนของรายการที่แบ่งท่อน → [{len, qty}] (คืน [] ถ้าเป็นต้นเต็ม)
+function getItemSegs(it) {
+  if (!it || it.prodMode !== 'split') return [];
+  if (it.segs && it.segs.length) return it.segs.map(function (s) { return { len: _prodLenNum(s.len), qty: parseInt(s.qty, 10) || 0 }; });
+  var full = _prodLenNum(it.length); var half = full ? full / 2 : 0;
+  return [{ len: half, qty: it.qty || 0 }, { len: half, qty: it.qty || 0 }];
+}
+// เป้าหมายที่ต้องผลิต: ต้นเต็ม → qty ต้น, แบ่งท่อน → รวมจำนวนท่อน
+function getItemProdTarget(it) {
+  if (it && it.prodMode === 'split') return getItemSegs(it).reduce(function (a, s) { return a + (s.qty || 0); }, 0);
+  return it ? (it.qty || 0) : 0;
+}
+// หน่วยของงานผลิตรายการนี้
+function getItemProdUnit(it) {
+  if (it && it.productType === 'girder') return 'ตัว';
+  return (it && it.prodMode === 'split') ? 'ท่อน' : 'ต้น';
+}
+// สรุปแผนแบ่งท่อนเป็นข้อความ เช่น "50×10.00ม. + 50×8.00ม."
+function fmtSegSummary(segs) {
+  return (segs || []).map(function (s) { return (s.qty || 0) + '×' + (s.len || 0).toFixed(2) + 'ม.'; }).join(' + ');
+}
 function getOrderTotalQty(o) {
   return getOrderItems(o).reduce((s, it) => s + (it.qty||0), 0);
 }
@@ -8615,7 +8686,8 @@ function renderOrders() {
           const iBarC = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
           const iPctC = iPct>=100?'#166534':iPct>=50?'#92400E':'#991B1B';
           const produced   = getTotalProduced(o.orderNum, pile, idx, _pidx);
-          const prodPct    = it.qty>0 ? Math.round(produced/it.qty*100) : 0;
+          const _prodTgt   = getItemProdTarget(it);
+          const prodPct    = _prodTgt>0 ? Math.round(produced/_prodTgt*100) : 0;
           const prodPctBar = Math.min(prodPct, 100);
           const prodBarC   = prodPct>=100?'#22C55E':prodPct>=50?'#F59E0B':'#F97316';
           const prodPctC   = prodPct>=100?'#166534':prodPct>=50?'#92400E':'#9A3412';
@@ -8669,7 +8741,7 @@ function renderOrders() {
             <td style="font-size:12px;">${lenDisp}</td>
             <td><strong>${it.qty}</strong></td>
             <td style="min-width:140px;"><div style="display:flex;flex-direction:column;gap:6px;">
-              <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span style="color:#9A3412;">🏭 ผลิต ${produced}/${it.qty}</span><span style="color:${prodPctC};">${prodPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span style="color:#9A3412;">🏭 ผลิต ${produced}/${_prodTgt}${it.prodMode==='split'?' ท่อน':''}</span><span style="color:${prodPctC};">${prodPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div></div>
               <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''} style="color:#1D4ED8;">🚚 ส่ง ${delDisp}/${it.qty}</span><span style="color:${iPctC};">${iPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div>${over>0?`<div style="font-size:10px;color:#DC2626;margin-top:1px;">ส่งเกิน ${over}</div>`:''}</div>
             </div></td>
             <td style="font-size:12px;">${o.deliveryDate}${dlBadge}</td>
@@ -8771,7 +8843,8 @@ function renderOrders() {
         const iPctBar = Math.min(iPct, 100);
         const iBarC  = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
         const produced   = getTotalProduced(o.orderNum, pile, idx, _pidx);
-        const prodPct    = iqty>0 ? Math.round(produced/iqty*100) : 0;
+        const _prodTgt   = getItemProdTarget(it);
+        const prodPct    = _prodTgt>0 ? Math.round(produced/_prodTgt*100) : 0;
         const prodPctBar = Math.min(prodPct, 100);
         const prodBarC   = prodPct>=100?'#22C55E':prodPct>=50?'#F59E0B':'#F97316';
         const idxBadge   = isMultiItem ? `<span class="mob-oe-idx">${idx+1}/${o.items.length}</span>` : '';
@@ -8780,7 +8853,7 @@ function renderOrders() {
         return `<div class="mob-oe-item">
           <div class="mob-oe-spec">${idxBadge}<span>${s?_esc(s):_emptySpec}</span><span class="mob-oe-qty">${iqty} ${iu}</span></div>
           <div class="mob-oe-prog">
-            <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt" style="color:#9A3412;">🏭 ผลิต ${produced}/${iqty}</span><span style="font-size:11px;font-weight:700;color:${prodPct>=100?'#166534':'#9A3412'};">${prodPctBar}%</span></div>
+            <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt" style="color:#9A3412;">🏭 ผลิต ${produced}/${_prodTgt}${it.prodMode==='split'?' ท่อน':''}</span><span style="font-size:11px;font-weight:700;color:${prodPct>=100?'#166534':'#9A3412'};">${prodPctBar}%</span></div>
             <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div>
             <div class="mob-oc-prog-lbl" style="margin-top:3px;"><span class="mob-oc-prog-txt ${_canEditB?'mob-oe-del':''}" ${_canEditB?`onclick="${editCall}"`:''} style="color:#1D4ED8;">🚚 ส่ง ${delLbl}/${iqty}</span><span style="font-size:11px;font-weight:700;">${iPctBar}%</span></div>
             <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div>
@@ -9202,6 +9275,20 @@ function getTotalProduced(orderNum, pileType, itemIdx, idx) {
     })
     .reduce((s, l) => s + (l.qtyNet !== undefined ? l.qtyNet : l.qtyProduced || 0), 0);
 }
+// จำนวนท่อนที่ผลิตแล้วของท่อนหนึ่งๆ (สำหรับรายการแบ่งท่อน)
+function getSegProduced(orderNum, pileType, itemIdx, segIdx, idx) {
+  const activeOrder = idx ? idx.byNum.get(orderNum) : getOrders().find(o => o.orderNum === orderNum);
+  const orderTs = activeOrder ? (activeOrder.timestamp || 0) : 0;
+  return (idx ? (idx.byOrder.get(orderNum) || []) : getProdLog())
+    .filter(l => {
+      if (l.archived) return false;
+      if (l.orderNum !== orderNum || l.pileType !== pileType) return false;
+      if (orderTs && (l.timestamp || 0) < orderTs) return false;
+      if (l.itemIdx !== undefined ? l.itemIdx !== itemIdx : itemIdx !== 0) return false;
+      return l.segIdx === segIdx;
+    })
+    .reduce((s, l) => s + (l.qtyNet !== undefined ? l.qtyNet : l.qtyProduced || 0), 0);
+}
 
 // ── Render Production Section ──────────────────────────────────
 // แตะหัวออเดอร์ (แถบฟ้า) เพื่อกาง/พับ รายการสินค้าที่ต้องผลิต
@@ -9233,12 +9320,15 @@ function renderProdSection() {
     const pilesHtml = items.map((it, itemIdx) => {
       const pileType = it.pileType || o.pileType || '-';
       const isG = it.productType === 'girder';
-      const u   = isG ? 'ตัว' : 'ต้น';
+      const u   = getItemProdUnit(it);
+      const isSplit = it.prodMode === 'split';
+      const segs = getItemSegs(it);
+      const target = getItemProdTarget(it);
       const totalProduced = getTotalProduced(o.orderNum, pileType, itemIdx, _pidx);
       const stockDelivered = it.stockDelivered || 0;
-      const pct = it.qty > 0 ? Math.min(100, Math.round((totalProduced + stockDelivered) / it.qty * 100)) : 0;
-      const remaining = Math.max(0, it.qty - totalProduced - stockDelivered);
-      const excess    = Math.max(0, totalProduced - it.qty);
+      const pct = target > 0 ? Math.min(100, Math.round((totalProduced + stockDelivered) / target * 100)) : 0;
+      const remaining = Math.max(0, target - totalProduced - stockDelivered);
+      const excess    = Math.max(0, totalProduced - target);
       const _actList = getProdActive().filter(a => a.orderNum === o.orderNum && a.pileType === pileType && (a.itemIdx === undefined || a.itemIdx === itemIdx));
       const inProd = _actList[0];
       const inProgQty = _actList.reduce((s,a) => s + (a.qtyCasting||0), 0);
@@ -9273,8 +9363,12 @@ function renderProdSection() {
           <span style="font-size:12px;font-weight:700;color:${remaining<=0?'#166534':'#1E40AF'};" title="เหลือผลิต">${remaining} ${u}</span>
         </div>
         ${tags ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${tags}</div>` : ''}
+        ${isG ? '' : `<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:6px 9px;margin-bottom:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:700;color:#9A3412;">⚙️ ${isSplit ? ('แบ่งท่อน: ' + fmtSegSummary(segs) + ' · เชื่อม ' + (segs.length-1) + ' จุด/ต้น') : ('ต้นเต็ม · ยาว ' + (_prodLenNum(it.length)?_prodLenNum(it.length).toFixed(2):'-') + 'ม.')}</span>
+          ${canDo('log_production') ? `<button onclick="openProdPlan('${o.orderNum}',${itemIdx})" style="background:#fff;color:#9A3412;border:1px solid #FB923C;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">ตั้งวิธีผลิต</button>` : ''}
+        </div>`}
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:4px;">
-          <span>ผลิตแล้ว <strong style="color:${pct>=100?'#166534':'#1E293B'};">${totalProduced}</strong> / ${it.qty} ${u}</span>
+          <span>ผลิตแล้ว <strong style="color:${pct>=100?'#166534':'#1E293B'};">${totalProduced}</strong> / ${target} ${u}</span>
           <span style="font-weight:700;color:${pct>=100?'#166534':'#92400E'};">${pct}%</span>
         </div>
         ${stockDelivered > 0 ? `<div style="display:flex;justify-content:space-between;font-size:11px;background:#FEF3C7;border:1px solid #FCD34D;border-radius:6px;padding:4px 8px;margin-bottom:4px;">
@@ -9554,6 +9648,91 @@ function submitFreeProd() {
   renderActiveProd(); renderProdSection();
 }
 
+// ════════════════════════════════════════════════════════════════
+//  วิธีผลิต (ต้นเต็ม / แบ่งท่อน) — Modal
+// ════════════════════════════════════════════════════════════════
+var _ppMode = 'whole', _ppSegs = [], _ppFull = 0, _ppQty = 0;
+function openProdPlan(orderNum, itemIdx) {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์ตั้งค่าการผลิต'); return; }
+  var o = getOrders().find(function (x) { return x.orderNum === orderNum; });
+  if (!o) return;
+  var it = getOrderItems(o)[itemIdx]; if (!it) return;
+  document.getElementById('pp_order').value = orderNum;
+  document.getElementById('pp_item_idx').value = itemIdx;
+  _ppFull = _prodLenNum(it.length);
+  _ppQty  = it.qty || 0;
+  _ppMode = (it.prodMode === 'split') ? 'split' : 'whole';
+  var segs = getItemSegs(it);
+  _ppSegs = segs.length ? segs.map(function (s) { return { len: s.len, qty: s.qty }; })
+                        : [{ len: _ppFull / 2 || 0, qty: _ppQty }, { len: _ppFull / 2 || 0, qty: _ppQty }];
+  document.getElementById('pp_sub').textContent = orderNum + ' — ' + (it.pileType || o.pileType || '-')
+    + ' · สั่ง ' + _ppQty + ' ต้น · ยาวเต็ม ' + (_ppFull ? _ppFull.toFixed(2) : '-') + 'ม.';
+  ppRenderSegs(); ppApplyMode(); ppRender();
+  document.getElementById('prodPlanModal').style.display = 'flex';
+}
+function closeProdPlan() { document.getElementById('prodPlanModal').style.display = 'none'; }
+function ppSetMode(m) { _ppMode = m; ppApplyMode(); ppRender(); }
+function ppApplyMode() {
+  var w = document.getElementById('pp_chip_whole'), s = document.getElementById('pp_chip_split');
+  var box = document.getElementById('pp_split_box'), on = '#F97316', off = '#E2E8F0';
+  if (w) { w.style.borderColor = (_ppMode === 'whole') ? on : off; w.style.background = (_ppMode === 'whole') ? '#FFF7ED' : '#fff'; }
+  if (s) { s.style.borderColor = (_ppMode === 'split') ? on : off; s.style.background = (_ppMode === 'split') ? '#FFF7ED' : '#fff'; }
+  if (box) box.style.display = (_ppMode === 'split') ? '' : 'none';
+}
+function ppRenderSegs() {
+  var box = document.getElementById('pp_seg_rows');
+  box.innerHTML = _ppSegs.map(function (s, i) {
+    return '<div style="display:flex;align-items:center;gap:6px;margin:6px 0;font-size:13px;color:#7C2D12;font-weight:700;flex-wrap:wrap;">'
+      + '<span>ท่อนที่ ' + (i + 1) + '</span> ยาว '
+      + '<input type="number" step="0.5" value="' + s.len + '" oninput="ppSetSegLen(' + i + ',this.value)" style="width:70px;padding:5px 7px;border:1.5px solid #FDBA74;border-radius:6px;font-size:13px;"> ม. · ผลิต '
+      + '<input type="number" step="1" value="' + s.qty + '" oninput="ppSetSegQty(' + i + ',this.value)" style="width:70px;padding:5px 7px;border:1.5px solid #FDBA74;border-radius:6px;font-size:13px;"> ท่อน '
+      + (_ppSegs.length > 2 ? '<button onclick="ppDelSeg(' + i + ')" style="background:#FEE2E2;color:#B91C1C;border:none;border-radius:6px;width:24px;height:24px;cursor:pointer;font-weight:700;">✕</button>' : '')
+      + '</div>';
+  }).join('');
+}
+function ppSetSegLen(i, v) { _ppSegs[i].len = parseFloat(v) || 0; ppRender(); }
+function ppSetSegQty(i, v) { _ppSegs[i].qty = parseInt(v, 10) || 0; ppRender(); }
+function ppAddSeg() {
+  var used = _ppSegs.reduce(function (a, s) { return a + (s.len || 0); }, 0);
+  var remain = Math.max(0, _ppFull - used);
+  _ppSegs.push({ len: remain > 0 ? remain : 0, qty: _ppQty }); ppRenderSegs(); ppRender();
+}
+function ppDelSeg(i) { if (_ppSegs.length <= 2) return; _ppSegs.splice(i, 1); ppRenderSegs(); ppRender(); }
+function ppHalf() { var half = _ppFull ? _ppFull / 2 : 0; _ppSegs = [{ len: half, qty: _ppQty }, { len: half, qty: _ppQty }]; ppRenderSegs(); ppRender(); }
+function ppRender() {
+  var res = document.getElementById('pp_res');
+  if (_ppMode === 'whole') {
+    res.innerHTML = '→ ผลิตเป็นต้นเต็ม ' + _ppQty + ' ต้น ยาว ' + (_ppFull ? _ppFull.toFixed(2) : '-') + 'ม.';
+    return;
+  }
+  var total  = _ppSegs.reduce(function (a, s) { return a + (s.qty || 0); }, 0);
+  var welds  = _ppSegs.length - 1;
+  var sumLen = _ppSegs.reduce(function (a, s) { return a + (s.len || 0); }, 0);
+  res.innerHTML = '→ แบ่งเป็น ' + _ppSegs.length + ' ท่อน (' + fmtSegSummary(_ppSegs) + ')<br>ต้องผลิตจริงรวม ' + total + ' ท่อน · เชื่อม ' + welds + ' จุด/ต้น';
+  var warn = document.getElementById('pp_warn');
+  if (_ppFull && Math.abs(sumLen - _ppFull) > 0.01) {
+    warn.style.display = ''; warn.textContent = '⚠️ ผลรวมความยาว ' + sumLen.toFixed(2) + 'ม. ไม่เท่ากับความยาวเต็ม ' + _ppFull.toFixed(2) + 'ม.';
+  } else { warn.style.display = 'none'; }
+}
+function saveProdPlan() {
+  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์ตั้งค่าการผลิต'); return; }
+  var orderNum = document.getElementById('pp_order').value;
+  var itemIdx  = parseInt(document.getElementById('pp_item_idx').value);
+  var orders = getOrders();
+  var o = orders.find(function (x) { return x.orderNum === orderNum; });
+  if (!o) return;
+  var its = getOrderItems(o);
+  if (!(o.items && o.items.length)) o.items = its; // ทำให้แก้ไขและบันทึกได้จริง
+  var it = o.items[itemIdx]; if (!it) return;
+  if (_ppMode === 'split') { it.prodMode = 'split'; it.segs = _ppSegs.map(function (s) { return { len: s.len, qty: s.qty }; }); }
+  else { it.prodMode = 'whole'; delete it.segs; }
+  saveOrders(orders);
+  try { logAudit('ตั้งวิธีผลิต', orderNum, (it.pileType || '') + ' · ' + (_ppMode === 'split' ? ('แบ่งท่อน ' + fmtSegSummary(_ppSegs)) : 'ต้นเต็ม')); } catch (e) {}
+  closeProdPlan();
+  renderProdSection();
+  showToast('✅ บันทึกวิธีผลิตแล้ว');
+}
+
 function openStartProdForm(orderNum, pileType, qtyRequired, length, itemIdx) {
   if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   document.getElementById('spf_order').value    = orderNum;
@@ -9576,11 +9755,39 @@ function openStartProdForm(orderNum, pileType, qtyRequired, length, itemIdx) {
   document.getElementById('spf_time').value = _now.toTimeString().slice(0, 5);
   const specLabel = (length && length !== '-') ? ' · ' + length : '';
   const _isG = (pileType === 'Girder');
-  const _u   = _isG ? 'ตัว' : 'ต้น';
+  let _u   = _isG ? 'ตัว' : 'ต้น';
   const _up  = document.getElementById('spfUnitPile');
   const _ug  = document.getElementById('spfUnitGirder');
   if (_up) _up.style.display = _isG ? 'none' : '';
   if (_ug) _ug.style.display = _isG ? '' : 'none';
+  // ── รายการแบ่งท่อน: แสดงตัวเลือกท่อน + นับเป็นท่อน ──
+  const _segField = document.getElementById('spf_seg_field');
+  const _segSel   = document.getElementById('spf_seg');
+  let _itSplit = null;
+  try {
+    const _o = getOrders().find(x => x.orderNum === orderNum);
+    if (_o && itemIdx !== undefined) {
+      const _it = getOrderItems(_o)[itemIdx];
+      if (_it && _it.prodMode === 'split') _itSplit = _it;
+    }
+  } catch (e) {}
+  if (_itSplit && _segSel) {
+    _u = 'ท่อน';
+    if (_up) _up.style.display = 'none';
+    if (_ug) _ug.style.display = 'none';
+    const _pidxLocal = buildProdIndex();
+    const _segs = getItemSegs(_itSplit);
+    _segSel.innerHTML = _segs.map(function (s, i) {
+      const made = getSegProduced(orderNum, pileType, itemIdx, i, _pidxLocal);
+      const rem  = Math.max(0, (s.qty || 0) - made);
+      return '<option value="' + i + '" data-len="' + (s.len || 0).toFixed(2) + 'ม." data-rem="' + rem + '">ท่อนที่ ' + (i + 1) + ' · ' + (s.len || 0).toFixed(2) + 'ม. (เหลือ ' + rem + ' ท่อน)</option>';
+    }).join('');
+    if (_segField) _segField.style.display = '';
+    _segSel.selectedIndex = 0;
+    spfSegChange();
+  } else if (_segField) {
+    _segField.style.display = 'none';
+  }
   document.getElementById('spfSub').textContent = orderNum + ' — ' + pileType + specLabel + ' (ต้องผลิต ' + qtyRequired + ' ' + _u + ')';
   document.getElementById('spf_item_idx').value = itemIdx !== undefined ? itemIdx : '';
   document.getElementById('startProdFormCard').style.display = '';
@@ -9588,6 +9795,15 @@ function openStartProdForm(orderNum, pileType, qtyRequired, length, itemIdx) {
 }
 function closeStartProdForm() {
   document.getElementById('startProdFormCard').style.display = 'none';
+}
+// เปลี่ยนท่อนที่เลือก → เติมความยาว + จำนวนที่เหลือให้อัตโนมัติ
+function spfSegChange() {
+  const sel = document.getElementById('spf_seg');
+  if (!sel || !sel.options.length) return;
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('spf_length').value = opt.getAttribute('data-len') || '-';
+  const rem = parseInt(opt.getAttribute('data-rem')) || 0;
+  document.getElementById('spf_qty').value = rem > 0 ? rem : '';
 }
 function submitStartProd() {
   if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
@@ -9618,19 +9834,27 @@ function submitStartProd() {
   let _gExtra = {};
   // [หน่วย] งานผลิตต้องรู้ว่านับเป็นต้นหรือท่อน — ยึดจากรายการในออเดอร์ก่อน
   let _prodUnit = _unitOf(document.getElementById('spf_unit') && document.getElementById('spf_unit').value);
+  // รายการแบ่งท่อน → นับเป็นท่อน + จำ segIdx ที่เลือก
+  let _segIdx;
+  const _segFieldOn = document.getElementById('spf_seg_field') && document.getElementById('spf_seg_field').style.display !== 'none';
+  if (_segFieldOn) {
+    const _segSel = document.getElementById('spf_seg');
+    if (_segSel && _segSel.value !== '') _segIdx = parseInt(_segSel.value);
+  }
   try {
     const _o = getOrders().find(x => x.orderNum === orderNum);
     if (_o) {
       const _its = getOrderItems(_o);
       const _it = (_itemIdxNum !== undefined && _its[_itemIdxNum]) ? _its[_itemIdxNum] : _its.find(x => (x.pileType||_o.pileType) === pileType);
       if (_it && _it.unit) _prodUnit = _unitOf(_it.unit);
+      if (_it && _it.prodMode === 'split') _prodUnit = 'ท่อน';
       if (_it && _it.productType === 'girder') {
         _gExtra = { productType:'girder', height:_it.height, width:_it.width, rebar:_it.rebar,
           wireTop:_it.wireTop, wireMid:_it.wireMid, wireBottom:_it.wireBottom, pipe:_it.pipe, position:_it.position };
       }
     }
   } catch(e) {}
-  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, unit: _prodUnit, note, prodDate, lane, tong, wire, standQty, standSize, standRows, startedAt: _startedAt, startedBy: (_currentUser && _currentUser.email) || '-', ..._gExtra, ...(_itemIdxNum !== undefined ? { itemIdx: _itemIdxNum } : {}) });
+  list.push({ id: genVid(), orderNum, pileType, length, qtyRequired: required, qtyCasting, unit: _prodUnit, note, prodDate, lane, tong, wire, standQty, standSize, standRows, startedAt: _startedAt, startedBy: (_currentUser && _currentUser.email) || '-', ..._gExtra, ...(_itemIdxNum !== undefined ? { itemIdx: _itemIdxNum } : {}), ...(_segIdx !== undefined ? { segIdx: _segIdx } : {}) });
   saveProdActive(list);
   // อัปเดตสถานะออเดอร์ → กำลังผลิต
   const orders = getOrders();
@@ -9658,7 +9882,7 @@ function openFinishProd(activeId) {
   document.getElementById('fp_net_display').textContent      = qty;
   const specLabel = (a.length && a.length !== '-') ? ' · ' + a.length : '';
   const _fpIsG = (a.pileType === 'Girder' || a.productType === 'girder');
-  const _fpU   = _fpIsG ? 'ตัว' : 'ต้น';
+  const _fpU   = a.unit ? a.unit : (_fpIsG ? 'ตัว' : 'ต้น');
   ['fpu1','fpu2','fpu3'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = _fpU; });
   const _fpDL = document.getElementById('fp_defect_label'); if (_fpDL) _fpDL.textContent = 'ผลิตเสียกี่' + _fpU + '?';
   document.getElementById('fpSub').textContent = a.orderNum + ' — ' + a.pileType + specLabel + ' · ผลิตได้ ' + qty + ' ' + _fpU;
@@ -9735,7 +9959,7 @@ function submitFinishProd() {
     qtyRequired: required, qtyProduced: qty,
     qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0,
     unit: (a.productType === 'girder' ? 'ตัว' : _unitOf(a.unit)),
-    lane: a.lane||'', tong: a.tong||'', wire: a.wire||'', standRows: a.standRows||[], ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}) };
+    lane: a.lane||'', tong: a.tong||'', wire: a.wire||'', standRows: a.standRows||[], ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}), ...(a.segIdx !== undefined ? { segIdx: a.segIdx } : {}) };
   if (a.productType === 'girder') _newLog.productType = 'girder';
   // [หน่วย] Girder นับเป็น "ตัว" · เสาเข็มใช้หน่วยที่ติดมากับงานผลิต (สืบทอดจากรายการออเดอร์)
   const _u = a.productType === 'girder' ? 'ตัว' : _unitOf(a.unit);
@@ -9753,7 +9977,7 @@ function submitFinishProd() {
       const done = (pt === a.pileType && i === a.itemIdx) ? newTotal : getTotalProduced(a.orderNum, pt, i);
       // [FIX#B5] ต้องบวกของที่ส่งจากสต็อกเก่าด้วย ไม่งั้นออเดอร์ที่ผลิตครบแล้วจะค้างที่ "กำลังผลิต"
       // (หน้าฝ่ายผลิตนับรวมให้อยู่แล้ว จึงขึ้น 100% แต่สถานะไม่ขยับ)
-      return done + (it.stockDelivered || 0) >= it.qty;
+      return done + (it.stockDelivered || 0) >= getItemProdTarget(it);
     });
     if (allDone && ['รับออเดอร์','ยืนยัน Order','กำลังผลิต'].includes(o.status||'')) {
       o.status = 'พร้อมส่ง'; saveOrders(orders); showToast('✅ ผลิตครบแล้ว! ' + a.orderNum + ' → พร้อมส่ง');
@@ -9780,8 +10004,8 @@ function submitFinishProd() {
     renderProdErrHistory();
   }
 
-  // เพิ่มสต็อก
-  if (netQty > 0) {
+  // เพิ่มสต็อก (ข้ามรายการที่นับเป็น "ท่อน" เพราะยังเป็นชิ้นส่วน ยังไม่ใช่เสาต้นสมบูรณ์)
+  if (netQty > 0 && _u !== 'ท่อน') {
     // สร้าง spec label จากทุก field ที่มี
     const _specParts = a.productType === 'girder' ? [
       a.height   && a.height   !== '-' ? 'สูง ' + a.height : null,
