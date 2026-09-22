@@ -2247,6 +2247,13 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .data-table .new-row td{background:#F0FDF4 !important;}
 .data-table .overdue-row td{background:#FFF1F1 !important;}
 .data-table .soon-row td{background:#FFFBEB !important;}
+/* บีบหน้า "สถานะออเดอร์" ให้แน่นขึ้น ลดพื้นที่ว่าง เห็นออเดอร์ได้มากขึ้น (แนวยาวเหมือนเดิม) */
+#ordersGrouped .card{margin-bottom:8px;}
+#ordersGrouped .card:last-child{margin-bottom:0;}
+#ordersGrouped .card-header{padding:9px 14px;}
+#ordersGrouped .data-table th{padding:6px 9px;}
+#ordersGrouped .data-table td{padding:5px 9px;}
+#ordersGrouped .act-row{margin-top:3px;}
 .table-empty td{text-align:center;color:#94A3B8;font-style:italic;padding:32px !important;}
 .order-id{font-weight:800;color:#1E40AF;font-size:13px;}
 .edit-cell{cursor:pointer;color:#1E40AF;font-weight:700;text-decoration:underline dotted;}
@@ -8740,7 +8747,7 @@ function renderOrders() {
             <td><strong>${_esc(o.customer)}</strong>${o.tel?`<br><span style="font-size:11px;color:#64748B;">${_esc(o.tel)}</span>`:''}</td>
             <td style="font-size:12px;">${lenDisp}</td>
             <td><strong>${it.qty}</strong></td>
-            <td style="min-width:140px;"><div style="display:flex;flex-direction:column;gap:6px;">
+            <td style="min-width:140px;"><div style="display:flex;flex-direction:column;gap:4px;">
               <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span style="color:#9A3412;">🏭 ผลิต ${produced}/${_prodTgt}${it.prodMode==='split'?' ท่อน':''}</span><span style="color:${prodPctC};">${prodPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div></div>
               <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''} style="color:#1D4ED8;">🚚 ส่ง ${delDisp}/${it.qty}</span><span style="color:${iPctC};">${iPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div>${over>0?`<div style="font-size:10px;color:#DC2626;margin-top:1px;">ส่งเกิน ${over}</div>`:''}</div>
             </div></td>
