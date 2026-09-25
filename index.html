@@ -2999,6 +2999,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   <div class="nav-tab sale-only" id="nav-proderr" data-tab="proderr" onclick="goTab('proderr',this)">🏭 ฝ่ายผลิต</div>
   <div class="nav-tab" id="nav-transport" data-tab="transport" onclick="goTab('transport',this)">🚛 ฝ่ายขนส่ง</div>
   <div class="nav-tab" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ฝ่ายสต็อก</div>
+  <div class="nav-tab" id="nav-yard" data-tab="yard" onclick="goTab('yard',this)">🗺️ ผังลาน</div>
   <div class="nav-tab" id="nav-customers" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
   <!-- Dashboard ไม่อยู่บนแถบเมนู — เข้าจากการ์ดที่หน้าแรกอย่างเดียว -->
   <div class="nav-tab" id="nav-dashboard" data-tab="dashboard" onclick="openDashboardPage()" style="display:none !important;">📈 Dashboard ↗</div>
@@ -5215,6 +5216,392 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
+<!-- ================================================================ SECTION: ผังลาน (Stock #2 · location layer) ================================================================ -->
+<style>
+  #yardApp{ --ink:#1f2937; --muted:#64748b; --band:#eef2f7; color:var(--ink); font-family:-apple-system,"Segoe UI",Tahoma,sans-serif; }
+  #yardApp .yhead{ padding:14px 20px 4px; }
+  #yardApp .yhead h2{ margin:0; font-size:18px; }
+  #yardApp .yhead .sub{ color:var(--muted); font-size:12.5px; margin-top:3px; }
+  #yardApp .bar{ display:flex; gap:10px; flex-wrap:wrap; padding:12px 20px 4px; }
+  #yardApp .stat{ background:#fff; border:1px solid #d7dee7; border-radius:10px; padding:9px 14px; min-width:120px; }
+  #yardApp .stat .l{ font-size:11px; color:var(--muted); } #yardApp .stat .v{ font-size:18px; font-weight:800; margin-top:2px; }
+  #yardApp .legend{ padding:2px 20px 8px; color:var(--muted); font-size:12px; }
+  #yardApp .guard{ margin:6px 20px 0; border-radius:10px; padding:11px 16px; font-size:13px; font-weight:700; }
+  #yardApp .guard.ok{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  #yardApp .guard.bad{ background:#fef2f2; border:1.5px solid #f87171; color:#991b1b; }
+  #yardApp .guard .ghead{ display:flex; align-items:center; gap:8px; }
+  #yardApp .guard ul{ margin:7px 0 0; padding-left:20px; font-weight:600; } #yardApp .guard li{ margin:2px 0; }
+  #yardApp .guard .gsub{ font-weight:500; font-size:12px; margin-top:5px; }
+  #yardApp .plan{ margin:8px 20px 20px; background:#fff; border:3px solid var(--ink); border-radius:6px; padding:14px; position:relative; }
+  #yardApp .fence{ text-align:center; margin:10px 0; position:relative; }
+  #yardApp .fence::before{ content:""; position:absolute; top:50%; left:0; right:0; border-top:2px dashed #94a3b8; }
+  #yardApp .fence span{ position:relative; background:#fff; padding:0 14px; font-size:12px; color:var(--muted); }
+  #yardApp .zrow{ display:flex; gap:12px; align-items:stretch; margin:10px 0; }
+  #yardApp .grow{ flex:1; }
+  #yardApp .block{ border:2px solid #64748b; border-radius:8px; padding:6px; background:var(--band); }
+  #yardApp .block.tight{ flex:none; }
+  #yardApp .cols{ display:flex; gap:5px; } #yardApp .col{ flex:1; display:flex; flex-direction:column; gap:5px; }
+  #yardApp .cell{ background:#fff; border:1px solid #cbd5e1; border-radius:7px; height:96px; padding:4px 5px; cursor:pointer; transition:.12s; display:flex; flex-direction:column; gap:2px; overflow:hidden; }
+  #yardApp .cell:hover{ border-color:#2563eb; transform:translateY(-1px); box-shadow:0 2px 6px rgba(37,99,235,.15); }
+  #yardApp .cell.empty{ border-style:dashed; color:#94a3b8; align-items:center; justify-content:center; background:#fbfdff; }
+  #yardApp .cell.old{ box-shadow:0 0 0 2px #ef4444 inset; }
+  #yardApp .cell .sid{ font-size:10.5px; color:var(--muted); font-weight:700; flex:none; }
+  #yardApp .cell .lots{ display:flex; flex-direction:column; flex-wrap:wrap; align-content:flex-start; gap:2px 4px; flex:1 1 auto; min-height:0; overflow:hidden; }
+  #yardApp .cell .lot{ display:flex; align-items:center; gap:3px; font-size:9.5px; line-height:1.25; white-space:nowrap; }
+  #yardApp .cell .lot .lotold{ font-size:8px; } #yardApp .cell .nm{ font-weight:700; }
+  #yardApp .cell .foot{ flex:none; font-size:9.5px; color:var(--muted); }
+  #yardApp .raft{ border:2px solid #64748b; border-radius:8px; background:repeating-linear-gradient(45deg,#eef2f7,#eef2f7 8px,#e6ebf2 8px,#e6ebf2 16px); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:#475569; min-height:70px; }
+  #yardApp .raft.slim{ min-height:52px; font-size:13px; }
+  #yardApp .facil{ border:1.5px solid #94a3b8; border-radius:6px; background:#fff; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700; color:#475569; padding:6px 8px; text-align:center; }
+  #yardApp .buildings{ display:flex; gap:8px; justify-content:center; margin-top:6px; } #yardApp .buildings .facil{ flex:1; }
+  #yardApp .scale{ width:150px; margin:8px auto 2px; border:1.5px solid #94a3b8; border-radius:6px; background:repeating-linear-gradient(90deg,#fff,#fff 6px,#eef2f7 6px,#eef2f7 12px); text-align:center; font-size:11.5px; font-weight:700; color:#475569; padding:5px; }
+  #yardApp .sidelbl{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; font-size:11px; color:#64748b; font-weight:700; width:26px; }
+  #yardApp .queue{ margin:4px 20px 14px; background:#fff; border:1px solid #d7dee7; border-left:5px solid #f59e0b; border-radius:10px; padding:12px 16px; }
+  #yardApp .queue h3{ margin:0 0 3px; font-size:14px; display:flex; align-items:center; gap:8px; }
+  #yardApp .queue .qbadge{ background:#fef3c7; color:#92400e; font-size:12px; font-weight:700; padding:2px 10px; border-radius:99px; }
+  #yardApp .queue .qhint{ color:var(--muted); font-size:12px; margin-bottom:10px; }
+  #yardApp .queue .qempty{ color:#94a3b8; font-size:13px; padding:8px 0; }
+  #yardApp .qitem{ display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid #eef2f7; border-radius:8px; margin-bottom:6px; background:#fafcff; }
+  #yardApp .qitem .qmain{ flex:1; min-width:0; }
+  #yardApp .qitem .qspec{ font-weight:700; font-size:13px; }
+  #yardApp .qitem .qsub{ font-size:11.5px; color:#64748b; margin-top:1px; }
+  #yardApp .qitem .qsrc{ font-size:12px; color:#92400e; font-weight:700; margin-top:3px; background:#fff7ed; border:1px solid #fed7aa; border-radius:6px; padding:3px 8px; display:inline-block; }
+  #yardApp .queue.out .qitem .qsrc{ color:#991b1b; background:#fef2f2; border-color:#fecaca; }
+  #yardApp .qitem .qqty{ font-weight:800; font-size:15px; color:#b45309; white-space:nowrap; }
+  #yardApp .qitem .qbtn{ background:#2563eb; color:#fff; border:0; border-radius:7px; padding:8px 15px; font-size:13px; cursor:pointer; white-space:nowrap; }
+  #yardApp .qitem .qbtn:hover{ background:#1d4ed8; }
+  #yardApp .queue.out{ border-left-color:#ef4444; }
+  #yardApp .queue.out .qbadge{ background:#fee2e2; color:#b91c1c; }
+  #yardApp .queue.out .qitem .qqty{ color:#dc2626; }
+  #yardApp .queue.out .qitem .qbtn{ background:#dc2626; } #yardApp .queue.out .qitem .qbtn:hover{ background:#b91c1c; }
+  #yardApp .yov{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:9000; padding:16px; }
+  #yardApp .yov .box{ background:#fff; border:1px solid #d7dee7; border-radius:14px; padding:22px; width:540px; max-width:100%; max-height:90vh; overflow:auto; }
+  #yardApp .yov h3{ margin:0 0 4px; } #yardApp .yov .hint{ color:var(--muted); font-size:12px; margin-bottom:12px; }
+  #yardApp .lotrow{ border:1px solid #e2e8f0; border-radius:10px; padding:10px; margin-bottom:10px; background:#f8fafc; }
+  #yardApp .lotrow .rhead{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  #yardApp .lotrow .rhead b{ font-size:13px; } #yardApp .lotrow .agebadge{ font-size:11px; color:var(--muted); }
+  #yardApp .lotrow .rdetail{ font-size:12.5px; color:#334155; margin-bottom:6px; line-height:1.5; }
+  #yardApp .lotrow .rqty{ font-size:12.5px; color:var(--muted); margin-bottom:6px; } #yardApp .lotrow .rqty b{ color:var(--ink); font-size:14px; }
+  #yardApp .lotrow .rsrc{ font-size:12px; color:#1e40af; background:#eff6ff; border:1px solid #dbeafe; border-radius:7px; padding:5px 8px; margin-bottom:6px; font-weight:600; }
+  #yardApp .lotrow .rnote{ font-size:12px; color:#475569; background:#fff; border:1px solid #e2e8f0; border-radius:7px; padding:6px 8px; }
+  #yardApp .rmbtn{ background:#fee2e2; color:#b91c1c; border:0; border-radius:6px; padding:4px 9px; font-size:12px; cursor:pointer; }
+  #yardApp .yov label{ display:block; font-size:11px; color:var(--muted); margin:0 0 3px; }
+  #yardApp .yov select,#yardApp .yov input{ width:100%; background:#fff; color:var(--ink); border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; }
+  #yardApp .addbtn{ width:100%; background:transparent; border:1px dashed #94a3b8; color:#2563eb; border-radius:8px; padding:9px; font-size:13px; cursor:pointer; margin-bottom:6px; }
+  #yardApp .btns{ display:flex; gap:8px; margin-top:14px; }
+  #yardApp .btns .save{ flex:1; background:#2563eb; color:#fff; border:0; border-radius:8px; padding:10px; font-size:14px; cursor:pointer; }
+  #yardApp .btns .cancel{ flex:1; background:#fff; border:1px solid #cbd5e1; color:var(--ink); border-radius:8px; padding:10px; font-size:14px; cursor:pointer; }
+  #yardApp .placerow,#yardApp .takerow{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  #yardApp .placerow .pQty,#yardApp .takerow .tQty{ width:110px; flex:none; }
+  #yardApp .placerow .pBlk{ width:150px; flex:none; }
+  #yardApp .placerow .pNum{ flex:1; min-width:120px; }
+  #yardApp #yPlaceRemain,#yardApp #yTakeRemain{ font-size:13px; font-weight:700; margin-top:10px; padding:8px 10px; background:#f1f5f9; border-radius:8px; }
+  #yardApp #outOv .btns .save{ background:#dc2626; }
+</style>
+<div id="sec-yard" class="section">
+ <div id="yardApp">
+  <div class="yhead">
+    <h2>🗺️ ผังลาน — ตำแหน่งกองเสาเข็ม (Stock #2)</h2>
+    <div class="sub">ผังบอก “ตำแหน่ง” ของจริงในลาน · จำนวน/สเปคอิงจากสต็อก 1 (เสาลูกค้า) แบบสด · คลิกช่องเพื่อดู/บันทึกตำแหน่ง</div>
+  </div>
+  <div class="bar">
+    <div class="stat"><div class="l">ช่องที่ใช้แล้ว</div><div class="v" id="sUsed">-</div></div>
+    <div class="stat"><div class="l">จำนวนล็อตทั้งหมด</div><div class="v" id="sLots">-</div></div>
+    <div class="stat"><div class="l">ในลาน (ต้น)</div><div class="v" id="sQty">-</div></div>
+    <div class="stat" style="border-color:#f59e0b;background:#fffbeb;"><div class="l" style="color:#92400e;">รอลงลาน (ต้น)</div><div class="v" id="sWait" style="color:#b45309;">-</div></div>
+    <div class="stat" style="border-color:#ef4444;background:#fef2f2;"><div class="l" style="color:#b91c1c;">รอเอาออก (ต้น)</div><div class="v" id="sOut" style="color:#dc2626;">-</div></div>
+    <div class="stat"><div class="l">ล็อตค้างนานสุด</div><div class="v" id="sOld">-</div></div>
+  </div>
+  <div class="legend">🔴 ขอบแดง = ค้างในลานเกิน 45 วัน (ควรระบายก่อน ตามหลัก FIFO) • คลิกช่องว่างเพื่อดูรายละเอียด</div>
+
+  <div class="guard" id="guard"></div>
+
+  <div class="queue">
+    <h3>⏳ รอจัดลงลาน <span class="qbadge" id="qCount">-</span></h3>
+    <div class="qhint">ของที่มีในสต็อก 1 (เสาลูกค้า) แต่ยังไม่ได้ระบุตำแหน่งในลาน — กด “จัดลงลาน” เพื่อเลือกกอง (แยกหลายกองได้)</div>
+    <div id="queueList"></div>
+  </div>
+
+  <div class="queue out">
+    <h3>🚚 เสาออก · รอตัดออกจากลาน <span class="qbadge" id="oCount">-</span></h3>
+    <div class="qhint">ในลานมีมากกว่าที่สต็อก 1 บอก (เช่น ขนส่งรับไปแล้ว/สต็อก 1 ตัดออก) — กด “เอาออกจากกอง” เพื่อระบุว่าหยิบจากกองไหน</div>
+    <div id="outList"></div>
+  </div>
+
+  <div class="plan">
+    <div class="fence"><span>รั้ว</span></div>
+    <div class="zrow">
+      <div class="sidelbl">KABAG</div>
+      <div class="block grow" id="blkC"></div>
+      <div class="block tight" id="blkF"></div>
+      <div class="facil" style="width:70px;">อู่ซ่อม</div>
+    </div>
+    <div class="zrow">
+      <div class="sidelbl"></div>
+      <div class="block tight" id="blkD"></div>
+      <div class="raft grow">แพ 2</div>
+      <div class="sidelbl">ลาน<br>เท<br>ปูน</div>
+    </div>
+    <div class="zrow">
+      <div class="sidelbl">ORU</div>
+      <div class="block grow" id="blkB"></div>
+      <div class="sidelbl">ถนน<br>คอนกรีต</div>
+    </div>
+    <div class="zrow">
+      <div class="sidelbl"></div>
+      <div class="raft grow slim">แพ 1</div>
+      <div class="sidelbl"></div>
+    </div>
+    <div class="zrow">
+      <div class="sidelbl"></div>
+      <div class="block grow" id="blkA"></div>
+      <div class="block tight" id="blkE"></div>
+      <div class="sidelbl">ทาง<br>เข้า<br>ออก</div>
+    </div>
+    <div class="scale">⚖ ตาชั่ง</div>
+    <div class="buildings">
+      <div class="facil">โรงแหวน</div>
+      <div class="facil">โรงแหวน</div>
+      <div class="facil">โรงงานเชื่อมเหล็ก</div>
+      <div class="facil">ออฟฟิศฝ่ายสนาม</div>
+      <div class="facil">ออฟฟิศสำนักงาน</div>
+      <div class="facil" style="flex:none;width:64px;">ป้อมยาม</div>
+    </div>
+    <div class="fence"><span>รั้ว</span></div>
+  </div>
+
+  <!-- modal: ดูช่อง -->
+  <div id="ov" class="yov">
+    <div class="box">
+      <h3 id="ovTitle">ช่อง</h3>
+      <div class="hint">สเปคและจำนวนอิงสต็อก 1 (ดูอย่างเดียว) · ฝั่งลานใช้บันทึก “ตำแหน่งกอง” เท่านั้น</div>
+      <div id="lotList"></div>
+      <div class="btns"><button class="save" onclick="YARD.closeOv()">เสร็จ / ปิด</button></div>
+    </div>
+  </div>
+  <!-- modal: จัดลงลาน -->
+  <div id="placeOv" class="yov">
+    <div class="box">
+      <h3>📦 จัดลงลาน</h3>
+      <div class="hint" id="placeInfo"></div>
+      <div id="placeRows"></div>
+      <button class="addbtn" onclick="YARD.addPlaceRow()">+ เพิ่มกองปลายทาง</button>
+      <div id="yPlaceRemain"></div>
+      <div class="btns">
+        <button class="save" onclick="YARD.savePlace()">ยืนยันจัดลง</button>
+        <button class="cancel" onclick="YARD.closePlace()">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+  <!-- modal: เอาออกจากกอง -->
+  <div id="outOv" class="yov">
+    <div class="box">
+      <h3>🚚 เอาออกจากกอง</h3>
+      <div class="hint" id="takeInfo"></div>
+      <div id="takeRows"></div>
+      <button class="addbtn" onclick="YARD.addTakeRow()">+ เพิ่มกองที่หยิบออก</button>
+      <div id="yTakeRemain"></div>
+      <div class="btns">
+        <button class="save" onclick="YARD.saveTakeOut()">ยืนยันเอาออก</button>
+        <button class="cancel" onclick="YARD.closeTakeOut()">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+ </div>
+</div>
+<script>
+/* ============================================================
+   YARD (Stock #2 · location layer) — เชื่อมกับสต็อก 1 (customerPoles) สด
+   - จำนวน/สเปค = อ่านจาก getCustPoles() (สต็อก 1) แบบ read-only
+   - ตำแหน่งกอง (STATE) = ของฝั่งลานเอง เก็บใน localStorage (sud_yard_state_v1)
+   - รอจัดลงลาน / รอเอาออก = คำนวณจากส่วนต่าง (สต็อก1 − ที่ลงไปแล้ว) → ยอดตรงกันเสมอ
+   ============================================================ */
+window.YARD = (function(){
+  "use strict";
+  const OLD_DAYS=45, LS_STATE="sud_yard_state_v1";
+  const BLOCKS={ A:10, B:12, C:10, D:2, E:2, F:2 };
+  const nz=v=>(v==null||v==="")?"-":(""+v).trim();
+  const fmtDate=iso=>{ if(!iso) return "วันนี้"; try{ return new Date(iso).toLocaleDateString("th-TH",{day:"2-digit",month:"short",year:"numeric"}); }catch(e){ return iso; } };
+  const ageOf=dt=>dt?Math.floor((Date.now()-new Date(dt).getTime())/86400000):0;
+  const todayISO=()=>new Date().toISOString().slice(0,10);
+  const esc=s=>(""+(s==null?"":s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+  // ---- ตำแหน่งกองจริง (yard owns this) ----
+  let STATE={};
+  function load(){ try{ const s=localStorage.getItem(LS_STATE); STATE=s?JSON.parse(s):{}; }catch(e){ STATE={}; } }
+  function save(){ try{ localStorage.setItem(LS_STATE, JSON.stringify(STATE)); }catch(e){} }
+  const lotsOf=id=>Array.isArray(STATE[id])?STATE[id]:[];
+
+  // ---- spec helpers (เทียบเต็มสเปค: ชนิด|ยาว|เชื่อม|เหล็ก|บ่า) ----
+  function specLabel(l){ const len=(l.length||"").toString().trim(); const lenTxt=len?(/^\d/.test(len)?len+"ม.":len):""; return ((l.pileType||"")+(lenTxt?" "+lenTxt:"")).trim(); }
+  function specFull(l){ const p=[l.pileType||"", (l.length?("ยาว "+l.length):"")]; if(l.weld&&l.weld!=="-") p.push("เชื่อม "+l.weld); if(l.steel&&l.steel!=="-") p.push("เหล็ก "+l.steel); if(l.ba&&l.ba!=="-") p.push("บ่า "+l.ba); return p.filter(Boolean).join(" · "); }
+  function specKey(l){ return [nz(l.pileType), nz(l.length), nz(l.weld), nz(l.steel), nz(l.ba)].join("|"); }
+  function lotFromKey(k){ const p=k.split("|"); return { pileType:p[0], length:p[1]==="-"?"":p[1], weld:p[2], steel:p[3], ba:p[4] }; }
+  function sameSpec(a,b){ return specKey(a)===specKey(b); }
+
+  // ---- สต็อก 1 (สด) จาก customerPoles ----
+  function getCP(){ try{ if(typeof getCustPoles==="function") return getCustPoles()||[]; }catch(e){} try{ return (window._cache&&_cache.custPoles)||[]; }catch(e){} return []; }
+  function stock1Map(){
+    const m={};
+    getCP().forEach(c=>{ if(!c||!c.pileType) return;
+      const k=specKey({pileType:c.pileType,length:c.spec,weld:c.weld,steel:c.steel,ba:c.ba});
+      if(!m[k]) m[k]={qty:0, orders:{}};
+      m[k].qty+=(+c.qty||0);
+      if(c.orderNum) m[k].orders[c.orderNum]=(m[k].orders[c.orderNum]||0)+(+c.qty||0);
+    });
+    return m;
+  }
+  function placedMap(){ const m={}; Object.keys(STATE).forEach(id=>lotsOf(id).forEach(l=>{ const k=specKey(l); m[k]=(m[k]||0)+(+l.qty||0); })); return m; }
+  function ordersText(k, s1){ const o=(s1&&s1[k]&&s1[k].orders)||{}; const ks=Object.keys(o); return ks.length?ks.map(x=>"#"+x).join(", "):""; }
+
+  // ---- รอจัดลง / รอเอาออก = ส่วนต่าง (สต็อก1 − ที่ลงแล้ว) ----
+  let QUEUE=[], OUTQUEUE=[], _s1cache={};
+  function rebuildQueues(){
+    const s1=stock1Map(), placed=placedMap(); _s1cache=s1;
+    const keys=new Set([...Object.keys(s1), ...Object.keys(placed)]);
+    QUEUE=[]; OUTQUEUE=[]; let qi=0, oi=0;
+    keys.forEach(k=>{
+      const have=(s1[k]?s1[k].qty:0), put=(placed[k]||0), diff=have-put;
+      if(diff===0) return;
+      const base=lotFromKey(k), ord=ordersText(k,s1);
+      if(diff>0) QUEUE.push(Object.assign({id:"Q"+(qi++), key:k, qty:diff, orders:ord}, base));
+      else       OUTQUEUE.push(Object.assign({id:"O"+(oi++), key:k, qty:-diff, orders:ord}, base));
+    });
+  }
+
+  // ---- แผนผัง ----
+  function cellHTML(id){
+    const lots=lotsOf(id);
+    if(!lots.length) return `<div class="cell empty" onclick="YARD.openOv('${id}')"><div class="sid">${id}</div><div>— ว่าง —</div></div>`;
+    const hasOld=lots.some(l=>ageOf(l.date)>OLD_DAYS);
+    const oldest=Math.max(...lots.map(l=>ageOf(l.date)));
+    const items=lots.map(l=>{ const old=ageOf(l.date)>OLD_DAYS; return `<div class="lot" title="${esc(specFull(l))}"><span class="nm">${esc(specLabel(l))}</span>${old?'<span class="lotold">🔴</span>':''}</div>`; }).join("");
+    return `<div class="cell${hasOld?' old':''}" onclick="YARD.openOv('${id}')"><div class="sid">${id}${lots.length>1?' · '+lots.length+' สเปค':''}</div><div class="lots">${items}</div><div class="foot">เก่าสุด ${oldest} ว.</div></div>`;
+  }
+  function buildBlock(prefix){ const N=BLOCKS[prefix], cols=N/2; let html='<div class="cols">'; for(let k=0;k<cols;k++){ const top=N-2*k, bot=N-2*k-1; html+=`<div class="col">${cellHTML(prefix+top)}${cellHTML(prefix+bot)}</div>`; } return html+'</div>'; }
+  function renderMap(){ ["A","B","C","D","E","F"].forEach(p=>{ const el=document.getElementById("blk"+p); if(el) el.innerHTML=buildBlock(p); }); }
+  function renderStats(){
+    const ids=Object.keys(STATE).filter(id=>lotsOf(id).length);
+    const totalSlots=Object.values(BLOCKS).reduce((a,b)=>a+b,0);
+    let totalQty=0, totalLots=0, oldest=null;
+    ids.forEach(id=>lotsOf(id).forEach(l=>{ totalQty+=(+l.qty||0); totalLots++; const a=ageOf(l.date); if(!oldest||a>oldest.a) oldest={id,a}; }));
+    const waitQty=QUEUE.reduce((s,q)=>s+(+q.qty||0),0), outQty=OUTQUEUE.reduce((s,q)=>s+(+q.qty||0),0);
+    const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+    set("sUsed",`${ids.length} / ${totalSlots} ช่อง`); set("sLots",totalLots); set("sQty",totalQty.toLocaleString("th-TH"));
+    set("sWait",waitQty.toLocaleString("th-TH")); set("sOut",outQty.toLocaleString("th-TH"));
+    set("sOld",oldest?`${oldest.id} • ${oldest.a} ว.`:"-");
+  }
+  function renderGuard(){
+    const el=document.getElementById("guard"); if(!el) return;
+    if(!QUEUE.length && !OUTQUEUE.length){
+      el.className="guard ok";
+      el.innerHTML='<div class="ghead">✅ ยอดตรงกับสต็อก 1 ทุกสเปค — (ในลาน + รอจัดลง − รอเอาออก) = สต็อก 1 · ไม่มีของหายหรือเกิน</div>';
+      return;
+    }
+    el.className="guard bad";
+    const wQ=QUEUE.reduce((s,q)=>s+q.qty,0), wO=OUTQUEUE.reduce((s,q)=>s+q.qty,0);
+    const rows=[];
+    QUEUE.forEach(q=>rows.push(`<li><b>${esc(specLabel(q))}</b> — สต็อก 1 มี ${q.qty} ต้น ที่ยังไม่ได้ลงตำแหน่งในลาน${q.orders?(" · "+esc(q.orders)):""}</li>`));
+    OUTQUEUE.forEach(q=>rows.push(`<li><b>${esc(specLabel(q))}</b> — ในลานมีเกินสต็อก 1 อยู่ ${q.qty} ต้น (สต็อก 1 ตัดออกแล้ว) ต้องเอาออกจากกอง</li>`));
+    el.innerHTML=`<div class="ghead">⚠️ ยังไม่ตรงกับสต็อก 1 — รอจัดลง ${QUEUE.length} สเปค (${wQ} ต้น) · รอเอาออก ${OUTQUEUE.length} สเปค (${wO} ต้น)</div><ul>${rows.join("")}</ul><div class="gsub">จัดของลงกอง/เอาออกให้ครบ แล้วยอดจะกลับมาตรงสต็อก 1 อัตโนมัติ</div>`;
+  }
+  function renderQueue(){
+    const wrap=document.getElementById("queueList"); if(!wrap) return;
+    const totalQ=QUEUE.reduce((s,q)=>s+(+q.qty||0),0);
+    const cc=document.getElementById("qCount"); if(cc) cc.textContent=QUEUE.length+" สเปค · "+totalQ.toLocaleString("th-TH")+" ต้น";
+    if(!QUEUE.length){ wrap.innerHTML='<div class="qempty">✓ ไม่มีของรอจัดลงลาน — ทุกอย่างในสต็อก 1 ลงตำแหน่งครบแล้ว</div>'; return; }
+    wrap.innerHTML=QUEUE.map(q=>`<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div><div class="qsub">${esc(specFull(q))}</div><div class="qsrc">📥 เข้าจาก: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 (เสาลูกค้า)"}</div></div><div class="qqty">${q.qty} ต้น</div><button class="qbtn" onclick="YARD.openPlace('${q.id}')">จัดลงลาน →</button></div>`).join("");
+  }
+  function renderOutQueue(){
+    const wrap=document.getElementById("outList"); if(!wrap) return;
+    const totalO=OUTQUEUE.reduce((s,q)=>s+(+q.qty||0),0);
+    const cc=document.getElementById("oCount"); if(cc) cc.textContent=OUTQUEUE.length+" รายการ · "+totalO.toLocaleString("th-TH")+" ต้น";
+    if(!OUTQUEUE.length){ wrap.innerHTML='<div class="qempty">✓ ไม่มีเสาออกที่ค้างตัด — ในลานไม่เกินสต็อก 1</div>'; return; }
+    wrap.innerHTML=OUTQUEUE.map(q=>{
+      const have=gongsWithSpec(q).reduce((s,g)=>s+g.qty,0);
+      const warn=have<q.qty?` · ⚠️ ในลานมี ${have} ต้น (ไม่พอ)`:"";
+      return `<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div><div class="qsub">${esc(specFull(q))}</div><div class="qsrc">📤 ออกไป: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 ตัดออก"}${warn}</div></div><div class="qqty">${q.qty} ต้น</div><button class="qbtn" onclick="YARD.openTakeOut('${q.id}')">เอาออกจากกอง →</button></div>`;
+    }).join("");
+  }
+  function renderAll(){ load(); rebuildQueues(); renderMap(); renderStats(); renderQueue(); renderOutQueue(); renderGuard(); }
+
+  // ---- ดูช่อง (read-only) ----
+  function lotRowHTML(l){
+    const age=l.date?ageOf(l.date):0;
+    const badge=l.date?`เข้าลาน ${age} วัน${age>OLD_DAYS?" · 🔴 เกิน 45 วัน":""}`:"";
+    return `<div class="lotrow"><div class="rhead"><b>${esc(specLabel(l))}</b><span class="agebadge">${badge}</span></div><div class="rdetail">${esc(specFull(l))}</div><div class="rqty">จำนวน <b>${l.qty}</b> ต้น · เข้าลาน ${fmtDate(l.date)}</div>${l.inOrder?`<div class="rsrc">📥 เข้าจาก: ออเดอร์ ${esc(l.inOrder)}</div>`:''}${l.note?`<div class="rnote">📝 ${esc(l.note)}</div>`:''}</div>`;
+  }
+  function openOv(id){
+    const t=document.getElementById("ovTitle"); if(t) t.textContent="ช่อง "+id;
+    const lots=lotsOf(id);
+    document.getElementById("lotList").innerHTML = lots.length ? lots.map(lotRowHTML).join("") : `<div style="text-align:center;color:#94a3b8;padding:22px 0;font-size:13px;">— ช่องนี้ว่าง —<br><span style="font-size:12px;">ของจะมาลงเมื่อ “จัดลงลาน” จากคิวรอจัดลงลาน</span></div>`;
+    document.getElementById("ov").style.display="flex";
+  }
+  function closeOv(){ document.getElementById("ov").style.display="none"; }
+
+  // ---- จัดลงลาน ----
+  function blockOptions(){ return ["A","B","C","D","E","F"].map(p=>`<option value="${p}">บล็อก ${p}</option>`).join(""); }
+  function numOptions(blk){ const n=BLOCKS[blk]||0; let html=""; for(let i=1;i<=n;i++){ const id=blk+i, cnt=lotsOf(id).length; html+=`<option value="${i}">${id} ${cnt?("· มี "+cnt+" สเปค"):"· ว่าง"}</option>`; } return html; }
+  function syncNums(sel){ const row=sel.closest(".placerow"); if(!row) return; const num=row.querySelector(".pNum"); if(num) num.innerHTML=numOptions(sel.value); }
+  let curQ=null;
+  function openPlace(id){ const q=QUEUE.find(x=>x.id===id); if(!q) return; curQ=id;
+    document.getElementById("placeInfo").innerHTML=`จัดของ <b>${esc(specLabel(q))}</b> (${esc(specFull(q))}) — จากสต็อก 1 มี <b>${q.qty}</b> ต้น · เลือกกองปลายทาง แยกลงหลายกองได้`;
+    document.getElementById("placeRows").innerHTML=""; addPlaceRow(q.qty);
+    document.getElementById("placeOv").style.display="flex"; placeRemain();
+  }
+  function addPlaceRow(defQty){ const d=document.createElement("div"); d.innerHTML=`<div class="placerow"><select class="pBlk" onchange="YARD.syncNums(this)">${blockOptions()}</select><select class="pNum">${numOptions("A")}</select><input type="number" class="pQty" min="0" value="${defQty||0}" oninput="YARD.placeRemain()"><button class="rmbtn" onclick="this.closest('.placerow').remove();YARD.placeRemain()">ลบ</button></div>`; document.getElementById("placeRows").appendChild(d.firstElementChild); }
+  function placeRemain(){ const q=QUEUE.find(x=>x.id===curQ); if(!q) return; let sum=0; document.querySelectorAll("#placeRows .pQty").forEach(i=>sum+=(+i.value||0)); const left=q.qty-sum; const el=document.getElementById("yPlaceRemain"); el.textContent=`รวมจัดลง ${sum} ต้น · เหลือรอจัดลง ${left} ต้น`+(left<0?"  ⚠️ เกินยอดสต็อก 1!":""); el.style.color=left<0?"#b91c1c":"#475569"; }
+  function savePlace(){ const q=QUEUE.find(x=>x.id===curQ); if(!q) return;
+    const rows=[...document.querySelectorAll("#placeRows .placerow")]; let placed=0; const assigns=[];
+    rows.forEach(r=>{ const slot=(r.querySelector(".pBlk").value)+(r.querySelector(".pNum").value); const qty=+r.querySelector(".pQty").value||0; if(qty>0){ assigns.push({slot,qty}); placed+=qty; } });
+    if(placed<=0){ alert("ใส่จำนวนที่จะจัดลงก่อนครับ"); return; }
+    if(placed>q.qty){ alert("จำนวนที่จัดลง ("+placed+") เกินยอดในสต็อก 1 ("+q.qty+" ต้น)"); return; }
+    const today=todayISO();
+    assigns.forEach(a=>{ if(!Array.isArray(STATE[a.slot])) STATE[a.slot]=[];
+      const ex=STATE[a.slot].find(l=>sameSpec(l,q)&&l.date===today);
+      if(ex){ ex.qty+=a.qty; } else { STATE[a.slot].push({pileType:q.pileType,length:q.length,weld:q.weld,steel:q.steel,ba:q.ba,qty:a.qty,date:today,inOrder:q.orders||"",note:""}); }
+    });
+    save(); closePlace(); renderAll();
+  }
+  function closePlace(){ document.getElementById("placeOv").style.display="none"; curQ=null; }
+
+  // ---- เอาออกจากกอง ----
+  function gongsWithSpec(item){ const out=[]; Object.keys(STATE).forEach(id=>{ (STATE[id]||[]).forEach(l=>{ if(sameSpec(l,item)&&(+l.qty||0)>0) out.push({id, qty:+l.qty||0, age:ageOf(l.date)}); }); }); out.sort((a,b)=>b.age-a.age); return out; }
+  let curO=null;
+  function takeSlotOptions(item){ const gs=gongsWithSpec(item); if(!gs.length) return `<option value="">— ไม่มีกองที่มีสเปคนี้ —</option>`; return gs.map(g=>`<option value="${g.id}">${g.id} · มี ${g.qty} ต้น · เข้าลาน ${g.age} ว.</option>`).join(""); }
+  function openTakeOut(id){ const q=OUTQUEUE.find(x=>x.id===id); if(!q) return; curO=id;
+    const gs=gongsWithSpec(q), have=gs.reduce((s,g)=>s+g.qty,0);
+    document.getElementById("takeInfo").innerHTML=`เอาออก <b>${esc(specLabel(q))}</b> (${esc(specFull(q))}) — สต็อก 1 ตัดออก <b>${q.qty}</b> ต้น<br>ในลานมีสเปคนี้ <b>${have}</b> ต้น · เลือกกองที่หยิบออกจริง (ไล่เก่าสุดก่อน · แยกหลายกองได้)`;
+    document.getElementById("takeRows").innerHTML=""; addTakeRow(Math.min(q.qty,(gs[0]?gs[0].qty:0)));
+    document.getElementById("outOv").style.display="flex"; takeRemain();
+  }
+  function addTakeRow(defQty){ const q=OUTQUEUE.find(x=>x.id===curO); if(!q) return; const d=document.createElement("div"); d.innerHTML=`<div class="takerow"><select class="tSlot">${takeSlotOptions(q)}</select><input type="number" class="tQty" min="0" value="${defQty||0}" oninput="YARD.takeRemain()"><button class="rmbtn" onclick="this.closest('.takerow').remove();YARD.takeRemain()">ลบ</button></div>`; document.getElementById("takeRows").appendChild(d.firstElementChild); }
+  function takeRemain(){ const q=OUTQUEUE.find(x=>x.id===curO); if(!q) return; let sum=0; document.querySelectorAll("#takeRows .tQty").forEach(i=>sum+=(+i.value||0)); const left=q.qty-sum; const el=document.getElementById("yTakeRemain"); el.textContent=`รวมเอาออก ${sum} ต้น · เหลือค้างต้องตัด ${left} ต้น`+(left<0?"  ⚠️ เกินยอดที่ตัด!":""); el.style.color=left<0?"#b91c1c":"#475569"; }
+  function saveTakeOut(){ const q=OUTQUEUE.find(x=>x.id===curO); if(!q) return;
+    const rows=[...document.querySelectorAll("#takeRows .takerow")]; let taken=0; const picks=[];
+    rows.forEach(r=>{ const slot=r.querySelector(".tSlot").value; const qty=+r.querySelector(".tQty").value||0; if(slot&&qty>0){ picks.push({slot,qty}); taken+=qty; } });
+    if(taken<=0){ alert("ใส่จำนวนที่จะเอาออกก่อนครับ"); return; }
+    if(taken>q.qty){ alert("จำนวนที่เอาออก ("+taken+") เกินยอดที่สต็อก 1 ตัด ("+q.qty+" ต้น)"); return; }
+    for(const p of picks){ let need=p.qty; const arr=STATE[p.slot]||[];
+      for(let i=0;i<arr.length&&need>0;i++){ if(!sameSpec(arr[i],q)) continue; const take=Math.min(need,+arr[i].qty||0); arr[i].qty-=take; need-=take; }
+      STATE[p.slot]=arr.filter(l=>(+l.qty||0)>0); if(!STATE[p.slot].length) delete STATE[p.slot];
+      if(need>0) alert("กอง "+p.slot+" มีของสเปคนี้ไม่พอ — เอาออกได้เท่าที่มี");
+    }
+    save(); closeTakeOut(); renderAll();
+  }
+  function closeTakeOut(){ document.getElementById("outOv").style.display="none"; curO=null; }
+
+  // ---- init ----
+  function _active(){ const s=document.getElementById("sec-yard"); return s&&s.classList.contains("active"); }
+  function anyModalOpen(){ return ["ov","placeOv","outOv"].some(id=>{ const e=document.getElementById(id); return e&&e.style.display==="flex"; }); }
+  load();
+  document.addEventListener("click",e=>{ ["ov","placeOv","outOv"].forEach(id=>{ if(e.target&&e.target.id===id){ const e2=document.getElementById(id); if(e2) e2.style.display="none"; } }); });
+  // ซิงก์กับสต็อก 1 อัตโนมัติทุก 4 วิ ขณะเปิดหน้าผังลาน (ไม่เพิ่ม listener Firebase ซ้ำ)
+  setInterval(()=>{ if(_active()&&!anyModalOpen()) renderAll(); }, 4000);
+
+  return { renderAll, openOv, closeOv, openPlace, addPlaceRow, syncNums, placeRemain, savePlace, closePlace, openTakeOut, addTakeRow, takeRemain, saveTakeOut, closeTakeOut };
+})();
+</script>
 <!-- ================================================================ SECTION: ลูกค้า (NEW) ================================================================ -->
 <div id="sec-customers" class="section">
   <div class="app-content stack">
@@ -7786,6 +8173,7 @@ function goTab(name, el) {
   if (name === 'proderr')   { renderActiveProd(); renderProdSection(); renderProdLogHistory(); renderProdErrHistory(); }
   if (name === 'summary')   { renderSummary(); }
   if (name === 'stock')     { renderStockCards(); populateLogPileFilter(); renderStockLog(true); renderStockAudit(); }
+  if (name === 'yard')      { try{ if (window.YARD) YARD.renderAll(); }catch(e){} }
   if (name === 'customers') { renderCustomers(); }
   if (name === 'settings')  { loadSettingsUI(); if (_currentRole === 'admin') { umRefresh(); loadRolePerms(renderPermUI); } }
   // audit log: attach listener เฉพาะตอนเปิดหน้านี้, detach เมื่อออกจากหน้า (ประหยัด bandwidth)
