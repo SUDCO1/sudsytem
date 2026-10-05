@@ -3677,7 +3677,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
     </div>
 
     <!-- ── ประวัติการผลิต (marker) ── -->
-    <div class="card">
+    <div class="card" id="prodLogCard">
       <div class="card-header">
         <div class="card-title">📋 ประวัติการผลิต</div>
         <span style="margin-left:auto;font-size:11px;color:#94A3B8;" id="prodLogCount"></span>
@@ -3716,7 +3716,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
 
 
     <!-- ── ประวัติ Error ผลิต (ย้ายมาจากแท็บ "Error ขนส่ง" ที่ถูกลบ — FIX#5) ── -->
-    <div class="card">
+    <div class="card" id="prodErrHistCard">
       <div class="card-header">
         <div>
           <div class="card-title">⚠️ ประวัติ Error ผลิต</div>
@@ -5186,7 +5186,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="stockLogCard">
       <div class="card-header">
         <div class="card-title">📋 ประวัติการเคลื่อนไหวสต็อก</div>
       </div>
@@ -5313,6 +5313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="stat"><div class="l">ล็อตค้างนานสุด</div><div class="v" id="sOld">-</div></div>
   </div>
   <div class="legend">🔴 ขอบแดง = ค้างในลานเกิน 45 วัน (ควรระบายก่อน ตามหลัก FIFO) • คลิกช่องว่างเพื่อดูรายละเอียด</div>
+  <div style="margin:8px 0;" id="yardHistBtn"><button onclick="YARD.openHist()" style="font-size:13px;padding:7px 14px;border:1px solid #475569;background:#f1f5f9;color:#334155;border-radius:8px;cursor:pointer;">🕑 ดูประวัติการเคลื่อนไหว</button></div>
 
   <div class="guard" id="guard"></div>
 
@@ -5407,6 +5408,32 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
   </div>
+  <!-- modal: ประวัติการเคลื่อนไหว -->
+  <div id="histOv" class="yov">
+    <div class="box">
+      <h3>🕑 ประวัติการเคลื่อนไหวในลาน</h3>
+      <div class="hint">บันทึกการจัดลง / ย้ายกอง / เอาออก · ใหม่สุดอยู่บน (เก็บในเครื่องนี้)</div>
+      <div id="histList" style="max-height:58vh;overflow:auto;margin-top:8px;"></div>
+      <div class="btns"><button class="save" onclick="YARD.closeHist()">เสร็จ / ปิด</button></div>
+    </div>
+  </div>
+  <!-- modal: ย้ายกอง -->
+  <div id="moveOv" class="yov">
+    <div class="box">
+      <h3>↔️ ย้ายกอง</h3>
+      <div class="hint" id="moveInfo"></div>
+      <div class="placerow">
+        <select class="pBlk" id="moveBlk" onchange="YARD.syncMoveNums()"></select>
+        <select class="pNum" id="moveNum"></select>
+        <input type="number" class="pQty" id="moveQty" min="0" value="0" oninput="YARD.moveRemain()">
+      </div>
+      <div id="yMoveRemain"></div>
+      <div class="btns">
+        <button class="save" onclick="YARD.saveMove()">ยืนยันย้าย</button>
+        <button class="cancel" onclick="YARD.closeMove()">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
  </div>
 </div>
 <script>
@@ -5418,7 +5445,7 @@ document.addEventListener('DOMContentLoaded', () => {
    ============================================================ */
 window.YARD = (function(){
   "use strict";
-  const OLD_DAYS=45, LS_STATE="sud_yard_state_v1";
+  const OLD_DAYS=45, LS_STATE="sud_yard_state_v1", LS_LOG="sud_yard_log_v1";
   const BLOCKS={ A:10, B:12, C:10, D:2, E:2, F:2 };
   const nz=v=>(v==null||v==="")?"-":(""+v).trim();
   const fmtDate=iso=>{ if(!iso) return "วันนี้"; try{ return new Date(iso).toLocaleDateString("th-TH",{day:"2-digit",month:"short",year:"numeric"}); }catch(e){ return iso; } };
@@ -5431,6 +5458,12 @@ window.YARD = (function(){
   function load(){ try{ const s=localStorage.getItem(LS_STATE); STATE=s?JSON.parse(s):{}; }catch(e){ STATE={}; } }
   function save(){ try{ localStorage.setItem(LS_STATE, JSON.stringify(STATE)); }catch(e){} }
   const lotsOf=id=>Array.isArray(STATE[id])?STATE[id]:[];
+
+  // ---- ประวัติการเคลื่อนไหวในลาน (จัดลง/ย้าย/เอาออก) เก็บใน localStorage ----
+  let LOG=[];
+  function loadLog(){ try{ const s=localStorage.getItem(LS_LOG); LOG=s?JSON.parse(s):[]; }catch(e){ LOG=[]; } }
+  function saveLog(){ try{ localStorage.setItem(LS_LOG, JSON.stringify(LOG.slice(-500))); }catch(e){} }
+  function logEvent(action, d){ loadLog(); LOG.push(Object.assign({ts:Date.now(), action:action}, d||{})); saveLog(); }
 
   // ---- spec helpers (เทียบเต็มสเปค: ชนิด|ยาว|เชื่อม|เหล็ก|บ่า) ----
   function specLabel(l){ const len=(l.length||"").toString().trim(); const lenTxt=len?(/^\d/.test(len)?len+"ม.":len):""; return ((l.pileType||"")+(lenTxt?" "+lenTxt:"")).trim(); }
@@ -5542,15 +5575,16 @@ window.YARD = (function(){
   function renderAll(){ load(); rebuildQueues(); renderMap(); renderStats(); renderQueue(); renderOutQueue(); renderGuard(); }
 
   // ---- ดูช่อง (read-only) ----
-  function lotRowHTML(l){
+  function lotRowHTML(l, slotId, idx){
     const age=l.date?ageOf(l.date):0;
     const badge=l.date?`เข้าลาน ${age} วัน${age>OLD_DAYS?" · 🔴 เกิน 45 วัน":""}`:"";
-    return `<div class="lotrow"><div class="rhead"><b>${esc(specLabel(l))}</b><span class="agebadge">${badge}</span></div><div class="rdetail">${esc(specFull(l))}</div><div class="rqty">จำนวน <b>${l.qty}</b> ${uTag(specUnit(l))} · เข้าลาน ${fmtDate(l.date)}</div>${l.inOrder?`<div class="rsrc">📥 เข้าจาก: ออเดอร์ ${esc(l.inOrder)}</div>`:''}${l.note?`<div class="rnote">📝 ${esc(l.note)}</div>`:''}</div>`;
+    const moveBtn=(slotId!=null)?`<div style="margin-top:7px;"><button onclick="YARD.openMove('${esc(slotId)}',${idx})" style="font-size:12px;padding:5px 12px;border:1px solid #2563eb;background:#eff6ff;color:#1d4ed8;border-radius:7px;cursor:pointer;">↔️ ย้ายกองนี้ไปช่องอื่น</button></div>`:"";
+    return `<div class="lotrow"><div class="rhead"><b>${esc(specLabel(l))}</b><span class="agebadge">${badge}</span></div><div class="rdetail">${esc(specFull(l))}</div><div class="rqty">จำนวน <b>${l.qty}</b> ${uTag(specUnit(l))} · เข้าลาน ${fmtDate(l.date)}</div>${l.inOrder?`<div class="rsrc">📥 เข้าจาก: ออเดอร์ ${esc(l.inOrder)}</div>`:''}${l.note?`<div class="rnote">📝 ${esc(l.note)}</div>`:''}${moveBtn}</div>`;
   }
   function openOv(id){
     const t=document.getElementById("ovTitle"); if(t) t.textContent="ช่อง "+id;
     const lots=lotsOf(id);
-    document.getElementById("lotList").innerHTML = lots.length ? lots.map(lotRowHTML).join("") : `<div style="text-align:center;color:#94a3b8;padding:22px 0;font-size:13px;">— ช่องนี้ว่าง —<br><span style="font-size:12px;">ของจะมาลงเมื่อ “จัดลงลาน” จากคิวรอจัดลงลาน</span></div>`;
+    document.getElementById("lotList").innerHTML = lots.length ? lots.map((l,i)=>lotRowHTML(l,id,i)).join("") : `<div style="text-align:center;color:#94a3b8;padding:22px 0;font-size:13px;">— ช่องนี้ว่าง —<br><span style="font-size:12px;">ของจะมาลงเมื่อ “จัดลงลาน” จากคิวรอจัดลงลาน</span></div>`;
     document.getElementById("ov").style.display="flex";
   }
   function closeOv(){ document.getElementById("ov").style.display="none"; }
@@ -5576,6 +5610,7 @@ window.YARD = (function(){
     assigns.forEach(a=>{ if(!Array.isArray(STATE[a.slot])) STATE[a.slot]=[];
       const ex=STATE[a.slot].find(l=>sameSpec(l,q)&&l.date===today);
       if(ex){ ex.qty+=a.qty; if(!ex.unit&&q.unit) ex.unit=q.unit; } else { STATE[a.slot].push({pileType:q.pileType,length:q.length,weld:q.weld,steel:q.steel,ba:q.ba,qty:a.qty,unit:q.unit||"ต้น",date:today,inOrder:q.orders||"",note:""}); }
+      logEvent("place",{spec:specLabel(q), full:specFull(q), from:"สต็อก 1", to:a.slot, qty:a.qty, unit:q.unit||"ต้น"});
     });
     save(); closePlace(); renderAll();
   }
@@ -5601,21 +5636,77 @@ window.YARD = (function(){
     for(const p of picks){ let need=p.qty; const arr=STATE[p.slot]||[];
       for(let i=0;i<arr.length&&need>0;i++){ if(!sameSpec(arr[i],q)) continue; const take=Math.min(need,+arr[i].qty||0); arr[i].qty-=take; need-=take; }
       STATE[p.slot]=arr.filter(l=>(+l.qty||0)>0); if(!STATE[p.slot].length) delete STATE[p.slot];
+      const tookHere=p.qty-need; if(tookHere>0) logEvent("out",{spec:specLabel(q), full:specFull(q), from:p.slot, to:"ออกจากลาน", qty:tookHere, unit:q.unit||"ต้น"});
       if(need>0) alert("กอง "+p.slot+" มีของสเปคนี้ไม่พอ — เอาออกได้เท่าที่มี");
     }
     save(); closeTakeOut(); renderAll();
   }
   function closeTakeOut(){ document.getElementById("outOv").style.display="none"; curO=null; }
 
+  // ---- ย้ายกอง (ย้ายของจากช่องหนึ่งไปอีกช่อง · สต็อก 1 ไม่เปลี่ยน แค่ย้ายตำแหน่ง) ----
+  let curMove=null; // {from, idx}
+  function openMove(fromId, idx){
+    const src=lotsOf(fromId)[idx]; if(!src){ alert("ไม่พบกองต้นทาง"); return; }
+    curMove={from:fromId, idx:idx};
+    const u=uTag(specUnit(src));
+    document.getElementById("moveInfo").innerHTML=`ย้าย <b>${esc(specLabel(src))}</b> (${esc(specFull(src))}) จากช่อง <b>${esc(fromId)}</b> — มี <b>${src.qty}</b> ${u} · เลือกช่องปลายทางและจำนวนที่จะย้าย`;
+    const mb=document.getElementById("moveBlk"); mb.innerHTML=blockOptions();
+    const fromBlk=(""+fromId).replace(/[0-9]+$/,""); if(fromBlk) mb.value=fromBlk;
+    document.getElementById("moveNum").innerHTML=numOptions(mb.value);
+    document.getElementById("moveQty").value=src.qty;
+    closeOv();
+    document.getElementById("moveOv").style.display="flex";
+    moveRemain();
+  }
+  function syncMoveNums(){ const mb=document.getElementById("moveBlk"); document.getElementById("moveNum").innerHTML=numOptions(mb.value); }
+  function moveRemain(){ if(!curMove) return; const src=lotsOf(curMove.from)[curMove.idx]; if(!src) return; const q=+document.getElementById("moveQty").value||0; const left=(+src.qty||0)-q; const el=document.getElementById("yMoveRemain"); const _u=uTag(specUnit(src)); el.innerHTML=`ย้าย ${q} ${_u} · เหลือไว้ที่เดิม ${left} ${_u}`+(q<=0?"  ⚠️ ใส่จำนวนที่จะย้าย":"")+(left<0?"  ⚠️ เกินจำนวนในกอง!":""); el.style.color=(left<0||q<=0)?"#b91c1c":"#475569"; }
+  function saveMove(){
+    if(!curMove) return;
+    const fromId=curMove.from; const arr=lotsOf(fromId); const src=arr[curMove.idx]; if(!src){ alert("ไม่พบกองต้นทาง"); return; }
+    const blk=document.getElementById("moveBlk").value; const num=document.getElementById("moveNum").value; const toId=blk+num;
+    const q=+document.getElementById("moveQty").value||0; const _u=specUnit(src)||"ต้น";
+    if(q<=0){ alert("ใส่จำนวนที่จะย้ายก่อนครับ"); return; }
+    if(q>(+src.qty||0)){ alert("จำนวนที่ย้าย ("+q+") เกินจำนวนในกอง ("+src.qty+" "+_u+")"); return; }
+    if(toId===fromId){ alert("ช่องปลายทางเป็นช่องเดิม เลือกช่องอื่นครับ"); return; }
+    src.qty-=q;
+    if(!Array.isArray(STATE[toId])) STATE[toId]=[];
+    const ex=STATE[toId].find(l=>sameSpec(l,src)&&l.date===src.date);
+    if(ex){ ex.qty+=q; if(!ex.unit&&src.unit) ex.unit=src.unit; }
+    else { STATE[toId].push({pileType:src.pileType,length:src.length,weld:src.weld,steel:src.steel,ba:src.ba,qty:q,unit:src.unit||"ต้น",date:src.date,inOrder:src.inOrder||"",note:src.note||""}); }
+    STATE[fromId]=arr.filter(l=>(+l.qty||0)>0); if(!STATE[fromId].length) delete STATE[fromId];
+    logEvent("move",{spec:specLabel(src), full:specFull(src), from:fromId, to:toId, qty:q, unit:_u});
+    save(); closeMove(); renderAll();
+    alert("ย้ายแล้ว "+q+" "+_u+" จากช่อง "+fromId+" ไปช่อง "+toId);
+  }
+  function closeMove(){ document.getElementById("moveOv").style.display="none"; curMove=null; }
+
+  // ---- ประวัติการเคลื่อนไหว (viewer) ----
+  function histRowHTML(e){
+    const d=new Date(e.ts||Date.now());
+    const pad=n=>(""+n).padStart(2,"0");
+    const dt=`${d.toLocaleDateString("th-TH",{day:"2-digit",month:"short",year:"numeric"})} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const act=e.action==="place"?'<span style="color:#2563eb;">📦 จัดลงลาน</span>':e.action==="move"?'<span style="color:#7c3aed;">↔️ ย้ายกอง</span>':e.action==="out"?'<span style="color:#dc2626;">🚚 เอาออก</span>':"•";
+    return `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px;margin-bottom:7px;background:#fff;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748b;"><span>${act}</span><span>${esc(dt)}</span></div>
+      <div style="font-weight:600;margin-top:3px;">${esc(e.spec||"")} · ${e.qty} ${uTag(e.unit||"ต้น")}</div>
+      <div style="font-size:12px;color:#475569;margin-top:2px;">${esc(e.from||"-")} → ${esc(e.to||"-")}</div>
+    </div>`;
+  }
+  function openHist(){ loadLog(); const rev=LOG.slice().reverse();
+    document.getElementById("histList").innerHTML = rev.length ? rev.map(histRowHTML).join("") : `<div style="text-align:center;color:#94a3b8;padding:22px 0;font-size:13px;">— ยังไม่มีประวัติ —<br><span style="font-size:12px;">ประวัติจะถูกบันทึกเมื่อมีการจัดลง / ย้ายกอง / เอาออก</span></div>`;
+    document.getElementById("histOv").style.display="flex";
+  }
+  function closeHist(){ document.getElementById("histOv").style.display="none"; }
+
   // ---- init ----
   function _active(){ const s=document.getElementById("sec-yard"); return s&&s.classList.contains("active"); }
-  function anyModalOpen(){ return ["ov","placeOv","outOv"].some(id=>{ const e=document.getElementById(id); return e&&e.style.display==="flex"; }); }
+  function anyModalOpen(){ return ["ov","placeOv","outOv","moveOv","histOv"].some(id=>{ const e=document.getElementById(id); return e&&e.style.display==="flex"; }); }
   load();
-  document.addEventListener("click",e=>{ ["ov","placeOv","outOv"].forEach(id=>{ if(e.target&&e.target.id===id){ const e2=document.getElementById(id); if(e2) e2.style.display="none"; } }); });
+  document.addEventListener("click",e=>{ ["ov","placeOv","outOv","moveOv","histOv"].forEach(id=>{ if(e.target&&e.target.id===id){ const e2=document.getElementById(id); if(e2) e2.style.display="none"; } }); });
   // ซิงก์กับสต็อก 1 อัตโนมัติทุก 4 วิ ขณะเปิดหน้าผังลาน (ไม่เพิ่ม listener Firebase ซ้ำ)
   setInterval(()=>{ if(_active()&&!anyModalOpen()) renderAll(); }, 4000);
 
-  return { renderAll, openOv, closeOv, openPlace, addPlaceRow, syncNums, placeRemain, savePlace, closePlace, openTakeOut, addTakeRow, takeRemain, saveTakeOut, closeTakeOut };
+  return { renderAll, openOv, closeOv, openPlace, addPlaceRow, syncNums, placeRemain, savePlace, closePlace, openTakeOut, addTakeRow, takeRemain, saveTakeOut, closeTakeOut, openMove, syncMoveNums, moveRemain, saveMove, closeMove, openHist, closeHist };
 })();
 </script>
 <!-- ================================================================ SECTION: ลูกค้า (NEW) ================================================================ -->
@@ -6080,7 +6171,7 @@ window.YARD = (function(){
       </div>
 
       <!-- History for this pile type -->
-      <div class="sd-section">
+      <div class="sd-section" id="sdLogSection">
         <div class="sd-section-title">🕑 ประวัติการเคลื่อนไหว</div>
         <div class="sd-log-wrap">
           <table class="sd-log-table">
@@ -8071,11 +8162,15 @@ const PERM_SECTIONS = [
   // ดู = เข้าหน้าตั้งค่า + อ่าน audit log ได้ · แก้ไข = กดบันทึกการตั้งค่าได้
   // (จัดการผู้ใช้ / สิทธิ์ / ลบประวัติ / ลบ log = Admin เท่านั้นเสมอ)
   { id:'settings',    icon:'⚙️', label:'ตั้งค่า + บันทึกการใช้งาน', type:'ve' },
+  // 🕑 ประวัติรายตัว = กล่องประวัติในป๊อปอัปเสาแต่ละชนิด (ฝ่ายสต็อก)
+  { id:'histItem',    icon:'🕑', label:'ประวัติรายตัว',  type:'toggle' },
+  // 📚 ประวัติรวม = กล่องประวัติรวมทุกฝ่าย (ผลิต/สต็อก/ลาน)
+  { id:'histAll',     icon:'📚', label:'ประวัติรวม',     type:'toggle' },
 ];
 // Stored as arrays of levels (or boolean for toggle).
 // Levels: 'view' | 'edit' | 'delete'
 const DEFAULT_ROLE_PERMS = {
-  admin:   { overview:['view','edit'], dashboard:true, sale:true,  orderstatus:['view','edit','delete'], production:['view','edit','delete'], shipping:['view','edit','delete'], stock:['view','edit','delete'], customer:['view','edit','delete'], settings:['view','edit'] },
+  admin:   { overview:['view','edit'], dashboard:true, sale:true,  orderstatus:['view','edit','delete'], production:['view','edit','delete'], shipping:['view','edit','delete'], stock:['view','edit','delete'], customer:['view','edit','delete'], settings:['view','edit'], histItem:true, histAll:true },
 };
 // Keep ALL_PERMISSIONS as empty stub so legacy references don't crash
 const ALL_PERMISSIONS = [];
@@ -8138,6 +8233,9 @@ function applyPermissions() {
     view_audit:           has('settings','view') || has('settings','edit'),
     // Dashboard — ติ๊กแยกได้เอง (ไม่ผูกกับสรุปภาพรวมแล้ว)
     view_dashboard:       has('dashboard','on'),
+    // 🕑 ประวัติรายตัว / 📚 ประวัติรวม — ติ๊กแยกต่างหาก
+    view_hist_item:       has('histItem','on'),
+    view_hist_all:        has('histAll','on'),
   };
   _applyNav();
 }
@@ -8165,6 +8263,12 @@ function _applyNav() {
   showNav('nav-customers', canDo('view_customers'));
   showNav('nav-audit',     canDo('view_audit'));
   showNav('nav-settings',  canDo('view_settings'));
+  // 🕑 ประวัติรายตัว — กล่องประวัติในป๊อปอัปเสาแต่ละตัว (ฝ่ายสต็อก)
+  const _histItemOn = canDo('view_hist_item');
+  ['sdLogSection'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = _histItemOn ? '' : 'none'; });
+  // 📚 ประวัติรวม — กล่องประวัติรวม (ผลิต 2, สต็อก 1, ลาน 1)
+  const _histAllOn = canDo('view_hist_all');
+  ['prodLogCard','prodErrHistCard','stockLogCard','yardHistBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = _histAllOn ? '' : 'none'; });
   // ปุ่มบันทึกการตั้งค่า — ต้องมีสิทธิ์ "แก้ไข" ของหมวดตั้งค่า
   const _setFooter = document.getElementById('settingsSaveFooter');
   if (_setFooter) _setFooter.style.display = (_currentRole === 'admin' || canDo('edit_settings')) ? '' : 'none';
