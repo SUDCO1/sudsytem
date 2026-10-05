@@ -5307,9 +5307,9 @@ document.addEventListener('DOMContentLoaded', () => {
   <div class="bar">
     <div class="stat"><div class="l">ช่องที่ใช้แล้ว</div><div class="v" id="sUsed">-</div></div>
     <div class="stat"><div class="l">จำนวนล็อตทั้งหมด</div><div class="v" id="sLots">-</div></div>
-    <div class="stat"><div class="l">ในลาน (ต้น)</div><div class="v" id="sQty">-</div></div>
-    <div class="stat" style="border-color:#f59e0b;background:#fffbeb;"><div class="l" style="color:#92400e;">รอลงลาน (ต้น)</div><div class="v" id="sWait" style="color:#b45309;">-</div></div>
-    <div class="stat" style="border-color:#ef4444;background:#fef2f2;"><div class="l" style="color:#b91c1c;">รอเอาออก (ต้น)</div><div class="v" id="sOut" style="color:#dc2626;">-</div></div>
+    <div class="stat"><div class="l">ในลาน</div><div class="v" id="sQty">-</div></div>
+    <div class="stat" style="border-color:#f59e0b;background:#fffbeb;"><div class="l" style="color:#92400e;">รอลงลาน</div><div class="v" id="sWait" style="color:#b45309;">-</div></div>
+    <div class="stat" style="border-color:#ef4444;background:#fef2f2;"><div class="l" style="color:#b91c1c;">รอเอาออก</div><div class="v" id="sOut" style="color:#dc2626;">-</div></div>
     <div class="stat"><div class="l">ล็อตค้างนานสุด</div><div class="v" id="sOld">-</div></div>
   </div>
   <div class="legend">🔴 ขอบแดง = ค้างในลานเกิน 45 วัน (ควรระบายก่อน ตามหลัก FIFO) • คลิกช่องว่างเพื่อดูรายละเอียด</div>
@@ -5445,16 +5445,31 @@ window.YARD = (function(){
     const m={};
     getCP().forEach(c=>{ if(!c||!c.pileType) return;
       const k=specKey({pileType:c.pileType,length:c.spec,weld:c.weld,steel:c.steel,ba:c.ba});
-      if(!m[k]) m[k]={qty:0, orders:{}};
+      if(!m[k]) m[k]={qty:0, orders:{}, units:{}};
       m[k].qty+=(+c.qty||0);
+      // [หน่วย] เก็บหน่วยจริงของแต่ละสเปค (ต้น/ท่อน/ตัว) ไม่ให้ค่ากลางมาทับ
+      const _u=(typeof _unitOf==="function")?_unitOf(c.unit):(c.unit||"ต้น");
+      m[k].units[_u]=(m[k].units[_u]||0)+(+c.qty||0);
       if(c.orderNum) m[k].orders[c.orderNum]=(m[k].orders[c.orderNum]||0)+(+c.qty||0);
     });
+    // หน่วยหลักของสเปค = หน่วยที่มีจำนวนมากสุด (กันกรณีคละหน่วย)
+    Object.keys(m).forEach(k=>{ const us=m[k].units||{}; m[k].unit=Object.keys(us).sort((a,b)=>us[b]-us[a])[0]||"ต้น"; });
     return m;
   }
   function placedMap(){ const m={}; Object.keys(STATE).forEach(id=>lotsOf(id).forEach(l=>{ const k=specKey(l); m[k]=(m[k]||0)+(+l.qty||0); })); return m; }
   function ordersText(k, s1){ const o=(s1&&s1[k]&&s1[k].orders)||{}; const ks=Object.keys(o); return ks.length?ks.map(x=>"#"+x).join(", "):""; }
 
   // ---- รอจัดลง / รอเอาออก = ส่วนต่าง (สต็อก1 − ที่ลงแล้ว) ----
+  // ---- หน่วยนับจริงของแต่ละสเปค (ล็อกไว้ ไม่ให้ตัวเปลี่ยนป้ายกลางมาทับ) ----
+  // คืน span ที่ติด data-unit-lock → ตัวสลับป้ายหน่วยของระบบจะข้ามให้
+  const uTag=(u)=>`<span data-unit-lock>${esc(u||"ต้น")}</span>`;
+  // หาหน่วยของ lot/สเปค: ใช้ค่าที่ติดมากับของก่อน ถ้าไม่มีค่อยอิงสต็อก 1
+  function specUnit(obj){ if(obj&&obj.unit) return obj.unit; try{ const c=_s1cache[specKey(obj)]; if(c&&c.unit) return c.unit; }catch(e){} return "ต้น"; }
+  // หน่วยของของที่ลงกองแล้ว (สแกน STATE) — ใช้ตอนสเปคไม่มีในสต็อก 1 แล้ว (คิวรอเอาออก)
+  function placedUnitOf(k){ let u=null; Object.keys(STATE).forEach(id=>lotsOf(id).forEach(l=>{ if(specKey(l)===k && l.unit && !u) u=l.unit; })); return u; }
+  // สรุปจำนวนแยกตามหน่วย เช่น "100 ต้น + 50 ท่อน" (รวมข้ามหน่วยไม่ได้)
+  function unitBreak(items){ const m={}; (items||[]).forEach(it=>{ const u=(it&&it.unit)||"ต้น"; m[u]=(m[u]||0)+(+((it&&it.qty)||0)); }); const ks=Object.keys(m); if(!ks.length) return "0 "+uTag("ต้น"); return ks.map(u=>m[u].toLocaleString("th-TH")+" "+uTag(u)).join(" + "); }
+
   let QUEUE=[], OUTQUEUE=[], _s1cache={};
   function rebuildQueues(){
     const s1=stock1Map(), placed=placedMap(); _s1cache=s1;
@@ -5464,8 +5479,9 @@ window.YARD = (function(){
       const have=(s1[k]?s1[k].qty:0), put=(placed[k]||0), diff=have-put;
       if(diff===0) return;
       const base=lotFromKey(k), ord=ordersText(k,s1);
-      if(diff>0) QUEUE.push(Object.assign({id:"Q"+(qi++), key:k, qty:diff, orders:ord}, base));
-      else       OUTQUEUE.push(Object.assign({id:"O"+(oi++), key:k, qty:-diff, orders:ord}, base));
+      const unit=(s1[k]&&s1[k].unit)||placedUnitOf(k)||"ต้น";
+      if(diff>0) QUEUE.push(Object.assign({id:"Q"+(qi++), key:k, qty:diff, orders:ord, unit}, base));
+      else       OUTQUEUE.push(Object.assign({id:"O"+(oi++), key:k, qty:-diff, orders:ord, unit}, base));
     });
   }
 
@@ -5483,12 +5499,12 @@ window.YARD = (function(){
   function renderStats(){
     const ids=Object.keys(STATE).filter(id=>lotsOf(id).length);
     const totalSlots=Object.values(BLOCKS).reduce((a,b)=>a+b,0);
-    let totalQty=0, totalLots=0, oldest=null;
-    ids.forEach(id=>lotsOf(id).forEach(l=>{ totalQty+=(+l.qty||0); totalLots++; const a=ageOf(l.date); if(!oldest||a>oldest.a) oldest={id,a}; }));
-    const waitQty=QUEUE.reduce((s,q)=>s+(+q.qty||0),0), outQty=OUTQUEUE.reduce((s,q)=>s+(+q.qty||0),0);
+    let totalLots=0, oldest=null; const inYard=[];
+    ids.forEach(id=>lotsOf(id).forEach(l=>{ totalLots++; inYard.push({qty:+l.qty||0, unit:specUnit(l)}); const a=ageOf(l.date); if(!oldest||a>oldest.a) oldest={id,a}; }));
     const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-    set("sUsed",`${ids.length} / ${totalSlots} ช่อง`); set("sLots",totalLots); set("sQty",totalQty.toLocaleString("th-TH"));
-    set("sWait",waitQty.toLocaleString("th-TH")); set("sOut",outQty.toLocaleString("th-TH"));
+    const setH=(id,h)=>{ const e=document.getElementById(id); if(e) e.innerHTML=h; };
+    set("sUsed",`${ids.length} / ${totalSlots} ช่อง`); set("sLots",totalLots);
+    setH("sQty",unitBreak(inYard)); setH("sWait",unitBreak(QUEUE)); setH("sOut",unitBreak(OUTQUEUE));
     set("sOld",oldest?`${oldest.id} • ${oldest.a} ว.`:"-");
   }
   function renderGuard(){
@@ -5501,26 +5517,26 @@ window.YARD = (function(){
     el.className="guard bad";
     const wQ=QUEUE.reduce((s,q)=>s+q.qty,0), wO=OUTQUEUE.reduce((s,q)=>s+q.qty,0);
     const rows=[];
-    QUEUE.forEach(q=>rows.push(`<li><b>${esc(specLabel(q))}</b> — สต็อก 1 มี ${q.qty} ต้น ที่ยังไม่ได้ลงตำแหน่งในลาน${q.orders?(" · "+esc(q.orders)):""}</li>`));
-    OUTQUEUE.forEach(q=>rows.push(`<li><b>${esc(specLabel(q))}</b> — ในลานมีเกินสต็อก 1 อยู่ ${q.qty} ต้น (สต็อก 1 ตัดออกแล้ว) ต้องเอาออกจากกอง</li>`));
-    el.innerHTML=`<div class="ghead">⚠️ ยังไม่ตรงกับสต็อก 1 — รอจัดลง ${QUEUE.length} สเปค (${wQ} ต้น) · รอเอาออก ${OUTQUEUE.length} สเปค (${wO} ต้น)</div><ul>${rows.join("")}</ul><div class="gsub">จัดของลงกอง/เอาออกให้ครบ แล้วยอดจะกลับมาตรงสต็อก 1 อัตโนมัติ</div>`;
+    QUEUE.forEach(q=>rows.push(`<li><b>${esc(specLabel(q))}</b> — สต็อก 1 มี ${q.qty} ${uTag(q.unit)} ที่ยังไม่ได้ลงตำแหน่งในลาน${q.orders?(" · "+esc(q.orders)):""}</li>`));
+    OUTQUEUE.forEach(q=>rows.push(`<li><b>${esc(specLabel(q))}</b> — ในลานมีเกินสต็อก 1 อยู่ ${q.qty} ${uTag(q.unit)} (สต็อก 1 ตัดออกแล้ว) ต้องเอาออกจากกอง</li>`));
+    el.innerHTML=`<div class="ghead">⚠️ ยังไม่ตรงกับสต็อก 1 — รอจัดลง ${QUEUE.length} สเปค (${unitBreak(QUEUE)}) · รอเอาออก ${OUTQUEUE.length} สเปค (${unitBreak(OUTQUEUE)})</div><ul>${rows.join("")}</ul><div class="gsub">จัดของลงกอง/เอาออกให้ครบ แล้วยอดจะกลับมาตรงสต็อก 1 อัตโนมัติ</div>`;
   }
   function renderQueue(){
     const wrap=document.getElementById("queueList"); if(!wrap) return;
     const totalQ=QUEUE.reduce((s,q)=>s+(+q.qty||0),0);
-    const cc=document.getElementById("qCount"); if(cc) cc.textContent=QUEUE.length+" สเปค · "+totalQ.toLocaleString("th-TH")+" ต้น";
+    const cc=document.getElementById("qCount"); if(cc) cc.innerHTML=QUEUE.length+" สเปค · "+unitBreak(QUEUE);
     if(!QUEUE.length){ wrap.innerHTML='<div class="qempty">✓ ไม่มีของรอจัดลงลาน — ทุกอย่างในสต็อก 1 ลงตำแหน่งครบแล้ว</div>'; return; }
-    wrap.innerHTML=QUEUE.map(q=>`<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div><div class="qsub">${esc(specFull(q))}</div><div class="qsrc">📥 เข้าจาก: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 (เสาลูกค้า)"}</div></div><div class="qqty">${q.qty} ต้น</div><button class="qbtn" onclick="YARD.openPlace('${q.id}')">จัดลงลาน →</button></div>`).join("");
+    wrap.innerHTML=QUEUE.map(q=>`<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div><div class="qsub">${esc(specFull(q))}</div><div class="qsrc">📥 เข้าจาก: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 (เสาลูกค้า)"}</div></div><div class="qqty">${q.qty} ${uTag(q.unit)}</div><button class="qbtn" onclick="YARD.openPlace('${q.id}')">จัดลงลาน →</button></div>`).join("");
   }
   function renderOutQueue(){
     const wrap=document.getElementById("outList"); if(!wrap) return;
     const totalO=OUTQUEUE.reduce((s,q)=>s+(+q.qty||0),0);
-    const cc=document.getElementById("oCount"); if(cc) cc.textContent=OUTQUEUE.length+" รายการ · "+totalO.toLocaleString("th-TH")+" ต้น";
+    const cc=document.getElementById("oCount"); if(cc) cc.innerHTML=OUTQUEUE.length+" รายการ · "+unitBreak(OUTQUEUE);
     if(!OUTQUEUE.length){ wrap.innerHTML='<div class="qempty">✓ ไม่มีเสาออกที่ค้างตัด — ในลานไม่เกินสต็อก 1</div>'; return; }
     wrap.innerHTML=OUTQUEUE.map(q=>{
       const have=gongsWithSpec(q).reduce((s,g)=>s+g.qty,0);
-      const warn=have<q.qty?` · ⚠️ ในลานมี ${have} ต้น (ไม่พอ)`:"";
-      return `<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div><div class="qsub">${esc(specFull(q))}</div><div class="qsrc">📤 ออกไป: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 ตัดออก"}${warn}</div></div><div class="qqty">${q.qty} ต้น</div><button class="qbtn" onclick="YARD.openTakeOut('${q.id}')">เอาออกจากกอง →</button></div>`;
+      const warn=have<q.qty?` · ⚠️ ในลานมี ${have} ${uTag(q.unit)} (ไม่พอ)`:"";
+      return `<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div><div class="qsub">${esc(specFull(q))}</div><div class="qsrc">📤 ออกไป: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 ตัดออก"}${warn}</div></div><div class="qqty">${q.qty} ${uTag(q.unit)}</div><button class="qbtn" onclick="YARD.openTakeOut('${q.id}')">เอาออกจากกอง →</button></div>`;
     }).join("");
   }
   function renderAll(){ load(); rebuildQueues(); renderMap(); renderStats(); renderQueue(); renderOutQueue(); renderGuard(); }
@@ -5529,7 +5545,7 @@ window.YARD = (function(){
   function lotRowHTML(l){
     const age=l.date?ageOf(l.date):0;
     const badge=l.date?`เข้าลาน ${age} วัน${age>OLD_DAYS?" · 🔴 เกิน 45 วัน":""}`:"";
-    return `<div class="lotrow"><div class="rhead"><b>${esc(specLabel(l))}</b><span class="agebadge">${badge}</span></div><div class="rdetail">${esc(specFull(l))}</div><div class="rqty">จำนวน <b>${l.qty}</b> ต้น · เข้าลาน ${fmtDate(l.date)}</div>${l.inOrder?`<div class="rsrc">📥 เข้าจาก: ออเดอร์ ${esc(l.inOrder)}</div>`:''}${l.note?`<div class="rnote">📝 ${esc(l.note)}</div>`:''}</div>`;
+    return `<div class="lotrow"><div class="rhead"><b>${esc(specLabel(l))}</b><span class="agebadge">${badge}</span></div><div class="rdetail">${esc(specFull(l))}</div><div class="rqty">จำนวน <b>${l.qty}</b> ${uTag(specUnit(l))} · เข้าลาน ${fmtDate(l.date)}</div>${l.inOrder?`<div class="rsrc">📥 เข้าจาก: ออเดอร์ ${esc(l.inOrder)}</div>`:''}${l.note?`<div class="rnote">📝 ${esc(l.note)}</div>`:''}</div>`;
   }
   function openOv(id){
     const t=document.getElementById("ovTitle"); if(t) t.textContent="ช่อง "+id;
@@ -5545,21 +5561,21 @@ window.YARD = (function(){
   function syncNums(sel){ const row=sel.closest(".placerow"); if(!row) return; const num=row.querySelector(".pNum"); if(num) num.innerHTML=numOptions(sel.value); }
   let curQ=null;
   function openPlace(id){ const q=QUEUE.find(x=>x.id===id); if(!q) return; curQ=id;
-    document.getElementById("placeInfo").innerHTML=`จัดของ <b>${esc(specLabel(q))}</b> (${esc(specFull(q))}) — จากสต็อก 1 มี <b>${q.qty}</b> ต้น · เลือกกองปลายทาง แยกลงหลายกองได้`;
+    document.getElementById("placeInfo").innerHTML=`จัดของ <b>${esc(specLabel(q))}</b> (${esc(specFull(q))}) — จากสต็อก 1 มี <b>${q.qty}</b> ${uTag(q.unit)} · เลือกกองปลายทาง แยกลงหลายกองได้`;
     document.getElementById("placeRows").innerHTML=""; addPlaceRow(q.qty);
     document.getElementById("placeOv").style.display="flex"; placeRemain();
   }
   function addPlaceRow(defQty){ const d=document.createElement("div"); d.innerHTML=`<div class="placerow"><select class="pBlk" onchange="YARD.syncNums(this)">${blockOptions()}</select><select class="pNum">${numOptions("A")}</select><input type="number" class="pQty" min="0" value="${defQty||0}" oninput="YARD.placeRemain()"><button class="rmbtn" onclick="this.closest('.placerow').remove();YARD.placeRemain()">ลบ</button></div>`; document.getElementById("placeRows").appendChild(d.firstElementChild); }
-  function placeRemain(){ const q=QUEUE.find(x=>x.id===curQ); if(!q) return; let sum=0; document.querySelectorAll("#placeRows .pQty").forEach(i=>sum+=(+i.value||0)); const left=q.qty-sum; const el=document.getElementById("yPlaceRemain"); el.textContent=`รวมจัดลง ${sum} ต้น · เหลือรอจัดลง ${left} ต้น`+(left<0?"  ⚠️ เกินยอดสต็อก 1!":""); el.style.color=left<0?"#b91c1c":"#475569"; }
+  function placeRemain(){ const q=QUEUE.find(x=>x.id===curQ); if(!q) return; let sum=0; document.querySelectorAll("#placeRows .pQty").forEach(i=>sum+=(+i.value||0)); const left=q.qty-sum; const el=document.getElementById("yPlaceRemain"); const _u=uTag(q.unit); el.innerHTML=`รวมจัดลง ${sum} ${_u} · เหลือรอจัดลง ${left} ${_u}`+(left<0?"  ⚠️ เกินยอดสต็อก 1!":""); el.style.color=left<0?"#b91c1c":"#475569"; }
   function savePlace(){ const q=QUEUE.find(x=>x.id===curQ); if(!q) return;
     const rows=[...document.querySelectorAll("#placeRows .placerow")]; let placed=0; const assigns=[];
     rows.forEach(r=>{ const slot=(r.querySelector(".pBlk").value)+(r.querySelector(".pNum").value); const qty=+r.querySelector(".pQty").value||0; if(qty>0){ assigns.push({slot,qty}); placed+=qty; } });
     if(placed<=0){ alert("ใส่จำนวนที่จะจัดลงก่อนครับ"); return; }
-    if(placed>q.qty){ alert("จำนวนที่จัดลง ("+placed+") เกินยอดในสต็อก 1 ("+q.qty+" ต้น)"); return; }
+    if(placed>q.qty){ alert("จำนวนที่จัดลง ("+placed+") เกินยอดในสต็อก 1 ("+q.qty+" "+(q.unit||"ต้น")+")"); return; }
     const today=todayISO();
     assigns.forEach(a=>{ if(!Array.isArray(STATE[a.slot])) STATE[a.slot]=[];
       const ex=STATE[a.slot].find(l=>sameSpec(l,q)&&l.date===today);
-      if(ex){ ex.qty+=a.qty; } else { STATE[a.slot].push({pileType:q.pileType,length:q.length,weld:q.weld,steel:q.steel,ba:q.ba,qty:a.qty,date:today,inOrder:q.orders||"",note:""}); }
+      if(ex){ ex.qty+=a.qty; if(!ex.unit&&q.unit) ex.unit=q.unit; } else { STATE[a.slot].push({pileType:q.pileType,length:q.length,weld:q.weld,steel:q.steel,ba:q.ba,qty:a.qty,unit:q.unit||"ต้น",date:today,inOrder:q.orders||"",note:""}); }
     });
     save(); closePlace(); renderAll();
   }
@@ -5568,20 +5584,20 @@ window.YARD = (function(){
   // ---- เอาออกจากกอง ----
   function gongsWithSpec(item){ const out=[]; Object.keys(STATE).forEach(id=>{ (STATE[id]||[]).forEach(l=>{ if(sameSpec(l,item)&&(+l.qty||0)>0) out.push({id, qty:+l.qty||0, age:ageOf(l.date)}); }); }); out.sort((a,b)=>b.age-a.age); return out; }
   let curO=null;
-  function takeSlotOptions(item){ const gs=gongsWithSpec(item); if(!gs.length) return `<option value="">— ไม่มีกองที่มีสเปคนี้ —</option>`; return gs.map(g=>`<option value="${g.id}">${g.id} · มี ${g.qty} ต้น · เข้าลาน ${g.age} ว.</option>`).join(""); }
+  function takeSlotOptions(item){ const gs=gongsWithSpec(item); const _u=(item&&item.unit)||"ต้น"; if(!gs.length) return `<option value="">— ไม่มีกองที่มีสเปคนี้ —</option>`; return gs.map(g=>`<option value="${g.id}">${g.id} · มี ${g.qty} ${_u} · เข้าลาน ${g.age} ว.</option>`).join(""); }
   function openTakeOut(id){ const q=OUTQUEUE.find(x=>x.id===id); if(!q) return; curO=id;
     const gs=gongsWithSpec(q), have=gs.reduce((s,g)=>s+g.qty,0);
-    document.getElementById("takeInfo").innerHTML=`เอาออก <b>${esc(specLabel(q))}</b> (${esc(specFull(q))}) — สต็อก 1 ตัดออก <b>${q.qty}</b> ต้น<br>ในลานมีสเปคนี้ <b>${have}</b> ต้น · เลือกกองที่หยิบออกจริง (ไล่เก่าสุดก่อน · แยกหลายกองได้)`;
+    document.getElementById("takeInfo").innerHTML=`เอาออก <b>${esc(specLabel(q))}</b> (${esc(specFull(q))}) — สต็อก 1 ตัดออก <b>${q.qty}</b> ${uTag(q.unit)}<br>ในลานมีสเปคนี้ <b>${have}</b> ${uTag(q.unit)} · เลือกกองที่หยิบออกจริง (ไล่เก่าสุดก่อน · แยกหลายกองได้)`;
     document.getElementById("takeRows").innerHTML=""; addTakeRow(Math.min(q.qty,(gs[0]?gs[0].qty:0)));
     document.getElementById("outOv").style.display="flex"; takeRemain();
   }
   function addTakeRow(defQty){ const q=OUTQUEUE.find(x=>x.id===curO); if(!q) return; const d=document.createElement("div"); d.innerHTML=`<div class="takerow"><select class="tSlot">${takeSlotOptions(q)}</select><input type="number" class="tQty" min="0" value="${defQty||0}" oninput="YARD.takeRemain()"><button class="rmbtn" onclick="this.closest('.takerow').remove();YARD.takeRemain()">ลบ</button></div>`; document.getElementById("takeRows").appendChild(d.firstElementChild); }
-  function takeRemain(){ const q=OUTQUEUE.find(x=>x.id===curO); if(!q) return; let sum=0; document.querySelectorAll("#takeRows .tQty").forEach(i=>sum+=(+i.value||0)); const left=q.qty-sum; const el=document.getElementById("yTakeRemain"); el.textContent=`รวมเอาออก ${sum} ต้น · เหลือค้างต้องตัด ${left} ต้น`+(left<0?"  ⚠️ เกินยอดที่ตัด!":""); el.style.color=left<0?"#b91c1c":"#475569"; }
+  function takeRemain(){ const q=OUTQUEUE.find(x=>x.id===curO); if(!q) return; let sum=0; document.querySelectorAll("#takeRows .tQty").forEach(i=>sum+=(+i.value||0)); const left=q.qty-sum; const el=document.getElementById("yTakeRemain"); const _u=uTag(q.unit); el.innerHTML=`รวมเอาออก ${sum} ${_u} · เหลือค้างต้องตัด ${left} ${_u}`+(left<0?"  ⚠️ เกินยอดที่ตัด!":""); el.style.color=left<0?"#b91c1c":"#475569"; }
   function saveTakeOut(){ const q=OUTQUEUE.find(x=>x.id===curO); if(!q) return;
     const rows=[...document.querySelectorAll("#takeRows .takerow")]; let taken=0; const picks=[];
     rows.forEach(r=>{ const slot=r.querySelector(".tSlot").value; const qty=+r.querySelector(".tQty").value||0; if(slot&&qty>0){ picks.push({slot,qty}); taken+=qty; } });
     if(taken<=0){ alert("ใส่จำนวนที่จะเอาออกก่อนครับ"); return; }
-    if(taken>q.qty){ alert("จำนวนที่เอาออก ("+taken+") เกินยอดที่สต็อก 1 ตัด ("+q.qty+" ต้น)"); return; }
+    if(taken>q.qty){ alert("จำนวนที่เอาออก ("+taken+") เกินยอดที่สต็อก 1 ตัด ("+q.qty+" "+(q.unit||"ต้น")+")"); return; }
     for(const p of picks){ let need=p.qty; const arr=STATE[p.slot]||[];
       for(let i=0;i<arr.length&&need>0;i++){ if(!sameSpec(arr[i],q)) continue; const take=Math.min(need,+arr[i].qty||0); arr[i].qty-=take; need-=take; }
       STATE[p.slot]=arr.filter(l=>(+l.qty||0)>0); if(!STATE[p.slot].length) delete STATE[p.slot];
