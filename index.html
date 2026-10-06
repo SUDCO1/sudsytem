@@ -5242,16 +5242,17 @@ document.addEventListener('DOMContentLoaded', () => {
   #yardApp .zrow{ display:flex; gap:12px; align-items:stretch; margin:10px 0; }
   #yardApp .grow{ flex:1; }
   #yardApp .block{ border:2px solid #64748b; border-radius:8px; padding:6px; background:var(--band); }
-  #yardApp .block.tight{ flex:none; }
-  #yardApp .cols{ display:flex; gap:5px; } #yardApp .col{ flex:1; display:flex; flex-direction:column; gap:5px; }
+  #yardApp .block.tight{ flex:none; width:120px; }
+  #yardApp .cols{ display:flex; gap:5px; } #yardApp .col{ flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
   #yardApp .cell{ background:#fff; border:1px solid #cbd5e1; border-radius:7px; height:96px; padding:4px 5px; cursor:pointer; transition:.12s; display:flex; flex-direction:column; gap:2px; overflow:hidden; }
   #yardApp .cell:hover{ border-color:#2563eb; transform:translateY(-1px); box-shadow:0 2px 6px rgba(37,99,235,.15); }
   #yardApp .cell.empty{ border-style:dashed; color:#94a3b8; align-items:center; justify-content:center; background:#fbfdff; }
   #yardApp .cell.old{ box-shadow:0 0 0 2px #ef4444 inset; }
   #yardApp .cell .sid{ font-size:10.5px; color:var(--muted); font-weight:700; flex:none; }
-  #yardApp .cell .lots{ display:flex; flex-direction:column; flex-wrap:wrap; align-content:flex-start; gap:2px 4px; flex:1 1 auto; min-height:0; overflow:hidden; }
-  #yardApp .cell .lot{ display:flex; align-items:center; gap:3px; font-size:9.5px; line-height:1.25; white-space:nowrap; }
-  #yardApp .cell .lot .lotold{ font-size:8px; } #yardApp .cell .nm{ font-weight:700; }
+  #yardApp .cell .lots{ display:flex; flex-direction:column; flex-wrap:nowrap; gap:2px 4px; flex:1 1 auto; min-height:0; overflow:hidden; }
+  #yardApp .cell .lotmore{ font-size:9px; font-weight:800; color:#2563eb; flex:none; margin-top:1px; }
+  #yardApp .cell .lot{ display:flex; align-items:center; gap:3px; font-size:9.5px; line-height:1.25; white-space:nowrap; min-width:0; }
+  #yardApp .cell .lot .lotold{ font-size:8px; flex:none; } #yardApp .cell .nm{ font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; }
   #yardApp .cell .foot{ flex:none; font-size:9.5px; color:var(--muted); }
   #yardApp .raft{ border:2px solid #64748b; border-radius:8px; background:repeating-linear-gradient(45deg,#eef2f7,#eef2f7 8px,#e6ebf2 8px,#e6ebf2 16px); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:#475569; min-height:70px; }
   #yardApp .raft.slim{ min-height:52px; font-size:13px; }
@@ -5259,24 +5260,44 @@ document.addEventListener('DOMContentLoaded', () => {
   #yardApp .buildings{ display:flex; gap:8px; justify-content:center; margin-top:6px; } #yardApp .buildings .facil{ flex:1; }
   #yardApp .scale{ width:150px; margin:8px auto 2px; border:1.5px solid #94a3b8; border-radius:6px; background:repeating-linear-gradient(90deg,#fff,#fff 6px,#eef2f7 6px,#eef2f7 12px); text-align:center; font-size:11.5px; font-weight:700; color:#475569; padding:5px; }
   #yardApp .sidelbl{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; font-size:11px; color:#64748b; font-weight:700; width:26px; }
+  @media(max-width:768px){
+    #yardApp .plan{ margin:8px 10px 16px; padding:10px; }
+    #yardApp .zrow{ gap:6px; margin:7px 0; }
+    #yardApp .block{ padding:4px; }
+    #yardApp .block.tight{ width:72px; }
+    #yardApp .cols{ gap:3px; } #yardApp .col{ gap:3px; }
+    #yardApp .cell{ height:78px; padding:3px 4px; }
+    #yardApp .cell .lot{ font-size:8.5px; }
+    #yardApp .cell .lot .lotold{ display:none; }
+    #yardApp .raft{ min-height:56px; font-size:13px; }
+    #yardApp .raft.slim{ min-height:44px; font-size:12px; }
+  }
   #yardApp .queue{ margin:4px 20px 14px; background:#fff; border:1px solid #d7dee7; border-left:5px solid #f59e0b; border-radius:10px; padding:12px 16px; }
   #yardApp .queue h3{ margin:0 0 3px; font-size:14px; display:flex; align-items:center; gap:8px; }
   #yardApp .queue .qbadge{ background:#fef3c7; color:#92400e; font-size:12px; font-weight:700; padding:2px 10px; border-radius:99px; }
   #yardApp .queue .qhint{ color:var(--muted); font-size:12px; margin-bottom:10px; }
   #yardApp .queue .qempty{ color:#94a3b8; font-size:13px; padding:8px 0; }
-  #yardApp .qitem{ display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid #eef2f7; border-radius:8px; margin-bottom:6px; background:#fafcff; }
+  #yardApp .qitem{ display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px solid #eef2f7; border-radius:12px; margin-bottom:10px; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.04); }
   #yardApp .qitem .qmain{ flex:1; min-width:0; }
-  #yardApp .qitem .qspec{ font-weight:700; font-size:13px; }
-  #yardApp .qitem .qsub{ font-size:11.5px; color:#64748b; margin-top:1px; }
-  #yardApp .qitem .qsrc{ font-size:12px; color:#92400e; font-weight:700; margin-top:3px; background:#fff7ed; border:1px solid #fed7aa; border-radius:6px; padding:3px 8px; display:inline-block; }
-  #yardApp .queue.out .qitem .qsrc{ color:#991b1b; background:#fef2f2; border-color:#fecaca; }
-  #yardApp .qitem .qqty{ font-weight:800; font-size:15px; color:#b45309; white-space:nowrap; }
-  #yardApp .qitem .qbtn{ background:#2563eb; color:#fff; border:0; border-radius:7px; padding:8px 15px; font-size:13px; cursor:pointer; white-space:nowrap; }
+  #yardApp .qitem .qspec{ font-weight:800; font-size:15px; color:#0f172a; }
+  #yardApp .qitem .qsub{ font-size:11.5px; color:#64748b; margin-top:2px; }
+  #yardApp .qitem .qsrc{ font-size:11px; color:#92400e; font-weight:600; margin-top:5px; background:#fff7ed; border:1px solid #fed7aa; border-radius:6px; padding:2px 8px; display:inline-block; }
+  #yardApp .queue.out .qitem .qsrc{ color:#b91c1b; background:#fef2f2; border-color:#fecaca; }
+  #yardApp .qitem .qqty{ font-weight:800; font-size:17px; color:#b45309; white-space:nowrap; }
+  #yardApp .qitem .qbtn{ background:#2563eb; color:#fff; border:0; border-radius:9px; padding:8px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; flex:0 0 auto; }
   #yardApp .qitem .qbtn:hover{ background:#1d4ed8; }
   #yardApp .queue.out{ border-left-color:#ef4444; }
   #yardApp .queue.out .qbadge{ background:#fee2e2; color:#b91c1c; }
   #yardApp .queue.out .qitem .qqty{ color:#dc2626; }
   #yardApp .queue.out .qitem .qbtn{ background:#dc2626; } #yardApp .queue.out .qitem .qbtn:hover{ background:#b91c1c; }
+  @media(max-width:768px){
+    #yardApp .queue{ margin:4px 10px 12px; padding:10px 12px; }
+    #yardApp .qitem{ flex-wrap:wrap; gap:8px 10px; align-items:center; }
+    #yardApp .qitem .qmain{ flex:1 1 100%; }
+    #yardApp .qitem .qsrc{ white-space:normal; }
+    #yardApp .qitem .qqty{ flex:0 0 auto; }
+    #yardApp .qitem .qbtn{ flex:0 0 auto; margin-left:auto; text-align:center; padding:9px 14px; }
+  }
   #yardApp .yov{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:9000; padding:16px; }
   #yardApp .yov .box{ background:#fff; border:1px solid #d7dee7; border-radius:14px; padding:22px; width:540px; max-width:100%; max-height:90vh; overflow:auto; }
   #yardApp .yov h3{ margin:0 0 4px; } #yardApp .yov .hint{ color:var(--muted); font-size:12px; margin-bottom:12px; }
@@ -5335,41 +5356,22 @@ document.addEventListener('DOMContentLoaded', () => {
   <div class="plan">
     <div class="fence"><span>รั้ว</span></div>
     <div class="zrow">
-      <div class="sidelbl">KABAG</div>
       <div class="block grow" id="blkC"></div>
       <div class="block tight" id="blkF"></div>
-      <div class="facil" style="width:70px;">อู่ซ่อม</div>
     </div>
     <div class="zrow">
-      <div class="sidelbl"></div>
       <div class="block tight" id="blkD"></div>
       <div class="raft grow">แพ 2</div>
-      <div class="sidelbl">ลาน<br>เท<br>ปูน</div>
     </div>
     <div class="zrow">
-      <div class="sidelbl">ORU</div>
       <div class="block grow" id="blkB"></div>
-      <div class="sidelbl">ถนน<br>คอนกรีต</div>
     </div>
     <div class="zrow">
-      <div class="sidelbl"></div>
       <div class="raft grow slim">แพ 1</div>
-      <div class="sidelbl"></div>
     </div>
     <div class="zrow">
-      <div class="sidelbl"></div>
       <div class="block grow" id="blkA"></div>
       <div class="block tight" id="blkE"></div>
-      <div class="sidelbl">ทาง<br>เข้า<br>ออก</div>
-    </div>
-    <div class="scale">⚖ ตาชั่ง</div>
-    <div class="buildings">
-      <div class="facil">โรงแหวน</div>
-      <div class="facil">โรงแหวน</div>
-      <div class="facil">โรงงานเชื่อมเหล็ก</div>
-      <div class="facil">ออฟฟิศฝ่ายสนาม</div>
-      <div class="facil">ออฟฟิศสำนักงาน</div>
-      <div class="facil" style="flex:none;width:64px;">ป้อมยาม</div>
     </div>
     <div class="fence"><span>รั้ว</span></div>
   </div>
@@ -5470,7 +5472,9 @@ window.YARD = (function(){
 
   // ---- spec helpers (เทียบเต็มสเปค: ชนิด|ยาว|เชื่อม|เหล็ก|บ่า) ----
   function specLabel(l){ const len=(l.length||"").toString().trim(); const lenTxt=len?(/^\d/.test(len)?len+"ม.":len):""; return ((l.pileType||"")+(lenTxt?" "+lenTxt:"")).trim(); }
+  function specShort(l){ return (l.pileType||"").toString().trim(); }
   function specFull(l){ const p=[l.pileType||"", (l.length?("ยาว "+l.length):"")]; if(l.weld&&l.weld!=="-") p.push("เชื่อม "+l.weld); if(l.steel&&l.steel!=="-") p.push("เหล็ก "+l.steel); if(l.ba&&l.ba!=="-") p.push("บ่า "+l.ba); return p.filter(Boolean).join(" · "); }
+  function specExtra(l){ const p=[]; if(l.weld&&l.weld!=="-") p.push("เชื่อม "+l.weld); if(l.steel&&l.steel!=="-") p.push("เหล็ก "+l.steel); if(l.ba&&l.ba!=="-") p.push("บ่า "+l.ba); return p.join(" · "); }
   function specKey(l){ return [nz(l.pileType), nz(l.length), nz(l.weld), nz(l.steel), nz(l.ba)].join("|"); }
   function lotFromKey(k){ const p=k.split("|"); return { pileType:p[0], length:p[1]==="-"?"":p[1], weld:p[2], steel:p[3], ba:p[4] }; }
   function sameSpec(a,b){ return specKey(a)===specKey(b); }
@@ -5526,12 +5530,30 @@ window.YARD = (function(){
     const lots=lotsOf(id);
     if(!lots.length) return `<div class="cell empty" onclick="YARD.openOv('${id}')"><div class="sid">${id}</div><div>— ว่าง —</div></div>`;
     const hasOld=lots.some(l=>ageOf(l.date)>OLD_DAYS);
-    const oldest=Math.max(...lots.map(l=>ageOf(l.date)));
-    const items=lots.map(l=>{ const old=ageOf(l.date)>OLD_DAYS; return `<div class="lot" title="${esc(specFull(l))}"><span class="nm">${esc(specLabel(l))}</span>${old?'<span class="lotold">🔴</span>':''}</div>`; }).join("");
-    return `<div class="cell${hasOld?' old':''}" onclick="YARD.openOv('${id}')"><div class="sid">${id}${lots.length>1?' · '+lots.length+' สเปค':''}</div><div class="lots">${items}</div><div class="foot">เก่าสุด ${oldest} ว.</div></div>`;
+    const items=lots.map(l=>{ const old=ageOf(l.date)>OLD_DAYS; return `<div class="lot" title="${esc(specFull(l))}"><span class="nm">${esc(specShort(l))}</span>${old?'<span class="lotold">🔴</span>':''}</div>`; }).join("");
+    return `<div class="cell${hasOld?' old':''}" onclick="YARD.openOv('${id}')"><div class="sid">${id}${lots.length>1?' · '+lots.length+' สเปค':''}</div><div class="lots">${items}</div></div>`;
   }
   function buildBlock(prefix){ const N=BLOCKS[prefix], cols=N/2; let html='<div class="cols">'; for(let k=0;k<cols;k++){ const top=N-2*k, bot=N-2*k-1; html+=`<div class="col">${cellHTML(prefix+top)}${cellHTML(prefix+bot)}</div>`; } return html+'</div>'; }
-  function renderMap(){ ["A","B","C","D","E","F"].forEach(p=>{ const el=document.getElementById("blk"+p); if(el) el.innerHTML=buildBlock(p); }); }
+  function clampLots(){
+    document.querySelectorAll('#yardApp .plan .cell .lots').forEach(lots=>{
+      const prev=lots.querySelector('.lotmore'); if(prev) prev.remove();
+      const items=[].slice.call(lots.querySelectorAll('.lot'));
+      items.forEach(it=>{ it.style.display=''; });
+      if(items.length===0) return;
+      if(lots.scrollHeight<=lots.clientHeight+1) return;
+      const chip=document.createElement('div'); chip.className='lotmore'; lots.appendChild(chip);
+      let hidden=0;
+      for(let i=items.length-1;i>=1;i--){
+        items[i].style.display='none'; hidden++;
+        chip.textContent='+'+hidden;
+        if(lots.scrollHeight<=lots.clientHeight+1) break;
+      }
+      chip.textContent='+'+hidden;
+    });
+  }
+  function renderMap(){ ["A","B","C","D","E","F"].forEach(p=>{ const el=document.getElementById("blk"+p); if(el) el.innerHTML=buildBlock(p); }); clampLots(); }
+  let _clampTO=null;
+  window.addEventListener('resize', ()=>{ clearTimeout(_clampTO); _clampTO=setTimeout(clampLots, 150); });
   function renderStats(){
     const ids=Object.keys(STATE).filter(id=>lotsOf(id).length);
     const totalSlots=Object.values(BLOCKS).reduce((a,b)=>a+b,0);
@@ -5562,7 +5584,7 @@ window.YARD = (function(){
     const totalQ=QUEUE.reduce((s,q)=>s+(+q.qty||0),0);
     const cc=document.getElementById("qCount"); if(cc) cc.innerHTML=QUEUE.length+" สเปค · "+unitBreak(QUEUE);
     if(!QUEUE.length){ wrap.innerHTML='<div class="qempty">✓ ไม่มีของรอจัดลงลาน — ทุกอย่างในสต็อก 1 ลงตำแหน่งครบแล้ว</div>'; return; }
-    wrap.innerHTML=QUEUE.map(q=>`<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div><div class="qsub">${esc(specFull(q))}</div><div class="qsrc">📥 เข้าจาก: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 (เสาลูกค้า)"}</div></div><div class="qqty">${q.qty} ${uTag(q.unit)}</div><button class="qbtn" onclick="YARD.openPlace('${q.id}')">จัดลงลาน →</button></div>`).join("");
+    wrap.innerHTML=QUEUE.map(q=>`<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div>${specExtra(q)?`<div class="qsub">${esc(specExtra(q))}</div>`:""}<div class="qsrc">📥 เข้าจาก: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 (เสาลูกค้า)"}</div></div><div class="qqty">${q.qty} ${uTag(q.unit)}</div><button class="qbtn" onclick="YARD.openPlace('${q.id}')">จัดลงลาน →</button></div>`).join("");
   }
   function renderOutQueue(){
     const wrap=document.getElementById("outList"); if(!wrap) return;
@@ -5572,7 +5594,7 @@ window.YARD = (function(){
     wrap.innerHTML=OUTQUEUE.map(q=>{
       const have=gongsWithSpec(q).reduce((s,g)=>s+g.qty,0);
       const warn=have<q.qty?` · ⚠️ ในลานมี ${have} ${uTag(q.unit)} (ไม่พอ)`:"";
-      return `<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div><div class="qsub">${esc(specFull(q))}</div><div class="qsrc">📤 ออกไป: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 ตัดออก"}${warn}</div></div><div class="qqty">${q.qty} ${uTag(q.unit)}</div><button class="qbtn" onclick="YARD.openTakeOut('${q.id}')">เอาออกจากกอง →</button></div>`;
+      return `<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div>${specExtra(q)?`<div class="qsub">${esc(specExtra(q))}</div>`:""}<div class="qsrc">📤 ออกไป: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 ตัดออก"}${warn}</div></div><div class="qqty">${q.qty} ${uTag(q.unit)}</div><button class="qbtn" onclick="YARD.openTakeOut('${q.id}')">เอาออกจากกอง →</button></div>`;
     }).join("");
   }
   function renderAll(){ load(); rebuildQueues(); renderMap(); renderStats(); renderQueue(); renderOutQueue(); renderGuard(); }
