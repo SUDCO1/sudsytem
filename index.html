@@ -5341,6 +5341,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   <div class="guard" id="guard"></div>
 
+  <div id="queueCatBar" class="pilecat-bar" style="padding:4px 2px 12px;"></div>
+
   <div class="queue">
     <h3>⏳ รอจัดลงลาน <span class="qbadge" id="qCount">-</span></h3>
     <div class="qhint">ของที่มีในสต็อก 1 (เสาลูกค้า) แต่ยังไม่ได้ระบุตำแหน่งในลาน — กด “จัดลงลาน” เพื่อเลือกกอง (แยกหลายกองได้)</div>
@@ -5511,6 +5513,7 @@ window.YARD = (function(){
   function unitBreak(items){ const m={}; (items||[]).forEach(it=>{ const u=(it&&it.unit)||"ต้น"; m[u]=(m[u]||0)+(+((it&&it.qty)||0)); }); const ks=Object.keys(m); if(!ks.length) return "0 "+uTag("ต้น"); return ks.map(u=>m[u].toLocaleString("th-TH")+" "+uTag(u)).join(" + "); }
 
   let QUEUE=[], OUTQUEUE=[], _s1cache={};
+  let _qCat='';
   function rebuildQueues(){
     const s1=stock1Map(), placed=placedMap(); _s1cache=s1;
     const keys=new Set([...Object.keys(s1), ...Object.keys(placed)]);
@@ -5579,25 +5582,41 @@ window.YARD = (function(){
     OUTQUEUE.forEach(q=>rows.push(`<li><b>${esc(specLabel(q))}</b> — ในลานมีเกินสต็อก 1 อยู่ ${q.qty} ${uTag(q.unit)} (สต็อก 1 ตัดออกแล้ว) ต้องเอาออกจากกอง</li>`));
     el.innerHTML=`<div class="ghead">⚠️ ยังไม่ตรงกับสต็อก 1 — รอจัดลง ${QUEUE.length} สเปค (${unitBreak(QUEUE)}) · รอเอาออก ${OUTQUEUE.length} สเปค (${unitBreak(OUTQUEUE)})</div><ul>${rows.join("")}</ul><div class="gsub">จัดของลงกอง/เอาออกให้ครบ แล้วยอดจะกลับมาตรงสต็อก 1 อัตโนมัติ</div>`;
   }
+  function renderQueueCat(){
+    const bar=document.getElementById("queueCatBar"); if(!bar) return;
+    if(!QUEUE.length && !OUTQUEUE.length){ bar.innerHTML=''; return; }
+    const counts={}; let total=0;
+    const tally=q=>{ const k=_pileCatOf(q.pileType||''); counts[k]=(counts[k]||0)+1; total++; };
+    QUEUE.forEach(tally); OUTQUEUE.forEach(tally);
+    const chip=(val,label,n)=>`<button class="pilecat-chip${_qCat===val?' on':''}${n===0?' zero':''}" onclick="YARD.setQCat('${val}')" title="${label} · ${n} สเปค">${label}<span class="n">${n}</span></button>`;
+    let html='<span class="pilecat-lbl">หมวดหมู่</span>';
+    html+=`<button class="pilecat-chip${_qCat===''?' on':''}" onclick="YARD.setQCat('')">ทั้งหมด<span class="n">${total}</span></button>`;
+    PILE_CATS.forEach(c=>{ html+=chip(c.key,c.label,counts[c.key]||0); });
+    if((counts[PILE_CAT_ETC]||0)>0 || _qCat===PILE_CAT_ETC) html+=chip(PILE_CAT_ETC,PILE_CAT_ETC,counts[PILE_CAT_ETC]||0);
+    bar.innerHTML=html;
+  }
+  function setQCat(c){ _qCat=(_qCat===c)?'':c; renderQueueCat(); renderQueue(); renderOutQueue(); }
   function renderQueue(){
     const wrap=document.getElementById("queueList"); if(!wrap) return;
-    const totalQ=QUEUE.reduce((s,q)=>s+(+q.qty||0),0);
     const cc=document.getElementById("qCount"); if(cc) cc.innerHTML=QUEUE.length+" สเปค · "+unitBreak(QUEUE);
     if(!QUEUE.length){ wrap.innerHTML='<div class="qempty">✓ ไม่มีของรอจัดลงลาน — ทุกอย่างในสต็อก 1 ลงตำแหน่งครบแล้ว</div>'; return; }
-    wrap.innerHTML=QUEUE.map(q=>`<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div>${specExtra(q)?`<div class="qsub">${esc(specExtra(q))}</div>`:""}<div class="qsrc">📥 เข้าจาก: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 (เสาลูกค้า)"}</div></div><div class="qqty">${q.qty} ${uTag(q.unit)}</div><button class="qbtn" onclick="YARD.openPlace('${q.id}')">จัดลงลาน →</button></div>`).join("");
+    const list=_qCat?QUEUE.filter(q=>_pileCatOf(q.pileType||'')===_qCat):QUEUE;
+    if(!list.length){ wrap.innerHTML='<div class="qempty">— ไม่มีรายการในหมวด '+esc(_pileCatLabel(_qCat))+' —</div>'; return; }
+    wrap.innerHTML=list.map(q=>`<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div>${specExtra(q)?`<div class="qsub">${esc(specExtra(q))}</div>`:""}<div class="qsrc">📥 เข้าจาก: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 (เสาลูกค้า)"}</div></div><div class="qqty">${q.qty} ${uTag(q.unit)}</div><button class="qbtn" onclick="YARD.openPlace('${q.id}')">จัดลงลาน →</button></div>`).join("");
   }
   function renderOutQueue(){
     const wrap=document.getElementById("outList"); if(!wrap) return;
-    const totalO=OUTQUEUE.reduce((s,q)=>s+(+q.qty||0),0);
     const cc=document.getElementById("oCount"); if(cc) cc.innerHTML=OUTQUEUE.length+" รายการ · "+unitBreak(OUTQUEUE);
     if(!OUTQUEUE.length){ wrap.innerHTML='<div class="qempty">✓ ไม่มีเสาออกที่ค้างตัด — ในลานไม่เกินสต็อก 1</div>'; return; }
-    wrap.innerHTML=OUTQUEUE.map(q=>{
+    const outL=_qCat?OUTQUEUE.filter(q=>_pileCatOf(q.pileType||'')===_qCat):OUTQUEUE;
+    if(!outL.length){ wrap.innerHTML='<div class="qempty">— ไม่มีรายการในหมวด '+esc(_pileCatLabel(_qCat))+' —</div>'; return; }
+    wrap.innerHTML=outL.map(q=>{
       const have=gongsWithSpec(q).reduce((s,g)=>s+g.qty,0);
       const warn=have<q.qty?` · ⚠️ ในลานมี ${have} ${uTag(q.unit)} (ไม่พอ)`:"";
       return `<div class="qitem"><div class="qmain"><div class="qspec">${esc(specLabel(q))}</div>${specExtra(q)?`<div class="qsub">${esc(specExtra(q))}</div>`:""}<div class="qsrc">📤 ออกไป: ${q.orders?("ออเดอร์ "+esc(q.orders)):"สต็อก 1 ตัดออก"}${warn}</div></div><div class="qqty">${q.qty} ${uTag(q.unit)}</div><button class="qbtn" onclick="YARD.openTakeOut('${q.id}')">เอาออกจากกอง →</button></div>`;
     }).join("");
   }
-  function renderAll(){ load(); rebuildQueues(); renderMap(); renderStats(); renderQueue(); renderOutQueue(); renderGuard(); }
+  function renderAll(){ load(); rebuildQueues(); renderMap(); renderStats(); renderQueueCat(); renderQueue(); renderOutQueue(); renderGuard(); }
 
   // ---- ดูช่อง (read-only) ----
   function lotRowHTML(l, slotId, idx){
@@ -5731,7 +5750,7 @@ window.YARD = (function(){
   // ซิงก์กับสต็อก 1 อัตโนมัติทุก 4 วิ ขณะเปิดหน้าผังลาน (ไม่เพิ่ม listener Firebase ซ้ำ)
   setInterval(()=>{ if(_active()&&!anyModalOpen()) renderAll(); }, 4000);
 
-  return { renderAll, openOv, closeOv, openPlace, addPlaceRow, syncNums, placeRemain, savePlace, closePlace, openTakeOut, addTakeRow, takeRemain, saveTakeOut, closeTakeOut, openMove, syncMoveNums, moveRemain, saveMove, closeMove, openHist, closeHist };
+  return { renderAll, openOv, closeOv, openPlace, addPlaceRow, syncNums, placeRemain, savePlace, closePlace, openTakeOut, addTakeRow, takeRemain, saveTakeOut, closeTakeOut, openMove, syncMoveNums, moveRemain, saveMove, closeMove, openHist, closeHist, setQCat };
 })();
 </script>
 <!-- ================================================================ SECTION: ลูกค้า (NEW) ================================================================ -->
