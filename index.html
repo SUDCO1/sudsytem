@@ -4466,15 +4466,15 @@ function tcOrderSearch(q) {
   const allCp = getCustPoles();
   dd.innerHTML = filtered.map(o => {
     const items = getOrderItems(o);
-    const piles = items.map(it=>it.pileType).join(', ');
+    const piles = items.map(it=>_esc(it.pileType)).join(', ');
     const hasCP = allCp.some(cp => cp.orderNum === o.orderNum && cp.online !== false);
     const noStock = !hasCP;
     const stockTag = noStock ? ' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;">ยังไม่มีเสาลูกค้า</span>' : '';
     return `<div data-ordernum="${(o.orderNum||'').replace(/"/g,'&quot;')}"
       style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background 0.1s;"
       onmouseenter="this.style.background='#EFF6FF'" onmouseleave="this.style.background=''">
-      <div style="font-size:13px;font-weight:700;color:${noStock?'#94A3B8':'#1E40AF'}">${o.orderNum}${stockTag}</div>
-      <div style="font-size:11px;color:#374151;margin-top:1px;">👤 ${_esc(o.customer||'-')}${o.tel?' · 📞 '+o.tel:''}</div>
+      <div style="font-size:13px;font-weight:700;color:${noStock?'#94A3B8':'#1E40AF'}">${_esc(o.orderNum)}${stockTag}</div>
+      <div style="font-size:11px;color:#374151;margin-top:1px;">👤 ${_esc(o.customer||'-')}${o.tel?' · 📞 '+_esc(o.tel):''}</div>
       <div style="font-size:10px;color:#64748B;margin-top:1px;">📦 ${piles}</div>
     </div>`;
   }).join('');
@@ -4493,8 +4493,8 @@ function tcSelectOrder(orderNum) {
   const items = getOrderItems(o);
   const addr = o.address||o.addr||(o.site&&o.site!=='-'?o.site:'');
   document.getElementById('tc_cust_info').innerHTML =
-    `<strong>${_esc(o.customer||'-')}</strong>${o.tel ? ' · 📞 ' + o.tel : ''}` +
-    (addr ? `<br>📍 ${addr}` : '');
+    `<strong>${_esc(o.customer||'-')}</strong>${o.tel ? ' · 📞 ' + _esc(o.tel) : ''}` +
+    (addr ? `<br>📍 ${_esc(addr)}` : '');
   document.getElementById('tc_cust_block').style.display = 'block';
   setTimeout(()=>{const cb=document.getElementById('tc_cust_block');if(cb)cb.scrollIntoView({behavior:'smooth',block:'nearest'});},50);
 
@@ -4666,7 +4666,7 @@ function _tcCpRowsHtml(orderNum, savedItems) {
     gMap[key].ids.push(cp.id);
   });
   return groups.map((g, i) => {
-    const specLabel = g.spec && g.spec !== '-' ? ' · สเปค ' + g.spec : '';
+    const specLabel = g.spec && g.spec !== '-' ? ' · สเปค ' + _esc(g.spec) : '';
     const stockTag = g.isStock ? ' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">สต็อกเก่า</span>' : '';
     const saved = (savedItems||[]).find(s => s.cpIds && s.cpIds[0] === g.ids[0])
       || (savedItems||[]).find(s => s.pileType === g.pileType && s.spec === g.spec);
@@ -4694,7 +4694,7 @@ function _tcCpRowsHtml(orderNum, savedItems) {
       <input type="hidden" id="tc_cp_sp_${i}" value="${(g.spec||'').replace(/"/g,'&quot;')}">
       <input type="hidden" id="tc_cp_stk_${i}" value="${g.isStock?'1':'0'}">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:12px;font-weight:700;color:${textColor};">${g.pileType}${specLabel}${stockTag}</div>
+        <div style="font-size:12px;font-weight:700;color:${textColor};">${_esc(g.pileType)}${specLabel}${stockTag}</div>
         <div style="font-size:10px;color:#64748B;margin-top:1px;line-height:1.7;">🪵 มี <span style="color:${textColor};font-weight:700;">${g.qty} ${_u}</span>${ordered!==null?` · 📋 สั่งไว้ <span style="color:#1E40AF;font-weight:700;">${ordered} ${_mi.unit}</span>`:''}${shipped!==null&&shipped>0?` · ✅ ส่งแล้ว <span style="color:#166534;font-weight:700;">${shipped} ${_mi.unit}</span>`:''}${toShip!==null?` · 🚚 เหลือส่ง <span style="color:#DC2626;font-weight:700;">${toShip} ${_mi.unit}</span>`:''}${(_mi && !_unitEq(_mi.unit, _u))?` <span style="background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">⚠️ หน่วยไม่ตรง</span>`:''}${toShip===null?` <span style="background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">⚠️ ไม่พบรายการนี้ในออเดอร์</span>`:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
@@ -8138,6 +8138,7 @@ function fmtBaht(v) {
 let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast');
+  if (!t) return;
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
@@ -10012,7 +10013,7 @@ function saveEditActiveProd() {
   const a = list.find(x => x.id === id);
   if (!a) return;
   a.prodDate    = document.getElementById('eap_date').value || a.prodDate;
-  a.qtyCasting  = parseInt(document.getElementById('eap_qty').value) || a.qtyCasting;
+  { const _qc = parseInt(document.getElementById('eap_qty').value); a.qtyCasting = Number.isNaN(_qc) ? a.qtyCasting : _qc; }
   a.lane        = document.getElementById('eap_lane').value.trim();
   a.tong        = document.getElementById('eap_tong').value.trim();
   a.note        = document.getElementById('eap_note').value.trim();
@@ -10730,7 +10731,7 @@ function renderProdLogHistory() {
   if (q) {
     logs = logs.filter(l => {
       const cust = orderMap[l.orderNum] || '';
-      return l.orderNum.toLowerCase().includes(q)
+      return (l.orderNum || '').toLowerCase().includes(q)
           || (l.pileType || '').toLowerCase().includes(q)
           || cust.includes(q)
           || (l.date || '').toLowerCase().includes(q)
@@ -12814,10 +12815,10 @@ function renderStockLog(resetPage) {
       return `<tr>
         <td style="${bg}">${e.ts}</td>
         <td style="${bg}"><span class="chip ${chipCls}">${label}</span></td>
-        <td style="${bg}font-weight:600;">${e.name}</td>
+        <td style="${bg}font-weight:600;">${_esc(e.name)}</td>
         <td style="${bg}color:${qC};font-weight:700;" data-unit-lock>${e.qtyDisplay}${e.unit ? ' <span style="font-size:10px;color:#94A3B8;font-weight:600;">'+_esc(e.unit)+'</span>' : ''}</td>
-        <td style="font-weight:700;">${e.newStock}</td>
-        <td style="${bg}">${e.ref}</td>
+        <td style="font-weight:700;">${_esc(e.newStock)}</td>
+        <td style="${bg}">${_esc(e.ref)}</td>
         <td style="${bg}">${_esc(e.staff)}</td>
         <td style="${bg}">${_esc(e.note)}</td>
         <td>${delBtnS}</td>
@@ -12839,7 +12840,7 @@ function renderStockLog(resetPage) {
         const qColor = isIn ? '#166534' : isOut ? '#991B1B' : '#6D28D9';
         // มือถือ: แสดงเฉพาะ ชนิดเสา + จำนวน +/- + คงเหลือ — แตะเพื่อดูรายละเอียด
         return `<div class="mob-lc mob-lc-clk" onclick="openStockLogDetail(${i})">
-          <div class="mob-lc-info"><div class="mob-lc-pile">${e.name}</div></div>
+          <div class="mob-lc-info"><div class="mob-lc-pile">${_esc(e.name)}</div></div>
           <div class="mob-lc-right"><div class="mob-lc-qty" style="color:${qColor};" data-unit-lock>${e.qtyDisplay}${e.unit ? ' <span style="font-size:10px;color:#94A3B8;font-weight:600;">'+_esc(e.unit)+'</span>' : ''}</div><div class="mob-lc-after">คงเหลือ ${e.newStock}</div></div>
           <span class="mob-pc-chev" style="margin-left:2px;">›</span>
         </div>`;
@@ -13497,17 +13498,16 @@ function loadSettingsUI() {
 function renderPriceTable() {
   const prices = (_cfg && _cfg.pilePrices) || getConfig().pilePrices || {};
   const types  = (_cfg && _cfg.pileTypes)  || getConfig().pileTypes  || [];
-  document.getElementById('priceTableBody').innerHTML = types.map(name => `
+  document.getElementById('priceTableBody').innerHTML = types.map((name, i) => `
     <tr>
       <td style="font-weight:600;">${_esc(name)}</td>
-      <td><input class="price-inp" type="number" id="price_${name.replace(/\s/g,'_').replace(/\./g,'_')}" placeholder="0" min="0" value="${prices[name]||''}" oninput="updatePricePreview(${_jsq(name)},this.value)"/></td>
-      <td style="color:#64748B;font-size:11px;" id="pricePrev_${name.replace(/\s/g,'_').replace(/\./g,'_')}">${prices[name]>0?'= '+prices[name].toLocaleString('th-TH')+' ฿/ต้น':''}</td>
+      <td><input class="price-inp" type="number" id="price_${i}" placeholder="0" min="0" value="${prices[name]||''}" oninput="updatePricePreview(${i},this.value)"/></td>
+      <td style="color:#64748B;font-size:11px;" id="pricePrev_${i}">${prices[name]>0?'= '+prices[name].toLocaleString('th-TH')+' ฿/ต้น':''}</td>
     </tr>`).join('');
 }
 
-function updatePricePreview(name, val) {
-  const safeKey = name.replace(/\s/g,'_').replace(/\./g,'_');
-  const el = document.getElementById(`pricePrev_${safeKey}`);
+function updatePricePreview(i, val) {
+  const el = document.getElementById(`pricePrev_${i}`);
   const v = parseInt(val)||0;
   if (el) el.textContent = v > 0 ? '= '+v.toLocaleString('th-TH')+' ฿/ต้น' : '';
 }
@@ -13590,9 +13590,8 @@ function saveSettings() {
   _cfg.unit         = (document.getElementById('cfg_unit') && document.getElementById('cfg_unit').value) || 'ต้น';
   // Collect prices
   _cfg.pilePrices = {};
-  (_cfg.pileTypes||[]).forEach(name => {
-    const safeKey = name.replace(/\s/g,'_').replace(/\./g,'_');
-    const el = document.getElementById(`price_${safeKey}`);
+  (_cfg.pileTypes||[]).forEach((name, i) => {
+    const el = document.getElementById(`price_${i}`);
     if (el) { const v = parseInt(el.value)||0; if (v>0) _cfg.pilePrices[name] = v; }
   });
   saveConfigData(_cfg);
@@ -15560,7 +15559,7 @@ function openEditProdLog(fbKey) {
     if (o) {
       getOrderItems(o).forEach((it, i) => {
         const selected = log.itemIdx === i ? 'selected' : '';
-        itemOptions += `<option value="${i}" ${selected}>${i+1}. ${it.pileType} | ${it.steel||''} | ${it.length||''} (${it.qty} ต้น)</option>`;
+        itemOptions += `<option value="${i}" ${selected}>${i+1}. ${_esc(it.pileType)} | ${_esc(it.steel||'')} | ${_esc(it.length||'')} (${it.qty} ต้น)</option>`;
       });
     }
   }
@@ -15581,7 +15580,7 @@ function openEditProdLog(fbKey) {
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;padding:28px 32px;min-width:360px;max-width:480px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.2);">
       <div style="font-size:16px;font-weight:800;color:#1E293B;margin-bottom:18px;">✏️ แก้ไขประวัติผลิต</div>
-      <div style="font-size:12px;color:#64748B;margin-bottom:16px;">Order: <strong>${log.orderNum}</strong> | เสา: <strong>${log.pileType}</strong></div>
+      <div style="font-size:12px;color:#64748B;margin-bottom:16px;">Order: <strong>${_esc(log.orderNum)}</strong> | เสา: <strong>${_esc(log.pileType)}</strong></div>
 
       <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">รายการที่ผลิต (Item)</label>
       <select id="_epli" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:12px;margin-bottom:14px;">${itemOptions}</select>
