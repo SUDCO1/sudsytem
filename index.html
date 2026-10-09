@@ -5473,10 +5473,14 @@ window.YARD = (function(){
   function logEvent(action, d){ loadLog(); LOG.push(Object.assign({ts:Date.now(), action:action}, d||{})); saveLog(); }
 
   // ---- spec helpers (เทียบเต็มสเปค: ชนิด|ยาว|เชื่อม|เหล็ก|บ่า) ----
-  function specLabel(l){ const len=(l.length||"").toString().trim(); const lenTxt=len?(/^\d/.test(len)?len+"ม.":len):""; return ((l.pileType||"")+(lenTxt?" "+lenTxt:"")).trim(); }
+  // ตัดส่วนหลัง "/" ของ format เก่า (ยาว/เชื่อม/เหล็ก/.../บ่า) ให้เหลือแค่ความยาวจริง
+  function _baseLen(v){ return (v||"").toString().split("/")[0].trim(); }
+  // ถ้าความยาวเป็น format เก่าที่รวม "/" มา ให้ดึง เชื่อม/เหล็ก/บ่า มาเติมเมื่อช่องแยกยังว่าง (กันข้อมูลหาย)
+  function _embed(l){ const s=(l.length||"").toString(); const pick=(cur,i,p)=>((cur&&cur!=="-")?cur:((p&&p[i])||cur)); if(!s.includes("/")) return {weld:l.weld,steel:l.steel,ba:l.ba}; const p=s.split("/").map(x=>x.trim()); return {weld:pick(l.weld,1,p),steel:pick(l.steel,2,p),ba:pick(l.ba,4,p)}; }
+  function specLabel(l){ const len=_baseLen(l.length); const lenTxt=len?(/^\d/.test(len)?len+"ม.":len):""; return ((l.pileType||"")+(lenTxt?" "+lenTxt:"")).trim(); }
   function specShort(l){ return (l.pileType||"").toString().trim(); }
-  function specFull(l){ const p=[l.pileType||"", (l.length?("ยาว "+l.length):"")]; if(l.weld&&l.weld!=="-") p.push("เชื่อม "+l.weld); if(l.steel&&l.steel!=="-") p.push("เหล็ก "+l.steel); if(l.ba&&l.ba!=="-") p.push("บ่า "+l.ba); return p.filter(Boolean).join(" · "); }
-  function specExtra(l){ const p=[]; if(l.weld&&l.weld!=="-") p.push("เชื่อม "+l.weld); if(l.steel&&l.steel!=="-") p.push("เหล็ก "+l.steel); if(l.ba&&l.ba!=="-") p.push("บ่า "+l.ba); return p.join(" · "); }
+  function specFull(l){ const e=_embed(l); const len=_baseLen(l.length); const p=[l.pileType||"", (len?("ยาว "+len):"")]; if(e.weld&&e.weld!=="-") p.push("เชื่อม "+e.weld); if(e.steel&&e.steel!=="-") p.push("เหล็ก "+e.steel); if(e.ba&&e.ba!=="-") p.push("บ่า "+e.ba); return p.filter(Boolean).join(" · "); }
+  function specExtra(l){ const e=_embed(l); const p=[]; if(e.weld&&e.weld!=="-") p.push("เชื่อม "+e.weld); if(e.steel&&e.steel!=="-") p.push("เหล็ก "+e.steel); if(e.ba&&e.ba!=="-") p.push("บ่า "+e.ba); return p.join(" · "); }
   function specKey(l){ return [nz(l.pileType), nz(l.length), nz(l.weld), nz(l.steel), nz(l.ba)].join("|"); }
   function lotFromKey(k){ const p=k.split("|"); return { pileType:p[0], length:p[1]==="-"?"":p[1], weld:p[2], steel:p[3], ba:p[4] }; }
   function sameSpec(a,b){ return specKey(a)===specKey(b); }
