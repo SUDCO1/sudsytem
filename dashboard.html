@@ -304,6 +304,7 @@ td.num, th.num { text-align: right; }
 /* ── เวลาถูกฝังเป็นแท็บในเว็บหลัก: ตัดหัวข้อที่ซ้ำกับเว็บแม่ออก ────────────── */
 body.embedded .topbar { padding: 9px 20px; }
 body.embedded .brand  { display: none; }
+body.embedded #backToAppBtn { display: none; }
 body.embedded nav.tabs { top: 0; }
 body.embedded .topbar  { position: static; }
 .refetching { opacity: 0.55; transition: opacity .15s; }
@@ -360,6 +361,7 @@ code.inline {
      ══════════════════════════════════════════════════════════════════════ -->
 <div id="app" class="hidden">
   <header class="topbar">
+    <button class="icon-btn" id="backToAppBtn" title="กลับหน้าหลัก">← กลับแอป</button>
     <span class="brand">SUDCO Dashboard</span>
     <span class="sync-note" id="syncNote"></span>
     <span class="topbar-spacer"></span>
@@ -1852,6 +1854,17 @@ themeBtn.addEventListener('click', () => {
 // ถูกเปิดอยู่ในกรอบของเว็บหลักหรือเปล่า — ถ้าใช่ ซ่อนหัวข้อที่ซ้ำกัน
 const EMBEDDED = (() => { try { return window.self !== window.top; } catch { return true; } })();
 if (EMBEDDED) document.body.classList.add('embedded');
+
+// ปุ่ม "← กลับแอป" — สำหรับตอนเปิดแบบแอป (PWA เต็มจอ) ที่ไม่มีปุ่มย้อนกลับของเบราว์เซอร์
+(function () {
+  var b = document.getElementById('backToAppBtn');
+  if (!b) return;
+  if (EMBEDDED) { b.style.display = 'none'; return; }
+  b.addEventListener('click', function () {
+    if (window.history.length > 1) { history.back(); }
+    else { location.href = 'index.html'; }
+  });
+})();
 
 async function enterApp() {
   $('#login').classList.add('hidden');
