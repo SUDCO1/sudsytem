@@ -3274,6 +3274,11 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <select class="filter-sel" id="statusFilter" onchange="renderOrders()">
           <option value="">สถานะ: ทั้งหมด</option>
         </select>
+        <!-- ── สลับมุมมอง: ตาราง(เดิม) / แพ(ลาน) ── -->
+        <div class="paeb-toggle" style="margin-left:auto;">
+          <button type="button" id="viewBtnTable" class="paeb-vbtn active" onclick="setOrderView('table')">📋 ตาราง</button>
+          <button type="button" id="viewBtnPae" class="paeb-vbtn" onclick="setOrderView('pae')">🏗️ แพ (ลาน)</button>
+        </div>
       </div>
       <!-- ── หมวดหมู่ตามขนาดเสา ── -->
       <div class="pilecat-bar" id="pileCatBar"></div>
@@ -3282,6 +3287,8 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
     <div id="ordersGrouped"></div>
     <!-- ── Mobile cards ── -->
     <div id="ordersMobile" style="padding:4px 0;display:none;"></div>
+    <!-- ── มุมมองแพ (ลาน) — เพิ่มใหม่ ไม่แตะของเดิม ── -->
+    <div id="ordersPaeBoard"></div>
   </div>
 </div>
 
@@ -5486,13 +5493,30 @@ window.YARD = (function(){
   // ---- ตำแหน่งกองจริง (yard owns this) ----
   let STATE={};
   function load(){ try{ const s=localStorage.getItem(LS_STATE); STATE=s?JSON.parse(s):{}; }catch(e){ STATE={}; } }
-  function save(){ try{ localStorage.setItem(LS_STATE, JSON.stringify(STATE)); }catch(e){} }
+  function save(){
+    try{ localStorage.setItem(LS_STATE, JSON.stringify(STATE)); }catch(e){}
+    try{ if(typeof db!=="undefined" && db) db.ref("sud/yardState").set(STATE||{}); }catch(e){}   // [YARD-CLOUD] ซิงค์ตำแหน่งจัดกองขึ้น Firebase
+  }
   const lotsOf=id=>Array.isArray(STATE[id])?STATE[id]:[];
+  // [YARD-CLOUD] รับข้อมูลตำแหน่งจาก cloud มาทับ แล้ววาดใหม่ (เรียกจาก listener ตอนโหลด/มีคนแก้จากเครื่องอื่น)
+  function applyCloudState(obj){
+    STATE = (obj && typeof obj==="object") ? obj : {};
+    try{ localStorage.setItem(LS_STATE, JSON.stringify(STATE)); }catch(e){}
+    try{ renderAll(); }catch(e){}
+  }
+  function applyCloudLog(arr){
+    LOG = Array.isArray(arr) ? arr : (arr && typeof arr==="object" ? Object.keys(arr).map(k=>arr[k]) : []);
+    try{ localStorage.setItem(LS_LOG, JSON.stringify(LOG.slice(-500))); }catch(e){}
+  }
 
   // ---- ประวัติการเคลื่อนไหวในลาน (จัดลง/ย้าย/เอาออก) เก็บใน localStorage ----
   let LOG=[];
   function loadLog(){ try{ const s=localStorage.getItem(LS_LOG); LOG=s?JSON.parse(s):[]; }catch(e){ LOG=[]; } }
-  function saveLog(){ try{ localStorage.setItem(LS_LOG, JSON.stringify(LOG.slice(-500))); }catch(e){} }
+  function saveLog(){
+    var trimmed = LOG.slice(-500);
+    try{ localStorage.setItem(LS_LOG, JSON.stringify(trimmed)); }catch(e){}
+    try{ if(typeof db!=="undefined" && db) db.ref("sud/yardLog").set(trimmed); }catch(e){}   // [YARD-CLOUD] ซิงค์ประวัติลานขึ้น Firebase
+  }
   function logEvent(action, d){ loadLog(); LOG.push(Object.assign({ts:Date.now(), action:action}, d||{})); saveLog(); }
 
   // ---- spec helpers (เทียบเต็มสเปค: ชนิด|ยาว|เชื่อม|เหล็ก|บ่า) ----
@@ -5777,7 +5801,7 @@ window.YARD = (function(){
   // ซิงก์กับสต็อก 1 อัตโนมัติทุก 4 วิ ขณะเปิดหน้าผังลาน (ไม่เพิ่ม listener Firebase ซ้ำ)
   setInterval(()=>{ if(_active()&&!anyModalOpen()) renderAll(); }, 4000);
 
-  return { renderAll, openOv, closeOv, openPlace, addPlaceRow, syncNums, placeRemain, savePlace, closePlace, openTakeOut, addTakeRow, takeRemain, saveTakeOut, closeTakeOut, openMove, syncMoveNums, moveRemain, saveMove, closeMove, openHist, closeHist, setQCat };
+  return { renderAll, openOv, closeOv, openPlace, addPlaceRow, syncNums, placeRemain, savePlace, closePlace, openTakeOut, addTakeRow, takeRemain, saveTakeOut, closeTakeOut, openMove, syncMoveNums, moveRemain, saveMove, closeMove, openHist, closeHist, setQCat, applyCloudState, applyCloudLog };
 })();
 </script>
 <!-- ================================================================ SECTION: ลูกค้า (NEW) ================================================================ -->
@@ -7040,6 +7064,8 @@ const K_PROD_LOG    = 'sud/prodLog';
 const PROD_LOG_FETCH_LIMIT = 1000; // โหลดเฉพาะ log ผลิตล่าสุด N รายการ (ลด bandwidth) — record เก่ากว่านี้ยังอยู่ใน DB ไม่ถูกลบ
 const K_PROD_ACTIVE = 'sud/prodActive';
 const K_AUDIT       = 'sud/auditLog';
+const K_YARD_STATE  = 'sud/yardState'; // ตำแหน่งจัดกองในลาน (ย้ายจาก localStorage ขึ้น cloud)
+const K_YARD_LOG    = 'sud/yardLog';   // ประวัติการเคลื่อนไหวในลาน (ย้ายขึ้น cloud)
 const AUDIT_FETCH_LIMIT = 300; // โหลดเฉพาะ log ล่าสุด N รายการ (ลด bandwidth)
 // [FIX#13] เดิม stockLog / orderHistory ใช้ .on('value') เปล่า ๆ → ทุกเครื่องดาวน์โหลดประวัติทั้งหมดใหม่ทุกครั้งที่มีการบันทึก
 const STOCK_LOG_FETCH_LIMIT = 1000;
@@ -7186,6 +7212,33 @@ function startFirebaseListeners() {
     try { _migrateLegacyStockOnce(); } catch (e) {}
     if (_fbReady) _ifOn('stock', renderSdCustPoles);
   });
+  // ── ลานสต็อก: ตำแหน่งจัดกอง + ประวัติ (ย้ายขึ้น cloud) ──
+  db.ref(K_YARD_STATE).on('value', snap => {
+    const v = snap.val();
+    if (v === null) {
+      // ยังไม่เคยมีบน cloud → ถ้าเครื่องนี้มีข้อมูลเก่าใน localStorage ให้ดันขึ้นครั้งแรก (ไม่ให้ข้อมูลหาย)
+      try {
+        const ls = JSON.parse(localStorage.getItem('sud_yard_state_v1') || 'null');
+        if (ls && Object.keys(ls).length) {
+          db.ref(K_YARD_STATE).set(ls);   // ดันขึ้น cloud รอบแรก (listener จะยิงกลับมาวาดเอง)
+        }
+      } catch(e){}
+      return;
+    }
+    if (typeof YARD !== 'undefined' && YARD.applyCloudState) { try { YARD.applyCloudState(v); } catch(e){} }
+  });
+  db.ref(K_YARD_LOG).on('value', snap => {
+    const v = snap.val();
+    if (v === null) {
+      try {
+        const ls = JSON.parse(localStorage.getItem('sud_yard_log_v1') || 'null');
+        if (ls && ls.length) db.ref(K_YARD_LOG).set(ls);
+      } catch(e){}
+      return;
+    }
+    if (typeof YARD !== 'undefined' && YARD.applyCloudLog) { try { YARD.applyCloudLog(v); } catch(e){} }
+  });
+
   // ── Audit Log (โหลดเฉพาะล่าสุด N รายการ) ──
   // หมายเหตุ: audit log ไม่ใช้ listener แบบ global เพื่อประหยัด bandwidth
   // จะ attach เฉพาะตอน admin เปิดหน้า "บันทึกการใช้งาน" เท่านั้น (ดู auditAttachListener)
@@ -16474,6 +16527,232 @@ function printQuotation(){
     });
 }
 
+</script>
+
+<!-- ============================================================
+     มุมมองแพ (ลาน) — เพิ่มใหม่ ไม่แตะโค้ดเดิม
+     บอร์ดสถานะออเดอร์ จัดกลุ่มตามสเปค + โชว์สต็อกต่อลาน A/B/C
+     ============================================================ -->
+<style>
+  .paeb-toggle{ display:inline-flex; gap:4px; background:#F1F5F9; padding:3px; border-radius:999px; }
+  .paeb-vbtn{ border:none; background:transparent; color:#64748B; font-size:13px; font-weight:700;
+    padding:6px 14px; border-radius:999px; cursor:pointer; white-space:nowrap; font-family:inherit; }
+  .paeb-vbtn.active{ background:#fff; color:#1e3a8a; box-shadow:0 1px 3px rgba(16,24,40,.12); }
+
+  #sec-status.paeb-mode #ordersGrouped, #sec-status.paeb-mode #ordersMobile{ display:none !important; }
+  #sec-status:not(.paeb-mode) #ordersPaeBoard{ display:none !important; }
+
+  .paeb-panel{ background:#fff; border-radius:16px; box-shadow:0 1px 2px rgba(16,24,40,.04),0 10px 28px rgba(16,24,40,.07); overflow:hidden; }
+  .paeb-hint{ padding:12px 16px; font-size:12.5px; color:#8795ab; background:#fafbfe; border-bottom:1px solid #eef1f7; line-height:1.6; }
+  .paeb-hint b{ color:#334155; }
+  .paeb-tbl{ width:100%; border-collapse:collapse; }
+  .paeb-tbl thead th{ background:#fafbfe; font-size:12px; font-weight:700; color:#9aa4b2; letter-spacing:.3px;
+    padding:12px 8px; text-align:center; border-bottom:1px solid #dbe3ef; }
+  .paeb-tbl thead th .ln{ display:block; font-weight:600; color:#c3ccda; font-size:11px; }
+  .paeb-tbl thead th.job-h{ text-align:left; padding-left:18px; }
+  .paeb-tbl td{ padding:12px 8px; text-align:center; vertical-align:middle; }
+  .paeb-tbl td.spec{ background:#f5f8ff; font-weight:800; font-size:17px; color:#1e3a8a; line-height:1.25;
+    border-right:1px solid #dbe3ef; width:120px; }
+  .paeb-tbl td.spec small{ display:block; font-size:12px; font-weight:600; color:#8795ab; margin-top:2px; }
+  .paeb-tbl td.pae{ width:78px; border-right:1px solid #eef1f7; }
+  .paeb-box{ display:inline-block; min-width:46px; padding:7px 0; border-radius:10px; font-size:20px; font-weight:800; }
+  .paeb-p1{ background:#eef6fc; color:#0369a1; }
+  .paeb-p2{ background:#f4effe; color:#7c3aed; }
+  .paeb-p3{ background:#eafaf2; color:#059669; }
+  .paeb-box.zero{ background:#f6f7f9; color:#c3ccda; }
+  .paeb-tbl td.job{ text-align:left; padding-left:18px; border-right:1px solid #eef1f7; cursor:pointer; }
+  .paeb-tbl td.job .nm{ font-weight:700; font-size:15px; color:#1e293b; }
+  .paeb-tbl td.job .nm .arw{ color:#c3ccda; font-weight:800; margin-left:6px; }
+  .paeb-tbl td.job .cd{ font-size:12px; color:#9aa4b2; margin-top:2px; }
+  .paeb-tbl td.num{ width:66px; font-size:17px; font-weight:800; border-right:1px solid #eef1f7; }
+  .paeb-tbl td.num.ord{ color:#334155; }
+  .paeb-tbl td.num.sent{ color:#0f766e; }
+  .paeb-tbl td.remain{ width:80px; }
+  .paeb-pill{ display:inline-block; min-width:48px; padding:5px 12px; border-radius:999px; font-size:14px; font-weight:800; }
+  .paeb-pill.left{ background:#fff4ec; color:#ea580c; }
+  .paeb-pill.done{ background:#eafaf2; color:#059669; }
+  .paeb-tbl tr.sub td{ border-top:1px solid #eef1f7; }
+  .paeb-tbl tr.grp td{ border-top:2px solid #dbe3ef; }
+  .paeb-tbl tbody tr:first-child td{ border-top:none; }
+  .paeb-tbl tbody tr.orow:hover td{ background:#f9fbff; }
+  .paeb-legend{ display:flex; gap:16px; justify-content:center; flex-wrap:wrap; padding:14px; background:#fafbfe;
+    border-top:1px solid #eef1f7; font-size:12.5px; color:#64748b; }
+  .paeb-legend i{ width:12px; height:12px; border-radius:3px; display:inline-block; vertical-align:middle; margin-right:5px; }
+  .paeb-empty{ text-align:center; padding:40px; color:#94A3B8; font-size:14px; }
+</style>
+<script>
+(function(){
+  "use strict";
+  window._orderView = window._orderView || 'table';
+
+  function _esc(s){ return (""+(s==null?"":s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function _baseLen(v){ return (v||"").toString().split("/")[0].trim(); }
+  function _lenTxt(len){ return len ? (/^\d/.test(len) ? len+"ม." : len) : ""; }
+  function _grpKey(pile, len){ return (pile||"") + "|" + _baseLen(len); }
+
+  // อ่านตำแหน่งกองจากลาน (localStorage เดียวกับแท็บลาน) → รวมสต็อกต่อลาน A/B/C แยกตามสเปค(ชนิด+ยาว)
+  function computeLaneStock(){
+    var STATE = {};
+    try{ STATE = JSON.parse(localStorage.getItem("sud_yard_state_v1") || "{}") || {}; }catch(e){ STATE = {}; }
+    var map = {};
+    Object.keys(STATE).forEach(function(id){
+      var lane = (id[0] || "").toUpperCase();
+      if (lane !== "A" && lane !== "B" && lane !== "C") return;
+      var lots = Array.isArray(STATE[id]) ? STATE[id] : [];
+      lots.forEach(function(l){
+        if (!l) return;
+        var k = _grpKey(l.pileType, l.length);
+        if (!map[k]) map[k] = { A:0, B:0, C:0 };
+        map[k][lane] += (+l.qty || 0);
+      });
+    });
+    return map;
+  }
+
+  function _delOf(o, it){
+    return (o.items && o.items.length > 1)
+      ? (it.delivered || 0)
+      : (it.delivered !== undefined ? it.delivered : (o.delivered || 0));
+  }
+
+  window.renderPaeBoard = function(){
+    var container = document.getElementById("ordersPaeBoard");
+    if (!container) return;
+    if (typeof getOrders !== "function") { container.innerHTML = ""; return; }
+
+    var query  = ((document.getElementById("orderSearch")||{}).value || "").trim().toLowerCase();
+    var statusF= (document.getElementById("statusFilter")||{}).value || "";
+
+    var orders = getOrders() || [];
+    if (query && typeof orderMatchesQuery === "function") orders = orders.filter(function(o){ return orderMatchesQuery(o, query); });
+    if (statusF) orders = orders.filter(function(o){ return (o.status || "รับ Order แล้ว") === statusF; });
+    if (typeof isPendingOrder === "function") orders = orders.filter(function(o){ return !isPendingOrder(o); });
+
+    var laneStock = computeLaneStock();
+
+    // จัดกลุ่มรายการออเดอร์ตามสเปค (ชนิด+ยาว)
+    var groups = {}, gOrder = [];
+    orders.forEach(function(o){
+      var items = (typeof getOrderItems === "function") ? getOrderItems(o) : (o.items || [o]);
+      items.forEach(function(it, idx){
+        var pile = it.pileType || o.pileType || "(ไม่ระบุ)";
+        var len  = _baseLen(it.length);
+        var k = _grpKey(pile, len);
+        if (!groups[k]) { groups[k] = { pile:pile, len:len, rows:[] }; gOrder.push(k); }
+        groups[k].rows.push({ o:o, it:it, idx:idx });
+      });
+    });
+
+    // เรียงกลุ่ม: ตามลำดับชนิดเสาใน config แล้วค่อยความยาว
+    var cfgPiles = [];
+    try{ cfgPiles = (getConfig().pileTypes || []); }catch(e){}
+    gOrder.sort(function(a,b){
+      var ga = groups[a], gb = groups[b];
+      var ai = cfgPiles.indexOf(ga.pile), bi = cfgPiles.indexOf(gb.pile);
+      ai = ai===-1?99:ai; bi = bi===-1?99:bi;
+      if (ai !== bi) return ai - bi;
+      return (parseFloat(ga.len)||0) - (parseFloat(gb.len)||0);
+    });
+
+    if (!gOrder.length) {
+      container.innerHTML = '<div class="paeb-panel"><div class="paeb-empty">'
+        + (query||statusF ? "ไม่พบผลลัพธ์ที่ค้นหา" : "ยังไม่มี Order")
+        + '</div></div>';
+      return;
+    }
+
+    var html = '<div class="paeb-panel">'
+      + '<div class="paeb-hint">🏗️ <b>มุมมองแพ</b> — แพ1=ลาน A · แพ2=ลาน B · แพ3=ลาน C (สต็อกของสเปคนั้นในแต่ละลาน) · แตะแถวเพื่อแก้ไข Order<br>'
+      + '<span style="color:#b45309;">หมายเหตุ: ตัวเลขแพอ่านจากการจัดกองในแท็บ “ลานสต็อก” ของเครื่องนี้</span></div>'
+      + '<table class="paeb-tbl"><thead><tr>'
+      + '<th>สเปคเสา</th>'
+      + '<th>แพ1<span class="ln">ลาน A</span></th>'
+      + '<th>แพ2<span class="ln">ลาน B</span></th>'
+      + '<th>แพ3<span class="ln">ลาน C</span></th>'
+      + '<th class="job-h">หน่วยงาน / เลขออเดอร์</th>'
+      + '<th>สั่ง</th><th>ส่ง</th><th>เหลือ</th>'
+      + '</tr></thead><tbody>';
+
+    gOrder.forEach(function(k){
+      var g = groups[k];
+      var isG = (g.pile === "Girder");
+      var ls = laneStock[k] || { A:0, B:0, C:0 };
+      var span = g.rows.length;
+      var specTxt = _esc(g.pile) + (g.len ? '<small>' + _esc(_lenTxt(g.len)) + '</small>' : '');
+      var box = function(v, cls){ return '<div class="paeb-box ' + (v>0?cls:'zero') + '">' + v + '</div>'; };
+
+      g.rows.forEach(function(r, ri){
+        var o = r.o, it = r.it;
+        var ordQ = (+it.qty || 0);
+        var del  = (+_delOf(o, it) || 0);
+        var rem  = ordQ - del;
+        var remHTML = rem > 0
+          ? '<span class="paeb-pill left">' + rem + '</span>'
+          : '<span class="paeb-pill done">ครบ</span>';
+        var name = o.customer || o.site || "(ไม่ระบุ)";
+
+        html += '<tr class="orow ' + (ri===0?'grp':'sub') + '" data-od="' + _esc(o.orderNum) + '">';
+        if (ri === 0) {
+          html += '<td class="spec" rowspan="' + span + '">' + specTxt + '</td>'
+                + '<td class="pae" rowspan="' + span + '">' + box(ls.A, 'paeb-p1') + '</td>'
+                + '<td class="pae" rowspan="' + span + '">' + box(ls.B, 'paeb-p2') + '</td>'
+                + '<td class="pae" rowspan="' + span + '">' + box(ls.C, 'paeb-p3') + '</td>';
+        }
+        html += '<td class="job"><div class="nm">' + _esc(name) + '<span class="arw">›</span></div>'
+              + '<div class="cd">' + _esc(o.orderNum) + '</div></td>'
+              + '<td class="num ord">' + ordQ + '</td>'
+              + '<td class="num sent">' + del + '</td>'
+              + '<td class="remain">' + remHTML + '</td>'
+              + '</tr>';
+      });
+    });
+
+    html += '</tbody></table>'
+      + '<div class="paeb-legend">'
+      + '<span><i style="background:#eef6fc;"></i>แพ1 = ลาน A</span>'
+      + '<span><i style="background:#f4effe;"></i>แพ2 = ลาน B</span>'
+      + '<span><i style="background:#eafaf2;"></i>แพ3 = ลาน C</span>'
+      + '<span style="color:#ea580c;font-weight:800;">ส้ม = ยังเหลือ</span>'
+      + '<span style="color:#059669;font-weight:800;">เขียว = ส่งครบ</span>'
+      + '</div></div>';
+
+    container.innerHTML = html;
+
+    // แตะแถว → เปิดป๊อปแก้ไข Order เดิม
+    container.querySelectorAll("tr.orow").forEach(function(tr){
+      tr.addEventListener("click", function(){
+        var od = tr.getAttribute("data-od");
+        if (od && typeof openEditOrder === "function") openEditOrder(od);
+      });
+    });
+  };
+
+  window.setOrderView = function(v){
+    window._orderView = v;
+    var sec = document.getElementById("sec-status");
+    var bT = document.getElementById("viewBtnTable"), bP = document.getElementById("viewBtnPae");
+    if (v === "pae") {
+      if (sec) sec.classList.add("paeb-mode");
+      if (bP) bP.classList.add("active");
+      if (bT) bT.classList.remove("active");
+      renderPaeBoard();
+    } else {
+      if (sec) sec.classList.remove("paeb-mode");
+      if (bT) bT.classList.add("active");
+      if (bP) bP.classList.remove("active");
+    }
+  };
+
+  // ให้ช่องค้นหา/กรองสถานะ อัปเดตมุมมองแพด้วย (hook ต่อท้าย renderOrders เดิม)
+  if (typeof window.renderOrders === "function") {
+    var _origRO = window.renderOrders;
+    window.renderOrders = function(){
+      var r = _origRO.apply(this, arguments);
+      if (window._orderView === "pae") { try{ renderPaeBoard(); }catch(e){} }
+      return r;
+    };
+  }
+})();
 </script>
 </body>
 </html>
