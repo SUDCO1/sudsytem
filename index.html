@@ -15758,6 +15758,9 @@ function saveEditProdLog(fbKey) {
       if (_o) {
         const _it = getOrderItems(_o)[itemIdx];
         if (_it) {
+          // [FIX] ซิงค์ "ความยาว" ตามรายการในออเดอร์ด้วย — กันเคสแก้ความยาวออเดอร์หลังผลิตไปแล้ว
+          // ทำให้ของที่ผลิตหลุดออกจากออเดอร์ (6.00 vs 10.00) → บันทึกผลิต/เสาลูกค้าจะตามออเดอร์เสมอ
+          if (_it.length && _it.length !== '-') update.length = _it.length;
           update.weld  = _it.weld  || '-';
           update.steel = _it.steel || '-';
           update.ba    = _it.ba    || '-';
@@ -15771,7 +15774,7 @@ function saveEditProdLog(fbKey) {
   if (log.addedToStock && (diff !== 0 || update.steel)) {
     const oldSpecLabel = [log.length, log.weld, log.steel, log.ba, log.extra]
       .filter(x => x && x !== '-').join('/') || '-';
-    const newSpecLabel = [log.length, update.weld||log.weld, update.steel||log.steel, update.ba||log.ba, update.extra||log.extra]
+    const newSpecLabel = [update.length||log.length, update.weld||log.weld, update.steel||log.steel, update.ba||log.ba, update.extra||log.extra]
       .filter(x => x && x !== '-').join('/') || '-';
 
     const _pUnit = log.unit;
@@ -15807,7 +15810,7 @@ function saveEditProdLog(fbKey) {
   if (log.addedToStock) {
     const oldSpecLabel = [log.length, log.weld, log.steel, log.ba, log.extra]
       .filter(x => x && x !== '-').join('/') || '';
-    const newSpecLabel = [log.length, update.weld||log.weld, update.steel||log.steel, update.ba||log.ba, update.extra||log.extra]
+    const newSpecLabel = [update.length||log.length, update.weld||log.weld, update.steel||log.steel, update.ba||log.ba, update.extra||log.extra]
       .filter(x => x && x !== '-').join('/') || '';
     const allCp = getCustPoles();
     // หา custPole ที่ตรงกัน: ใช้ prodLogKey ก่อน (entries ใหม่) fallback qty match (entries เก่า)
@@ -15821,6 +15824,8 @@ function saveEditProdLog(fbKey) {
     if (matchCp) {
       matchCp.qty = newQtyNet;
       if (newSpecLabel) matchCp.spec = newSpecLabel;
+      // [FIX] ซิงค์ความยาวการ์ดเสาลูกค้า (base) ให้ตรงออเดอร์ → จับคู่ออเดอร์ได้ ส่งได้
+      if (update.length) matchCp.base = update.length;
       saveSingleCustPole(matchCp);
     }
   }
