@@ -15032,6 +15032,29 @@ function submitEditOrder() {
   const o = orders.find(x => x.orderNum === _editOrderNum);
   if (!o) return;
 
+  // [GUARD] กันพลาด: ถ้าแก้ "ความยาว/สเปค" ของออเดอร์ที่ผลิตไปแล้ว ของที่ผลิตจะยังเป็นสเปคเดิม
+  // ไม่ตามแก้ให้ ทำให้ยอด "ขาด" / หน้าขนส่งไม่ตรง — เตือนให้รู้ตัวก่อน (กดตกลงแก้ต่อได้)
+  try {
+    const _sig = it => [String(it.length||'').trim(), String(it.weld||'').trim(),
+                        String(it.steel||'').trim(), String(it.ba||'').trim()].join('|');
+    const _oldSigs = (o.items||[]).map(_sig).sort();
+    const _newSigs = _editItemsDraft.map(_sig).sort();
+    const _specChanged = JSON.stringify(_oldSigs) !== JSON.stringify(_newSigs);
+    const _on = String(_editOrderNum||'').trim();
+    const _eq = x => String(x==null?'':x).trim() === _on;
+    const _hasProd = (getCustPoles()||[]).some(cp => _eq(cp.orderNum))
+      || (getProdLog()||[]).some(pl => _eq(pl.orderNum))
+      || (getProdActive()||[]).some(pa => _eq(pa.orderNum));
+    if (_specChanged && _hasProd) {
+      if (!confirm('⚠️ ออเดอร์นี้ผลิตไปแล้วบางส่วน\n\n'
+        + 'คุณกำลังแก้ "ความยาว / สเปค" ของรายการเสา\n'
+        + 'ของที่ผลิตไปแล้วจะยังเป็นความยาว/สเปค "เดิม" ไม่เปลี่ยนตามอัตโนมัติ\n'
+        + 'อาจทำให้ยอด "ขาด" หรือหน้าขนส่งไม่ตรงกัน\n\n'
+        + 'ถ้าตั้งใจแก้ กด "ตกลง" แล้วอย่าลืมไปแก้ความยาว/สเปคของกองที่ผลิตในหน้าสต็อกให้ตรงด้วย\n'
+        + 'ถ้าพิมพ์ผิด กด "ยกเลิก"')) return;
+    }
+  } catch (e) {}
+
   // [FIX#B33] เก็บค่าเดิมไว้ก่อนเขียนทับ เพื่อบันทึก audit แบบละเอียด (ก่อน→หลัง)
   const _obf = {
     customer: o.customer||'', tel: o.tel||'', sale: o.sale||'', site: o.site||'',
