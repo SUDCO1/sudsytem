@@ -3279,6 +3279,8 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
       <!-- ── หมวดหมู่ตามขนาดเสา ── -->
       <div class="pilecat-bar" id="pileCatBar"></div>
     </div>
+    <!-- ── รอคอนเฟิร์ม (แสดงเสมอ ทุกมุมมอง รวมถึงมุมมองแพ) ── -->
+    <div id="ordersPending"></div>
     <!-- ── Pile-grouped cards (desktop) ── -->
     <div id="ordersGrouped"></div>
     <!-- ── Mobile cards ── -->
@@ -9262,6 +9264,10 @@ function renderOrders() {
   if (_pileCat) pendingOrders = pendingOrders.filter(_orderInPileCat);
 
   const pendingHTML    = _pendingSectionHTML(pendingOrders);
+  // [FIX] แสดงหมวด "รอคอนเฟิร์ม" ไว้ด้านบนเสมอ — มุมมองแพซ่อน ordersGrouped/ordersMobile
+  // ถ้าไม่ดันขึ้นมาตรงนี้ การ์ดรอคอนเฟิร์ม + ปุ่มคอนเฟิร์มจะถูกซ่อนไปด้วย
+  const _pendBox = document.getElementById('ordersPending');
+  if (_pendBox) _pendBox.innerHTML = pendingHTML;
 
   // ─── Desktop: pile-grouped cards ────────────────────────────
   const container = document.getElementById('ordersGrouped');
