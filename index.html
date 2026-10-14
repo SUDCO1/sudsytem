@@ -3274,11 +3274,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <select class="filter-sel" id="statusFilter" onchange="renderOrders()">
           <option value="">สถานะ: ทั้งหมด</option>
         </select>
-        <!-- ── สลับมุมมอง: ตาราง(เดิม) / แพ(ลาน) ── -->
-        <div class="paeb-toggle" style="margin-left:auto;">
-          <button type="button" id="viewBtnTable" class="paeb-vbtn active" onclick="setOrderView('table')">📋 ตาราง</button>
-          <button type="button" id="viewBtnPae" class="paeb-vbtn" onclick="setOrderView('pae')">🏗️ แพ (ลาน)</button>
-        </div>
+        <!-- ── มุมมองเดียว: แพ (ลาน) · ปุ่มสลับถูกเอาออกแล้ว ── -->
       </div>
       <!-- ── หมวดหมู่ตามขนาดเสา ── -->
       <div class="pilecat-bar" id="pileCatBar"></div>
@@ -5492,7 +5488,11 @@ window.YARD = (function(){
 
   // ---- ตำแหน่งกองจริง (yard owns this) ----
   let STATE={};
-  function load(){ try{ const s=localStorage.getItem(LS_STATE); STATE=s?JSON.parse(s):{}; }catch(e){ STATE={}; } }
+  function load(){
+    // [YARD-CLOUD] อ่านจาก cloud เป็นหลัก (ถ้าโหลดมาแล้ว) · localStorage เป็นแค่สำรองออฟไลน์
+    try{ if(typeof _cache!=="undefined" && _cache.yardState!==null){ STATE=_cache.yardState||{}; return; } }catch(e){}
+    try{ const s=localStorage.getItem(LS_STATE); STATE=s?JSON.parse(s):{}; }catch(e){ STATE={}; }
+  }
   function save(){
     try{ localStorage.setItem(LS_STATE, JSON.stringify(STATE)); }catch(e){}
     try{ if(typeof db!=="undefined" && db) db.ref("sud/yardState").set(STATE||{}); }catch(e){}   // [YARD-CLOUD] ซิงค์ตำแหน่งจัดกองขึ้น Firebase
@@ -5511,7 +5511,10 @@ window.YARD = (function(){
 
   // ---- ประวัติการเคลื่อนไหวในลาน (จัดลง/ย้าย/เอาออก) เก็บใน localStorage ----
   let LOG=[];
-  function loadLog(){ try{ const s=localStorage.getItem(LS_LOG); LOG=s?JSON.parse(s):[]; }catch(e){ LOG=[]; } }
+  function loadLog(){
+    try{ if(typeof _cache!=="undefined" && Array.isArray(_cache.yardLog) && _cache.yardLog.length){ LOG=_cache.yardLog.slice(); return; } }catch(e){}
+    try{ const s=localStorage.getItem(LS_LOG); LOG=s?JSON.parse(s):[]; }catch(e){ LOG=[]; }
+  }
   function saveLog(){
     var trimmed = LOG.slice(-500);
     try{ localStorage.setItem(LS_LOG, JSON.stringify(trimmed)); }catch(e){}
@@ -7075,7 +7078,8 @@ const HISTORY_FETCH_LIMIT   = 500;
 const _cache = {
   orders:[], prodErrors:[], shipErrors:[], orderCounter:0,
   stock:{}, stockLog:[], config:null, customers:[], orderHistory:[],
-  stockVariants:{}, prodLog:[], prodActive:[], custPoles:[], auditLog:[]
+  stockVariants:{}, prodLog:[], prodActive:[], custPoles:[], auditLog:[],
+  yardState:null, yardLog:[]   // [YARD-CLOUD] ตำแหน่งจัดกอง + ประวัติลาน (sync จาก Firebase · แหล่งความจริงหลัก)
 };
 let _fbReady = false;
 const _fbReadyCallbacks = [];
@@ -7223,9 +7227,12 @@ function startFirebaseListeners() {
           db.ref(K_YARD_STATE).set(ls);   // ดันขึ้น cloud รอบแรก (listener จะยิงกลับมาวาดเอง)
         }
       } catch(e){}
+      _cache.yardState = {};              // cloud ยังว่าง → ถือว่าไม่มีของในลาน
       return;
     }
+    _cache.yardState = v;                 // [YARD-CLOUD] แหล่งความจริงหลัก = cloud
     if (typeof YARD !== 'undefined' && YARD.applyCloudState) { try { YARD.applyCloudState(v); } catch(e){} }
+    if (_fbReady && window._orderView === 'pae' && typeof renderPaeBoard === 'function') { try { renderPaeBoard(); } catch(e){} }
   });
   db.ref(K_YARD_LOG).on('value', snap => {
     const v = snap.val();
@@ -7234,8 +7241,10 @@ function startFirebaseListeners() {
         const ls = JSON.parse(localStorage.getItem('sud_yard_log_v1') || 'null');
         if (ls && ls.length) db.ref(K_YARD_LOG).set(ls);
       } catch(e){}
+      _cache.yardLog = [];
       return;
     }
+    _cache.yardLog = Array.isArray(v) ? v : Object.keys(v).map(k=>v[k]);
     if (typeof YARD !== 'undefined' && YARD.applyCloudLog) { try { YARD.applyCloudLog(v); } catch(e){} }
   });
 
@@ -16539,8 +16548,9 @@ function printQuotation(){
     padding:6px 14px; border-radius:999px; cursor:pointer; white-space:nowrap; font-family:inherit; }
   .paeb-vbtn.active{ background:#fff; color:#1e3a8a; box-shadow:0 1px 3px rgba(16,24,40,.12); }
 
-  #sec-status.paeb-mode #ordersGrouped, #sec-status.paeb-mode #ordersMobile{ display:none !important; }
-  #sec-status:not(.paeb-mode) #ordersPaeBoard{ display:none !important; }
+  /* มุมมองเดียว: แพ (ลาน) — ซ่อนตารางเก่า (คงแถบหมวดขนาดเสาไว้), โชว์บอร์ดแพเสมอ */
+  #sec-status #ordersGrouped, #sec-status #ordersMobile{ display:none !important; }
+  #sec-status #ordersPaeBoard{ display:block !important; }
 
   .paeb-panel{ background:#fff; border-radius:16px; box-shadow:0 1px 2px rgba(16,24,40,.04),0 10px 28px rgba(16,24,40,.07); overflow:hidden; }
   .paeb-hint{ padding:12px 16px; font-size:12.5px; color:#8795ab; background:#fafbfe; border-bottom:1px solid #eef1f7; line-height:1.6; }
@@ -16583,7 +16593,7 @@ function printQuotation(){
 <script>
 (function(){
   "use strict";
-  window._orderView = window._orderView || 'table';
+  window._orderView = 'pae';   // มุมมองเดียว: แพ (ลาน)
 
   function _esc(s){ return (""+(s==null?"":s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function _baseLen(v){ return (v||"").toString().split("/")[0].trim(); }
@@ -16593,7 +16603,11 @@ function printQuotation(){
   // อ่านตำแหน่งกองจากลาน (localStorage เดียวกับแท็บลาน) → รวมสต็อกต่อลาน A/B/C แยกตามสเปค(ชนิด+ยาว)
   function computeLaneStock(){
     var STATE = {};
-    try{ STATE = JSON.parse(localStorage.getItem("sud_yard_state_v1") || "{}") || {}; }catch(e){ STATE = {}; }
+    // [YARD-CLOUD] อ่านตำแหน่งกองจาก cloud เป็นหลัก · localStorage เป็นแค่สำรองออฟไลน์
+    try{
+      if (typeof _cache!=="undefined" && _cache.yardState!==null) STATE = _cache.yardState || {};
+      else STATE = JSON.parse(localStorage.getItem("sud_yard_state_v1") || "{}") || {};
+    }catch(e){ STATE = {}; }
     var map = {};
     Object.keys(STATE).forEach(function(id){
       var lane = (id[0] || "").toUpperCase();
@@ -16636,6 +16650,7 @@ function printQuotation(){
       var items = (typeof getOrderItems === "function") ? getOrderItems(o) : (o.items || [o]);
       items.forEach(function(it, idx){
         var pile = it.pileType || o.pileType || "(ไม่ระบุ)";
+        if (typeof _pileCatOK === "function" && !_pileCatOK(pile)) return;   // กรองตามแถบหมวดขนาดเสาที่เลือก
         var len  = _baseLen(it.length);
         var k = _grpKey(pile, len);
         if (!groups[k]) { groups[k] = { pile:pile, len:len, rows:[] }; gOrder.push(k); }
