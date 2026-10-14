@@ -9396,7 +9396,6 @@ function renderOrders() {
             <td style="font-size:12px;">${o.deliveryDate}${dlBadge}</td>
             <td style="font-size:12px;max-width:180px;">${o.site && o.site!=='-' ? '📍 '+_esc(o.site) : '<span style="color:#CBD5E1;">—</span>'}</td>
             <td style="${noteStyle};font-size:12px;">${_esc(errNote)}
-              ${canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='รับ Order แล้ว'?`<br><button onclick="acceptOrder(${_jsq(o.orderNum)})" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:6px;cursor:pointer;">🏭 รับ</button>`:''}
               ${canDo('change_order_status')&&((o.status||'รับ Order แล้ว')==='ส่งครบ'||o.status==='ส่งครบแล้ว')?`<br><button onclick="closeBill(${_jsq(o.orderNum)})" style="margin-top:4px;padding:3px 8px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;">🔴 จบบิล</button>`:''}
               <div class="act-row"><button class="act-btn" style="background:#FEF3C7;color:#92400E;" onclick="openIntakeFor(${_jsq(o.orderNum)})">📋 ใบรับงาน</button></div>
             </td>
@@ -9519,7 +9518,6 @@ function renderOrders() {
                 : `<span class="mob-oc-note mob-oc-note-empty">—</span>`));
 
       let btns = '';
-      if (canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='รับ Order แล้ว') btns += `<button onclick="acceptOrder(${_jsq(o.orderNum)})" style="padding:4px 10px;font-size:11px;font-weight:700;background:#166534;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🏭 รับ</button>`;
       if (canDo('change_order_status')&&(o.status||'รับ Order แล้ว')==='ส่งครบ') btns += `<button onclick="closeBill(${_jsq(o.orderNum)})" style="padding:4px 10px;font-size:11px;font-weight:700;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">🔴 จบบิล</button>`;
       btns += `<button onclick="openIntakeFor(${_jsq(o.orderNum)})" style="padding:4px 10px;font-size:11px;font-weight:700;background:#FEF3C7;color:#92400E;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">📋 ใบรับงาน</button>`;
 
@@ -9952,10 +9950,10 @@ function toggleProdOrder(idx) {
 function renderProdSection() {
   const container = document.getElementById('prodOrdersBody');
   if (!container) return;
-  const PROD_STATUSES = ['รับออเดอร์','ยืนยัน Order','กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง','ส่งแล้วบางส่วน'];
-  const orders = getOrders().filter(o => PROD_STATUSES.includes(o.status||''));
+  const PROD_STATUSES = ['รับ Order แล้ว','รับออเดอร์','ยืนยัน Order','กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง','ส่งแล้วบางส่วน'];
+  const orders = getOrders().filter(o => !isPendingOrder(o) && PROD_STATUSES.includes(o.status||''));
   if (!orders.length) {
-    container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;font-size:13px;">ยังไม่มีออเดอร์สำหรับฝ่ายผลิต — รอฝ่ายผลิตกดรับออเดอร์</div>';
+    container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94A3B8;font-size:13px;">ยังไม่มีออเดอร์สำหรับฝ่ายผลิต — คอนเฟิร์มออเดอร์แล้วจะขึ้นที่นี่อัตโนมัติ</div>';
     return;
   }
   const _pidx = buildProdIndex();   // [PERF] ดัชนีครั้งเดียวต่อการวาด
@@ -10508,7 +10506,7 @@ function submitStartProd() {
   // อัปเดตสถานะออเดอร์ → กำลังผลิต
   const orders = getOrders();
   const o = orders.find(x => x.orderNum === orderNum);
-  if (o && ['รับออเดอร์','ยืนยัน Order'].includes(o.status||'')) { o.status = 'กำลังผลิต'; saveOrders(orders); }
+  if (o && ['รับ Order แล้ว','รับออเดอร์','ยืนยัน Order'].includes(o.status||'')) { o.status = 'กำลังผลิต'; saveOrders(orders); }
   closeStartProdForm();
   logAudit('เริ่มผลิต (เทลงราง)', orderNum, pileType + ' · ' + qtyCasting + ' ' + _prodUnit);
   showToast('🏭 เริ่มเทแล้ว — ' + orderNum + ' · ' + qtyCasting + ' ' + _prodUnit + 'อยู่ในราง');
