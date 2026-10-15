@@ -10578,11 +10578,22 @@ function _segCompletedPiles(o, it, itemIdx, pidx) {
   const numPiles = it.qty || 0;
   if (!numPiles || !segs.length) return 0;
   const pileType = it.pileType || o.pileType;
-  let completed = Infinity;
+  // [FIX] ท่อนที่ "ยาวเท่ากัน" ใช้แทนกันได้ → รวมยอดตามความยาว ไม่แยกว่าเป็นท่อนที่ 1 หรือ 2
+  //   เช่น เสา 16.00ม = 8.00 + 8.00 · สั่ง 20 ต้น (ต่อ 1 ต้นใช้ท่อน 8.00 สองท่อน)
+  //   หล่อท่อน 8.00 ไป 10 ท่อน = ประกอบได้ 5 ต้น (10 ÷ 2) ไม่สนว่าหล่อลงช่องไหน
+  const byLen = {};
   segs.forEach((s, i) => {
-    const perPile = (s.qty || 0) / numPiles;                                  // ท่อนชนิดนี้ที่ 1 ต้นต้องใช้
-    const made    = getSegProduced(o.orderNum, pileType, itemIdx, i, pidx);   // หล่อท่อนชนิดนี้ไปแล้วกี่ท่อน
-    const canMake = perPile > 0 ? Math.floor(made / perPile) : 0;
+    const key     = String(s.len);
+    const perPile = (s.qty || 0) / numPiles;                                  // ท่อนความยาวนี้ที่ 1 ต้นต้องใช้
+    const made    = getSegProduced(o.orderNum, pileType, itemIdx, i, pidx);   // หล่อท่อนช่องนี้ไปแล้วกี่ท่อน
+    if (!byLen[key]) byLen[key] = { perPile: 0, made: 0 };
+    byLen[key].perPile += perPile;
+    byLen[key].made    += made;
+  });
+  let completed = Infinity;
+  Object.keys(byLen).forEach(k => {
+    const g = byLen[k];
+    const canMake = g.perPile > 0 ? Math.floor(g.made / g.perPile) : 0;
     if (canMake < completed) completed = canMake;
   });
   if (!isFinite(completed) || completed < 0) completed = 0;
@@ -10704,7 +10715,10 @@ function submitFinishProd() {
     pileType: a.pileType, length: a.length, ...itemSpecs,
     dateISO, date: isoToThai(dateISO), startedAt: a.startedAt || null, finishedAt,
     qtyRequired: required, qtyProduced: qty,
-    qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd, addedToStock: netQty > 0,
+    qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd,
+    // [FIX] งาน "ท่อน" ไม่ได้บวกเข้าสต็อก (ดูเงื่อนไขด้านล่าง _u !== 'ท่อน') → ต้องไม่ติดธงว่าบวกสต็อก
+    //   ไม่งั้นตอนลบประวัติผลิตจะไปหักสต็อกทั้งที่ตอนผลิตไม่เคยบวกเข้าไป
+    addedToStock: netQty > 0 && (a.productType === 'girder' ? 'ตัว' : _unitOf(a.unit)) !== 'ท่อน',
     unit: (a.productType === 'girder' ? 'ตัว' : _unitOf(a.unit)),
     lane: a.lane||'', tong: a.tong||'', wire: a.wire||'', standRows: a.standRows||[], ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}), ...(a.segIdx !== undefined ? { segIdx: a.segIdx } : {}) };
   if (a.productType === 'girder') _newLog.productType = 'girder';
@@ -16004,9 +16018,11 @@ function adminDeleteLog(type, fbKey) {
     const log = getProdLog().find(l => l._fbKey === fbKey);
     if (log && log.addedToStock) {
       const qtyNet = log.qtyNet !== undefined ? log.qtyNet : Math.max(0, (log.qtyProduced||log.qty||0) - (log.qtyDefect||log.defect||0));
+      // [FIX] งาน "ท่อน" ตอนผลิตไม่ได้บวกเข้าสต็อก → ตอนลบก็ต้องไม่หักสต็อก (กันข้อมูลเก่าที่ติดธงผิดไว้ด้วย)
+      const _wasStocked = _unitOf(log.unit) !== 'ท่อน';
 
       // 1. คืนสต็อก (ลบออกจาก spec stock)
-      if (qtyNet > 0) {
+      if (qtyNet > 0 && _wasStocked) {
         const specLabel = [log.length, log.weld, log.steel, log.ba, log.extra]
           .filter(x => x && x !== '-').join('/') || '-';
         if (!adjustProdCard(log._fbKey, log.pileType, -qtyNet, null, log.unit)) {
@@ -16029,20 +16045,33 @@ function adminDeleteLog(type, fbKey) {
         saveStockLog(logArr);
       }
 
-      // 2. ลบ custPole ที่ตรงกัน
-      const oldSpecLabel = [log.length, log.weld, log.steel, log.ba, log.extra]
-        .filter(x => x && x !== '-').join('/') || '';
-      const matchCp = getCustPoles().find(cp => cp.prodLogKey === fbKey)
-        || getCustPoles().find(cp =>
-            cp.pileType === log.pileType &&
-            (cp.orderNum === log.orderNum || (log.orderNum === 'STOCK' && !cp.online)) &&
-            cp.qty === qtyNet &&
-            (!oldSpecLabel || !cp.spec || cp.spec === oldSpecLabel)
-          );
-      if (matchCp) deleteCustPole(matchCp.id);
+      // 2. ลบ custPole ที่ตรงกัน (เฉพาะงานที่เข้าสต็อก — งานท่อนใช้การประกอบต้นซิงค์ให้ด้านล่างแทน)
+      if (_wasStocked) {
+        const oldSpecLabel = [log.length, log.weld, log.steel, log.ba, log.extra]
+          .filter(x => x && x !== '-').join('/') || '';
+        const matchCp = getCustPoles().find(cp => cp.prodLogKey === fbKey)
+          || getCustPoles().find(cp =>
+              cp.pileType === log.pileType &&
+              (cp.orderNum === log.orderNum || (log.orderNum === 'STOCK' && !cp.online)) &&
+              cp.qty === qtyNet &&
+              (!oldSpecLabel || !cp.spec || cp.spec === oldSpecLabel)
+            );
+        if (matchCp) deleteCustPole(matchCp.id);
+      }
     }
 
-    db.ref(K_PROD_LOG + '/' + fbKey).remove();
+    // [SEG→ต้น] ถ้าลบประวัติผลิตของงานแบ่งท่อน → ประกอบ/หักต้นเต็มให้ตรงยอดท่อนที่เหลือ
+    let _segResync = null;
+    try {
+      if (log && log.orderNum && log.orderNum !== 'STOCK' && log.itemIdx !== undefined && log.itemIdx !== null) {
+        const _o = getOrders().find(x => String(x.orderNum||'').trim() === String(log.orderNum).trim());
+        const _it = _o && getOrderItems(_o)[log.itemIdx];
+        if (_it && _it.prodMode === 'split') _segResync = { on: log.orderNum, ii: log.itemIdx };
+      }
+    } catch (e) {}
+    db.ref(K_PROD_LOG + '/' + fbKey).remove().then(() => {
+      if (_segResync) { try { _syncSegAssembly(_segResync.on, _segResync.ii); } catch (e) {} }
+    });
     renderProdLogHistory(); renderSummary();
 
   } else if (type === 'stockLog') {
