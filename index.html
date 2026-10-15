@@ -16730,28 +16730,29 @@ function printQuotation(){
   .paeb-tbl thead th.job-h{ text-align:left; padding-left:18px; }
   .paeb-tbl td{ padding:12px 8px; text-align:center; vertical-align:middle; }
   .paeb-tbl td.spec{ background:#f5f8ff; font-weight:800; font-size:17px; color:#1e3a8a; line-height:1.25;
-    border-right:1px solid #dbe3ef; width:120px; }
+    border-left:5px solid #1e3a8a; border-right:1px solid #9aa8bd; width:120px; }
   .paeb-tbl td.spec small{ display:block; font-size:12px; font-weight:600; color:#8795ab; margin-top:2px; }
-  .paeb-tbl td.pae{ width:78px; border-right:1px solid #eef1f7; }
+  .paeb-tbl td.pae{ width:78px; border-right:1px solid #9aa8bd; }
   .paeb-box{ display:inline-block; min-width:46px; padding:7px 0; border-radius:10px; font-size:20px; font-weight:800; }
   .paeb-p1{ background:#eef6fc; color:#0369a1; }
   .paeb-p2{ background:#f4effe; color:#7c3aed; }
   .paeb-p3{ background:#eafaf2; color:#059669; }
   .paeb-box.zero{ background:#f6f7f9; color:#c3ccda; }
-  .paeb-tbl td.job{ text-align:left; padding-left:18px; border-right:1px solid #eef1f7; cursor:pointer; }
+  .paeb-tbl td.job{ text-align:left; padding-left:18px; border-right:1px solid #9aa8bd; cursor:pointer; }
   .paeb-tbl td.job .nm{ font-weight:700; font-size:15px; color:#1e293b; }
   .paeb-tbl td.job .nm .arw{ color:#c3ccda; font-weight:800; margin-left:6px; }
   .paeb-tbl td.job .cd{ font-size:12px; color:#9aa4b2; margin-top:2px; }
-  .paeb-tbl td.num{ width:66px; font-size:17px; font-weight:800; border-right:1px solid #eef1f7; }
+  .paeb-tbl td.num{ width:66px; font-size:17px; font-weight:800; border-right:1px solid #9aa8bd; }
   .paeb-tbl td.num.ord{ color:#334155; }
   .paeb-tbl td.num.sent{ color:#0f766e; }
-  .paeb-tbl td.remain{ width:80px; }
+  .paeb-tbl td.remain{ width:80px; border-right:1px solid #9aa8bd; }
   .paeb-pill{ display:inline-block; min-width:48px; padding:5px 12px; border-radius:999px; font-size:14px; font-weight:800; }
   .paeb-pill.left{ background:#fff4ec; color:#ea580c; }
   .paeb-pill.done{ background:#eafaf2; color:#059669; }
-  .paeb-tbl tr.sub td{ border-top:1px solid #eef1f7; }
-  .paeb-tbl tr.grp td{ border-top:2px solid #dbe3ef; }
+  .paeb-tbl tr.sub td{ border-top:1px dashed #e4e9f2; }
+  .paeb-tbl tr.grp td{ border-top:2.5px solid #94a3b8; }
   .paeb-tbl tbody tr:first-child td{ border-top:none; }
+  .paeb-tbl tr.has-rem td.remain .paeb-pill.left{ box-shadow:0 0 0 2px #fdba74; }
   .paeb-tbl tbody tr.orow:hover td{ background:#f9fbff; }
   .paeb-legend{ display:flex; gap:16px; justify-content:center; flex-wrap:wrap; padding:14px; background:#fafbfe;
     border-top:1px solid #eef1f7; font-size:12.5px; color:#64748b; }
@@ -16874,7 +16875,8 @@ function printQuotation(){
           : '<span class="paeb-pill done">ครบ</span>';
         var name = o.customer || o.site || "(ไม่ระบุ)";
 
-        html += '<tr class="orow ' + (ri===0?'grp':'sub') + '" data-od="' + _esc(o.orderNum) + '">';
+        var _rowCls = (ri===0?'grp':'sub') + (ri===span-1?' grpend':'') + (rem>0?' has-rem':'');
+        html += '<tr class="orow ' + _rowCls + '" data-od="' + _esc(o.orderNum) + '">';
         if (ri === 0) {
           html += '<td class="spec" rowspan="' + span + '">' + specTxt + '</td>'
                 + '<td class="pae" rowspan="' + span + '">' + box(ls.A, 'paeb-p1') + '</td>'
