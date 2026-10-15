@@ -10830,6 +10830,21 @@ function submitFinishProd() {
       note: '🤖 Auto: ' + (a.isStockProd ? 'ผลิตเพิ่มสต็อก' : 'ผลิตจาก ' + a.orderNum) + (specLabel !== '-' ? ' สเปค ' + specLabel : '') + (defect > 0 ? ' (เสีย ' + defect + ' ' + _u + ')' : '') });
     saveStockLog(logArr);
     showToast('🏭 เพิ่มสต็อก ' + a.pileType + ' +' + netQty + ' ' + _u + (defect > 0 ? ' (เสีย ' + defect + ')' : ''));
+  } else if (netQty > 0 && _u === 'ท่อน') {
+    // [SEG-LOG] งานแบ่งท่อน: ท่อนยังไม่ใช่เสาต้นสมบูรณ์ จึงไม่บวกเข้าสต็อก
+    //   แต่บันทึกเป็นรายการ "บอกข้อมูล" ในประวัติการเคลื่อนไหวสต็อก เพื่อให้เห็นว่ามีการหล่อท่อน
+    //   · ไม่กระทบยอดสต็อก (newStock = ยอดเดิม ไม่เปลี่ยน)
+    //   · ตอนลบรายการนี้ก็ไม่หักสต็อก เพราะ adminDeleteLog type 'stockLog' ลบแค่ record
+    const _segLen = (a.length && a.length !== '-') ? a.length : '';
+    const logArr = getStockLog() || [];
+    logArr.unshift({ ts: nowTs(), typeVal: '🧩 หล่อท่อน (ยังไม่เข้าสต็อก)', name: a.pileType,
+      qty: netQty, unit: _u, newStock: (getStock()[a.pileType] || 0), qtyDisplay: '+' + netQty,
+      ref: a.isStockProd ? 'ผลิตเพิ่มสต็อก' : a.orderNum,
+      infoOnly: true,
+      staff: (_currentUser && _currentUser.email) || '-',
+      note: '🤖 Auto: หล่อท่อน' + (_segLen ? ' ' + _segLen : '') + ' จาก ' + (a.isStockProd ? 'สต็อก' : a.orderNum) + ' · ยังไม่ประกอบเป็นต้น' + (defect > 0 ? ' (เสีย ' + defect + ' ' + _u + ')' : '') });
+    saveStockLog(logArr);
+    showToast('🧩 บันทึกหล่อท่อน ' + a.pileType + ' +' + netQty + ' ' + _u + (defect > 0 ? ' (เสีย ' + defect + ')' : ''));
   }
   // [SEG→ต้น] ประกอบท่อนที่ครบชุดให้เป็น "ต้นเต็ม" อัตโนมัติ แล้วเข้าช่องเสาลูกค้า
   if (!a.isStockProd && a.itemIdx !== undefined && a.itemIdx !== null) { try { _syncSegAssembly(a.orderNum, a.itemIdx); } catch (e) {} }
