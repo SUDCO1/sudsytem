@@ -9956,6 +9956,8 @@ function toggleProdOrder(idx) {
 function renderProdSection() {
   const container = document.getElementById('prodOrdersBody');
   if (!container) return;
+  // [SEG→ต้น] เก็บตกครั้งเดียวต่อรอบเปิดแอป: ประกอบท่อนที่ครบชุด (ของเก่าก่อนมีฟีเจอร์นี้) ให้เป็นต้นเต็ม
+  if (!window._segAsmSynced && _cpLoaded) { window._segAsmSynced = true; try { _syncAllSegAssembly(); } catch (e) {} }
   const PROD_STATUSES = ['รับ Order แล้ว','รับออเดอร์','ยืนยัน Order','กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง','ส่งแล้วบางส่วน'];
   const orders = getOrders().filter(o => !isPendingOrder(o) && PROD_STATUSES.includes(o.status||''));
   if (!orders.length) {
@@ -10563,6 +10565,98 @@ function updateFinishCalc() {
   document.getElementById('fp_defect_display').textContent = defect;
   document.getElementById('fp_net_display').textContent    = net;
 }
+
+// ══════════════════════════════════════════════════════════════
+// [SEG→ต้น] ทำให้แอป "เข้าใจต้น/ท่อน"
+// รายการที่ตั้งวิธีผลิตเป็น "แบ่งท่อน" (1 ต้น หล่อเป็นหลายท่อนแล้วเอามาต่อกัน)
+// พอหล่อท่อน "ครบชุด" ของกี่ต้น ระบบจะประกอบเป็น "ต้นเต็ม" เข้าช่องเสาลูกค้า
+// ของออเดอร์ให้เอง — ไม่ต้องกดปุ่มเพิ่ม · ทำงานแบบ idempotent (เรียกซ้ำได้ ไม่สร้างซ้ำ)
+// ══════════════════════════════════════════════════════════════
+// จำนวน "ต้นเต็ม" ที่ประกอบได้จากท่อนที่หล่อไปแล้ว (นับเฉพาะชุดที่ครบ)
+function _segCompletedPiles(o, it, itemIdx, pidx) {
+  const segs = getItemSegs(it);
+  const numPiles = it.qty || 0;
+  if (!numPiles || !segs.length) return 0;
+  const pileType = it.pileType || o.pileType;
+  let completed = Infinity;
+  segs.forEach((s, i) => {
+    const perPile = (s.qty || 0) / numPiles;                                  // ท่อนชนิดนี้ที่ 1 ต้นต้องใช้
+    const made    = getSegProduced(o.orderNum, pileType, itemIdx, i, pidx);   // หล่อท่อนชนิดนี้ไปแล้วกี่ท่อน
+    const canMake = perPile > 0 ? Math.floor(made / perPile) : 0;
+    if (canMake < completed) completed = canMake;
+  });
+  if (!isFinite(completed) || completed < 0) completed = 0;
+  // ไม่เกินจำนวนที่สั่ง (ส่วนเกินปล่อยเป็นท่อนไว้ ไม่ประกอบเข้าช่องลูกค้าเกินออเดอร์)
+  return Math.min(completed, numPiles);
+}
+
+// ซิงค์ต้นเต็มที่ประกอบได้ของ "รายการเดียว" ให้ตรงกับที่หล่อจริง (สร้าง/ปรับ/อัปเดตสเปคล่าสุด)
+function _syncSegAssembly(orderNum, itemIdx, pidx) {
+  const on = String(orderNum == null ? '' : orderNum).trim();
+  if (!on || itemIdx === undefined || itemIdx === null) return 0;
+  const o = getOrders().find(x => String(x.orderNum || '').trim() === on);
+  if (!o) return 0;
+  const it = getOrderItems(o)[itemIdx];
+  if (!it || it.prodMode !== 'split') return 0;
+  const pileType = it.pileType || o.pileType;
+  const _pidx = pidx || buildProdIndex();
+  const completed = _segCompletedPiles(o, it, itemIdx, _pidx);
+  // การ์ด "ต้นเต็ม" ที่ประกอบไว้แล้วของรายการนี้
+  const mine = getCustPoles().filter(c => c.fromSegAssembly === true
+    && String(c.orderNum || '').trim() === on
+    && c.itemIdx === itemIdx
+    && c.pileType === pileType);
+  // อัปเดตสเปค/ความยาวให้ตามค่าล่าสุดของรายการ (เผื่อแก้ความยาวทีหลัง → ของตามไปด้วย)
+  const _fullLen = it.length || o.length || '-';
+  mine.forEach(c => {
+    let ch = false;
+    if (String(c.base || '') !== String(_fullLen))        { c.base = _fullLen;        ch = true; }
+    if (String(c.weld || '-') !== String(it.weld || '-')) { c.weld = it.weld || '-';  ch = true; }
+    if (String(c.steel|| '-') !== String(it.steel|| '-')) { c.steel = it.steel|| '-'; ch = true; }
+    if (String(c.ba   || '-') !== String(it.ba   || '-')) { c.ba = it.ba || '-';      ch = true; }
+    if (ch) saveSingleCustPole(c);
+  });
+  const have = mine.reduce((s, c) => s + (c.qty || 0), 0);
+  const diff = completed - have;
+  if (diff > 0) {
+    saveSingleCustPole({
+      id: 'cp_seg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      orderNum: on, pileType: pileType, itemIdx: itemIdx,
+      spec: '', base: _fullLen,
+      weld: it.weld || '-', steel: it.steel || '-', ba: it.ba || '-',
+      unit: 'ต้น', qty: diff,
+      online: true, fromSegAssembly: true,
+      createdAt: Date.now(),
+      note: 'Auto: ประกอบท่อนครบชุด → ต้นเต็ม ' + _fullLen
+    });
+    try { logAudit('ประกอบท่อนเป็นต้น (อัตโนมัติ)', on, pileType + ' · +' + diff + ' ต้น (รวม ' + completed + ' ต้น)'); } catch (e) {}
+  } else if (diff < 0) {
+    // ท่อนลดลง (แก้/ลบประวัติผลิต) → หักต้นเต็มที่ประกอบไว้ออกให้ตรง
+    let rm = -diff;
+    mine.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    for (const c of mine) {
+      if (rm <= 0) break;
+      const take = Math.min(c.qty || 0, rm);
+      c.qty = (c.qty || 0) - take; rm -= take;
+      if (c.qty <= 0) deleteCustPole(c.id); else saveSingleCustPole(c);
+    }
+    try { logAudit('ปรับต้นที่ประกอบ (อัตโนมัติ)', on, pileType + ' · เหลือ ' + completed + ' ต้น'); } catch (e) {}
+  }
+  return diff;
+}
+
+// ซิงค์ทุกออเดอร์ที่ยังอยู่ในสายผลิต (ใช้ตอนโหลดแอป เพื่อเก็บตกของเก่าที่หล่อไว้ก่อนมีฟีเจอร์นี้)
+function _syncAllSegAssembly() {
+  const PROD = ['รับ Order แล้ว','รับออเดอร์','ยืนยัน Order','กำลังผลิต','พร้อมส่ง','ระหว่างขนส่ง','ส่งแล้วบางส่วน'];
+  const pidx = buildProdIndex();
+  (getOrders() || []).forEach(o => {
+    if (!PROD.includes(o.status || '')) return;
+    getOrderItems(o).forEach((it, i) => {
+      if (it && it.prodMode === 'split') { try { _syncSegAssembly(o.orderNum, i, pidx); } catch (e) {} }
+    });
+  });
+}
+
 function submitFinishProd() {
   if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์บันทึกการผลิต'); return; }
   const activeId = document.getElementById('fp_active_id').value;
@@ -10723,6 +10817,8 @@ function submitFinishProd() {
     saveStockLog(logArr);
     showToast('🏭 เพิ่มสต็อก ' + a.pileType + ' +' + netQty + ' ' + _u + (defect > 0 ? ' (เสีย ' + defect + ')' : ''));
   }
+  // [SEG→ต้น] ประกอบท่อนที่ครบชุดให้เป็น "ต้นเต็ม" อัตโนมัติ แล้วเข้าช่องเสาลูกค้า
+  if (!a.isStockProd && a.itemIdx !== undefined && a.itemIdx !== null) { try { _syncSegAssembly(a.orderNum, a.itemIdx); } catch (e) {} }
   renderActiveProd(); renderProdSection(); renderProdLogHistory(); renderOrders(); renderSummary();
 }
 
@@ -15091,6 +15187,8 @@ function submitEditOrder() {
   //   · ลดจำนวน → ส่วนที่เกินยังถูกล็อกไว้
   // (ระบบจองอัตโนมัติปลดให้เฉพาะการ์ด ⚡ ที่มันจองเอง — การ์ดจากงานผลิตไม่ถูกแตะเลย)
   try { _releaseCardsNotNeeded(_editOrderNum); } catch (e) {}
+  // [SEG→ต้น] แก้ออเดอร์แล้ว: ให้ "ต้นเต็ม" ที่ประกอบไว้ตามสเปค/ความยาวล่าสุด + ประกอบเพิ่ม/ลดให้ตรง
+  try { const _pidx = buildProdIndex(); getOrderItems(o).forEach((it, i) => { if (it && it.prodMode === 'split') { try { _syncSegAssembly(_editOrderNum, i, _pidx); } catch (e) {} } }); } catch (e) {}
   autoSaveCustomer(customer, tel, custAddr);
   // [FIX#B33] audit ละเอียด: ระบุว่าแก้ฟิลด์ไหน จากอะไรเป็นอะไร
   const _chg = [];
@@ -15863,6 +15961,15 @@ function saveEditProdLog(fbKey) {
     document.getElementById('_editProdLogModal')?.remove();
     logAudit('แก้ไขประวัติผลิต', log.orderNum || log.pileType || '-', (log.pileType||'') + (diff!==0 ? ' · สต็อก '+(diff>0?'+':'')+diff+' ต้น' : ''));
     showToast('✅ แก้ไขแล้ว' + (log.addedToStock && diff !== 0 ? ' | สต็อก ' + (diff > 0 ? '+' : '') + diff + ' ต้น' : ''));
+    // [SEG→ต้น] แก้ประวัติผลิตของงานแบ่งท่อน → ประกอบ/หักต้นเต็มให้ตรงยอดท่อนล่าสุด
+    try {
+      const _on = log.orderNum, _ii = (itemIdx !== undefined ? itemIdx : log.itemIdx);
+      if (_on && _on !== 'STOCK' && _ii !== undefined && _ii !== null) {
+        const _o = getOrders().find(x => String(x.orderNum||'').trim() === String(_on).trim());
+        const _it = _o && getOrderItems(_o)[_ii];
+        if (_it && _it.prodMode === 'split') _syncSegAssembly(_on, _ii);
+      }
+    } catch (e) {}
     renderProdLogHistory();
     renderSummary();
   });
