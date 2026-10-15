@@ -10603,6 +10603,9 @@ function _segCompletedPiles(o, it, itemIdx, pidx) {
 
 // ซิงค์ต้นเต็มที่ประกอบได้ของ "รายการเดียว" ให้ตรงกับที่หล่อจริง (สร้าง/ปรับ/อัปเดตสเปคล่าสุด)
 function _syncSegAssembly(orderNum, itemIdx, pidx) {
+  // [ท่อน-MODE] เลิกประกอบท่อนเป็นต้นอัตโนมัติ — ท่อนเก็บเป็นท่อน ส่งเป็นท่อน
+  //   (หน้างานเอาไปต่อเป็นต้นเอง) · คงฟังก์ชันไว้กันจุดที่ยังเรียกอยู่ไม่ error
+  return 0;
   const on = String(orderNum == null ? '' : orderNum).trim();
   if (!on || itemIdx === undefined || itemIdx === null) return 0;
   const o = getOrders().find(x => String(x.orderNum || '').trim() === on);
@@ -10765,8 +10768,9 @@ function submitFinishProd() {
     renderProdErrHistory();
   }
 
-  // เพิ่มสต็อก (ข้ามรายการที่นับเป็น "ท่อน" เพราะยังเป็นชิ้นส่วน ยังไม่ใช่เสาต้นสมบูรณ์)
-  if (netQty > 0 && _u !== 'ท่อน') {
+  // [ท่อน-MODE] ผลิตเป็นท่อน = เก็บเข้าสต็อกเป็น "ท่อน" ไปเลย (ไม่ต้องรอประกอบเป็นต้น)
+  //   หน้างานจะเอาท่อนไปต่อเป็นต้นเอง — เราไม่ยุ่ง นับสต็อก/ส่งของเป็นท่อนตรง ๆ
+  if (netQty > 0) {
     // สร้าง spec label จากทุก field ที่มี
     const _specParts = a.productType === 'girder' ? [
       a.height   && a.height   !== '-' ? 'สูง ' + a.height : null,
@@ -10830,21 +10834,6 @@ function submitFinishProd() {
       note: '🤖 Auto: ' + (a.isStockProd ? 'ผลิตเพิ่มสต็อก' : 'ผลิตจาก ' + a.orderNum) + (specLabel !== '-' ? ' สเปค ' + specLabel : '') + (defect > 0 ? ' (เสีย ' + defect + ' ' + _u + ')' : '') });
     saveStockLog(logArr);
     showToast('🏭 เพิ่มสต็อก ' + a.pileType + ' +' + netQty + ' ' + _u + (defect > 0 ? ' (เสีย ' + defect + ')' : ''));
-  } else if (netQty > 0 && _u === 'ท่อน') {
-    // [SEG-LOG] งานแบ่งท่อน: ท่อนยังไม่ใช่เสาต้นสมบูรณ์ จึงไม่บวกเข้าสต็อก
-    //   แต่บันทึกเป็นรายการ "บอกข้อมูล" ในประวัติการเคลื่อนไหวสต็อก เพื่อให้เห็นว่ามีการหล่อท่อน
-    //   · ไม่กระทบยอดสต็อก (newStock = ยอดเดิม ไม่เปลี่ยน)
-    //   · ตอนลบรายการนี้ก็ไม่หักสต็อก เพราะ adminDeleteLog type 'stockLog' ลบแค่ record
-    const _segLen = (a.length && a.length !== '-') ? a.length : '';
-    const logArr = getStockLog() || [];
-    logArr.unshift({ ts: nowTs(), typeVal: '🧩 หล่อท่อน (ยังไม่เข้าสต็อก)', name: a.pileType,
-      qty: netQty, unit: _u, newStock: (getStock()[a.pileType] || 0), qtyDisplay: '+' + netQty,
-      ref: a.isStockProd ? 'ผลิตเพิ่มสต็อก' : a.orderNum,
-      infoOnly: true,
-      staff: (_currentUser && _currentUser.email) || '-',
-      note: '🤖 Auto: หล่อท่อน' + (_segLen ? ' ' + _segLen : '') + ' จาก ' + (a.isStockProd ? 'สต็อก' : a.orderNum) + ' · ยังไม่ประกอบเป็นต้น' + (defect > 0 ? ' (เสีย ' + defect + ' ' + _u + ')' : '') });
-    saveStockLog(logArr);
-    showToast('🧩 บันทึกหล่อท่อน ' + a.pileType + ' +' + netQty + ' ' + _u + (defect > 0 ? ' (เสีย ' + defect + ')' : ''));
   }
   // [SEG→ต้น] ประกอบท่อนที่ครบชุดให้เป็น "ต้นเต็ม" อัตโนมัติ แล้วเข้าช่องเสาลูกค้า
   if (!a.isStockProd && a.itemIdx !== undefined && a.itemIdx !== null) { try { _syncSegAssembly(a.orderNum, a.itemIdx); } catch (e) {} }
@@ -12246,6 +12235,29 @@ function submitCustPole() {
   showToast('✅ เพิ่มเสาลูกค้า ' + pileType + ' ' + qty + ' ' + unit + ' (Order ' + orderNum + ')');
 }
 
+// [MOVE-LOG] บันทึกการย้ายเสาลูกค้า ↔ เสาค้างสต็อก ลง "ประวัติการเคลื่อนไหวสต็อก"
+//   เป็นแถว "บอกข้อมูล" — ยอดสต็อกรวมไม่เปลี่ยน (ของชิ้นเดิม แค่เปลี่ยนป้ายจอง/ของกลาง)
+//   · ลบแถวนี้ไม่กระทบสต็อก (adminDeleteLog type 'stockLog' ลบแค่ record)
+function _logStockMove(pileType, qty, unit, toStock, orderNum) {
+  if (!pileType || !(qty > 0)) return;
+  const _u = _unitOf(unit);
+  const logArr = getStockLog() || [];
+  const cur = (getStock()[pileType] || 0);
+  logArr.unshift({
+    ts: nowTs(),
+    typeVal: toStock ? '🔄 ย้ายเข้าสต็อกกลาง' : '🔄 ย้ายไปจองออเดอร์',
+    name: pileType, qty: qty, unit: _u,
+    newStock: cur, qtyDisplay: '🔄 ' + qty,
+    ref: orderNum || '-',
+    infoOnly: true,
+    staff: (_currentUser && _currentUser.email) || '-',
+    note: toStock
+      ? ('ย้ายเสาลูกค้า → เสาค้างสต็อก (ของกลาง)' + (orderNum ? ' · จาก Order ' + orderNum : '') + ' · ยอดรวมไม่เปลี่ยน')
+      : ('ย้ายเสาค้างสต็อก → เสาลูกค้า' + (orderNum ? ' · Order ' + orderNum : '') + ' · ยอดรวมไม่เปลี่ยน')
+  });
+  saveStockLog(logArr);
+}
+
 function toggleCpOffline(id) {
   if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const arr = getCustPoles();
@@ -12260,6 +12272,7 @@ function toggleCpOffline(id) {
   saveSingleCustPole(item);
   // [ปิดจองอัตโนมัติ] ไม่ต้อง block แล้ว เพราะไม่มีระบบจองกลับอัตโนมัติ
   try { logAudit('ย้ายไปเสาค้างสต็อก', item.pileType, (item.qty||0) + ' ' + _u + (_prevOrder ? ' · จาก Order ' + _prevOrder : '')); } catch(e){}
+  _logStockMove(item.pileType, item.qty||0, item.unit, true, _prevOrder);
   if (_sdCurrentPile) openStockDetail(_sdCurrentPile);   // [FIX#S10] รีเฟรชสถิติหัวหน้าต่างด้วย
   renderStockCards();
   showToast('📦 ย้ายไปเสาค้างสต็อกแล้ว');
@@ -12277,6 +12290,7 @@ function toggleCpOfflineAll(ids) {
   items.forEach(item => { item.online = false; item.orderNum = ''; delete item.autoRes; saveSingleCustPole(item); });
   // [ปิดจองอัตโนมัติ] ไม่ต้อง block แล้ว
   try { logAudit('ย้ายไปเสาค้างสต็อก (กลุ่ม)', first.pileType, ids.length + ' รายการ · ' + _sumQty + ' ' + _uA + (_prevOrder ? ' · จาก Order ' + _prevOrder : '')); } catch(e){}
+  _logStockMove(first.pileType, _sumQty, first.unit, true, _prevOrder);
   if (_sdCurrentPile) openStockDetail(_sdCurrentPile);
   renderStockCards();
   showToast('📦 ย้ายไปเสาค้างสต็อกแล้ว (' + ids.length + ' รายการ)');
@@ -12387,12 +12401,14 @@ function closeAssignOrderModal() {
 function confirmAssignOrder(orderNum, ids) {
   if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const arr = getCustPoles();
+  let _apile = _assignOrderPile || '-', _asum = 0, _aunit = '';
   ids.forEach(id => {
     const item = arr.find(x => x.id === id);
-    if (item) { item.online = true; item.orderNum = orderNum; item.fromStock = true; saveSingleCustPole(item); }
+    if (item) { _apile = item.pileType || _apile; _aunit = item.unit; _asum += (item.qty||0); item.online = true; item.orderNum = orderNum; item.fromStock = true; saveSingleCustPole(item); }
   });
   _autoResUnblockOrder(orderNum);   // [AUTO-RES] ผูกเองแล้ว → เปิดจองอัตโนมัติของออเดอร์นี้กลับ
   try { logAudit('ผูกเสาเข้าออเดอร์', orderNum, (_assignOrderPile || '-') + ' · ' + ids.length + ' รายการ'); } catch(e){}
+  _logStockMove(_apile, _asum, _aunit, false, orderNum);
   closeAssignOrderModal();
   if (_sdCurrentPile) openStockDetail(_sdCurrentPile);
   showToast('🟢 ย้ายไปเสาลูกค้า Order ' + orderNum + ' (' + ids.length + ' รายการ)');
@@ -12406,6 +12422,7 @@ function toggleCpOnline(id) {
   item.online = true;
   saveSingleCustPole(item);
   try { logAudit('ย้ายกลับเสาลูกค้า', item.pileType, (item.orderNum ? 'Order ' + item.orderNum + ' · ' : '') + (item.qty||0) + ' ' + _unitOf(item.unit)); } catch(e){}
+  _logStockMove(item.pileType, item.qty||0, item.unit, false, item.orderNum);
   if (_sdCurrentPile) openStockDetail(_sdCurrentPile);   // [FIX#S10]
   renderStockCards();
   showToast('🟢 ย้ายกลับเป็นเสาลูกค้าแล้ว');
@@ -12420,6 +12437,7 @@ function toggleCpOnlineAll(ids) {
     if (item) { _pile = item.pileType || _pile; _uB = _unitOf(item.unit); _sum += (item.qty||0); item.online = true; saveSingleCustPole(item); }
   });
   try { logAudit('ย้ายกลับเสาลูกค้า (กลุ่ม)', _pile, ids.length + ' รายการ · ' + _sum + ' ' + _uB); } catch(e){}
+  _logStockMove(_pile, _sum, _uB, false, '');
   if (_sdCurrentPile) openStockDetail(_sdCurrentPile);   // [FIX#S10]
   renderStockCards();
   showToast('🟢 ย้ายกลับเสาลูกค้าแล้ว (' + ids.length + ' รายการ)');
