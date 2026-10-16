@@ -6474,6 +6474,7 @@ window.YARD = (function(){
     </div>
     <div class="sd-footer">
       <button class="btn edit-del-btn" id="editOrderDelBtn" onclick="deleteOrderFromEdit()">🗑 ลบ Order นี้</button>
+      <button class="btn" id="editOrderCloseBillBtn" onclick="closeBillFromEdit()" style="display:none;background:#DC2626;color:#fff;">🔴 จบบิล</button>
       <button class="btn btn-ghost" onclick="closeEditOrder()">ยกเลิก</button>
       <button class="btn btn-primary" onclick="submitEditOrder()">💾 บันทึกการแก้ไข</button>
     </div>
@@ -14993,8 +14994,23 @@ function openEditOrder(orderNum) {
   // ปุ่มลบอยู่ในหน้าแก้ไข — โชว์เฉพาะคนที่มีสิทธิ์ลบ
   const _delBtn = document.getElementById('editOrderDelBtn');
   if (_delBtn) _delBtn.style.display = canDo('delete_order') ? '' : 'none';
+  // ปุ่มจบบิล — โชว์เฉพาะออเดอร์ที่ "ส่งครบ" แล้ว และมีสิทธิ์เปลี่ยนสถานะ
+  const _cbBtn = document.getElementById('editOrderCloseBillBtn');
+  if (_cbBtn) {
+    const _st = o.status || 'รับ Order แล้ว';
+    _cbBtn.style.display = (canDo('change_order_status') && (_st === 'ส่งครบ' || _st === 'ส่งครบแล้ว')) ? '' : 'none';
+  }
   document.getElementById('editOrderOverlay').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+}
+
+// จบบิลจากในหน้าแก้ไข — ปิดหน้าต่างก่อน แล้วเรียก closeBill (closeBill มีกล่องยืนยันอยู่แล้ว)
+function closeBillFromEdit() {
+  const n = _editOrderNum;
+  if (!n) return;
+  if (!canDo('change_order_status')) { showToast('⛔ คุณไม่มีสิทธิ์เปลี่ยนสถานะ'); return; }
+  closeEditOrder();
+  closeBill(n);
 }
 
 // ลบ Order จากในหน้าแก้ไข (ยืนยันก่อนเสมอ · ลบสำเร็จแล้วค่อยปิดหน้าต่าง)
@@ -16944,6 +16960,7 @@ function printQuotation(){
       + '<th>สั่ง</th><th>ส่ง</th><th>เหลือ</th>'
       + '</tr></thead><tbody>';
 
+    var _cbShown = {};   // กันปุ่มจบบิลซ้ำ เมื่อออเดอร์เดียวมีหลายสเปค
     gOrder.forEach(function(k){
       var g = groups[k];
       var isG = (g.pile === "Girder");
@@ -16960,6 +16977,14 @@ function printQuotation(){
         var remHTML = rem > 0
           ? '<span class="paeb-pill left">' + rem + '</span>'
           : '<span class="paeb-pill done">ครบ</span>';
+        // ปุ่มจบบิล — โชว์ครั้งเดียวต่อออเดอร์ เมื่อส่งครบทั้งใบแล้ว
+        var _ost = o.status || '';
+        if ((_ost === 'ส่งครบ' || _ost === 'ส่งครบแล้ว')
+            && (typeof canDo !== 'function' || canDo('change_order_status'))
+            && !_cbShown[o.orderNum]) {
+          _cbShown[o.orderNum] = true;
+          remHTML += '<button class="paeb-cbbtn" onclick=\'event.stopPropagation();closeBill(' + JSON.stringify(String(o.orderNum)) + ')\' style="display:block;margin:6px auto 0;padding:4px 10px;font-size:12px;font-weight:800;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;">🔴 จบบิล</button>';
+        }
         var name = o.customer || o.site || "(ไม่ระบุ)";
 
         var _rowCls = (ri===0?'grp':'sub') + (ri===span-1?' grpend':'') + (rem>0?' has-rem':'');
