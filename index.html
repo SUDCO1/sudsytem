@@ -11549,23 +11549,34 @@ function renderHistorySummary() {
 
 // ── [FIX#B35] ไทม์ไลน์ในออเดอร์ (หน้าสรุปภาพรวม) ─────────────────
 // ดึงเหตุการณ์ทั้งหมดของออเดอร์จาก audit log แล้วจัดเป็นไทม์ไลน์
-function _tlIcon(action){
+// ไอคอน + ธีมสีของแต่ละประเภทเหตุการณ์ (ใช้ระบายสีจุด/เส้น/หัวข้อให้แยกกันชัด)
+function _tlStyle(action){
   const a = String(action||'');
-  if (a.indexOf('สร้างออเดอร์')>=0) return '🆕';
-  if (a.indexOf('คอนเฟิร์ม')>=0 || a.indexOf('รับออเดอร์')>=0) return '📋';
-  if (a.indexOf('ผลิต')>=0) return '🏭';
-  if (a.indexOf('ส่งจบ')>=0) return '✅';
-  if (a.indexOf('จองรถ')>=0 || a.indexOf('นัดส่ง')>=0) return '🚚';
-  if (a.indexOf('จบบิล')>=0 || a.indexOf('คืนเสาที่เหลือ')>=0) return '🎉';
-  if (a.indexOf('แก้ไข')>=0) return '✏️';
-  if (a.indexOf('ลบ')>=0) return '🗑️';
-  if (a.indexOf('สต็อก')>=0 || a.indexOf('ย้าย')>=0 || a.indexOf('คืน')>=0) return '📦';
-  return '•';
+  if (a.indexOf('สร้างออเดอร์')>=0)                              return { icon:'🆕', c:'#2563EB', soft:'#EFF6FF' };
+  if (a.indexOf('คอนเฟิร์ม')>=0 || a.indexOf('รับออเดอร์')>=0)   return { icon:'📋', c:'#4F46E5', soft:'#EEF2FF' };
+  if (a.indexOf('ผลิต')>=0)                                      return { icon:'🏭', c:'#EA580C', soft:'#FFF7ED' };
+  if (a.indexOf('ส่งจบ')>=0)                                     return { icon:'✅', c:'#16A34A', soft:'#F0FDF4' };
+  if (a.indexOf('จองรถ')>=0 || a.indexOf('นัดส่ง')>=0)           return { icon:'🚚', c:'#0284C7', soft:'#F0F9FF' };
+  if (a.indexOf('จบบิล')>=0 || a.indexOf('คืนเสาที่เหลือ')>=0)   return { icon:'🎉', c:'#D97706', soft:'#FFFBEB' };
+  if (a.indexOf('แก้ไข')>=0)                                     return { icon:'✏️', c:'#475569', soft:'#F1F5F9' };
+  if (a.indexOf('ลบ')>=0)                                        return { icon:'🗑️', c:'#DC2626', soft:'#FEF2F2' };
+  if (a.indexOf('สต็อก')>=0 || a.indexOf('ย้าย')>=0 || a.indexOf('คืน')>=0) return { icon:'📦', c:'#0D9488', soft:'#F0FDFA' };
+  return { icon:'•', c:'#64748B', soft:'#F1F5F9' };
 }
 function _tlFmtTime(ts){
   const d = new Date(ts||0);
   const th = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   return d.getDate()+' '+th[d.getMonth()]+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+// หัววันที่ (ไม่มีเวลา) + เวลาเฉย ๆ สำหรับไทม์ไลน์เส้นกลาง
+function _tlFmtDay(ts){
+  const d = new Date(ts||0);
+  const th = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return d.getDate()+' '+th[d.getMonth()]+' '+(d.getFullYear()+543);
+}
+function _tlFmtClock(ts){
+  const d = new Date(ts||0);
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+' น.';
 }
 function _tlActor(e){
   if (e.email && e.email !== '-') return e.email;
@@ -11573,6 +11584,24 @@ function _tlActor(e){
   return 'ระบบ';
 }
 function openOrderTimeline(orderNum){
+  // ฉีด CSS ไทม์ไลน์เส้นกลางครั้งเดียว (รองรับมือถือ: ยุบเป็นเส้นข้างเดียว)
+  if (!document.getElementById('otlStyle')) {
+    const _st = document.createElement('style');
+    _st.id = 'otlStyle';
+    _st.textContent =
+      '.otl-tl{position:relative;padding:2px 0;}'
+      + '.otl-tl::before{content:"";position:absolute;top:8px;bottom:8px;left:17px;width:2.5px;background:#E2E8F0;border-radius:99px;z-index:0;}'
+      + '.otl-day{position:relative;z-index:2;margin:14px 0 9px;padding-left:1px;}'
+      + '.otl-day span{display:inline-block;background:#1E293B;color:#fff;font-size:11px;font-weight:800;padding:4px 13px;border-radius:999px;box-shadow:0 2px 6px rgba(16,24,40,.18);}'
+      + '.otl-day:first-child{margin-top:0;}'
+      + '.otl-ev{position:relative;z-index:1;display:grid;grid-template-columns:36px 1fr;align-items:flex-start;margin-bottom:9px;}'
+      + '.otl-dot{grid-column:1;justify-self:center;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;background:#fff;border:2px solid #64748B;box-shadow:0 1px 4px rgba(16,24,40,.12);}'
+      + '.otl-card{grid-column:2;background:#fff;border:1px solid #EEF2F7;border-radius:11px;padding:8px 12px;box-shadow:0 1px 4px rgba(16,24,40,.06);margin-left:7px;min-width:0;}'
+      + '.otl-time{font-size:10.5px;color:#94A3B8;font-weight:700;}'
+      + '.otl-act{font-size:12.5px;font-weight:800;margin:1px 0;}'
+      + '.otl-det{font-size:12px;color:#475569;line-height:1.5;word-break:break-word;}';
+    document.head.appendChild(_st);
+  }
   // สร้าง modal ถ้ายังไม่มี
   let ov = document.getElementById('orderTimelineOverlay');
   if (!ov) {
@@ -11581,13 +11610,13 @@ function openOrderTimeline(orderNum){
     ov.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.55);align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto;';
     ov.onclick = function(ev){ if (ev.target === ov) closeOrderTimeline(); };
     ov.innerHTML =
-      '<div style="background:#fff;border-radius:14px;max-width:640px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.25);overflow:hidden;">'
-      + '<div style="background:#1E40AF;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-      +   '<div style="font-size:15px;font-weight:800;" id="otlTitle">🕒 ไทม์ไลน์ออเดอร์</div>'
-      +   '<button onclick="closeOrderTimeline()" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:8px;width:30px;height:30px;font-size:18px;cursor:pointer;line-height:1;">✕</button>'
+      '<div style="background:#fff;border-radius:18px;max-width:640px;width:100%;box-shadow:0 18px 50px rgba(15,23,42,0.3);overflow:hidden;">'
+      + '<div style="background:linear-gradient(135deg,#1E3A8A,#2563EB);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+      +   '<div style="font-size:16px;font-weight:800;letter-spacing:.2px;" id="otlTitle">🕒 ไทม์ไลน์ออเดอร์</div>'
+      +   '<button onclick="closeOrderTimeline()" style="background:rgba(255,255,255,0.18);color:#fff;border:none;border-radius:10px;width:32px;height:32px;font-size:18px;cursor:pointer;line-height:1;">✕</button>'
       + '</div>'
-      + '<div id="otlSummary" style="padding:12px 18px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:12px;color:#334155;"></div>'
-      + '<div id="otlBody" style="padding:14px 18px 20px;max-height:60vh;overflow-y:auto;"></div>'
+      + '<div id="otlSummary" style="padding:14px 20px;background:#F8FAFC;border-bottom:1px solid #EEF2F7;font-size:12px;color:#334155;"></div>'
+      + '<div id="otlBody" style="padding:18px 20px 22px;max-height:60vh;overflow-y:auto;"></div>'
       + '</div>';
     document.body.appendChild(ov);
   }
@@ -11620,32 +11649,38 @@ function _renderOrderTimeline(orderNum, rows){
   const shipCount = rows.filter(e => String(e.action||'').indexOf('ส่งจบ')>=0).length;
   const first = rows[0], last = rows[rows.length-1];
   if (sumEl) {
+    const chip = function(bg, fg, label, val){
+      return '<span style="display:inline-flex;align-items:center;gap:5px;background:' + bg + ';color:' + fg
+        + ';padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;">'
+        + label + ' <b style="font-weight:800;">' + val + '</b></span>';
+    };
     sumEl.innerHTML =
-      '<div style="display:flex;flex-wrap:wrap;gap:8px 16px;">'
-      + '<span>📅 เริ่ม <b>' + _tlFmtTime(first.ts) + '</b></span>'
-      + '<span>🏁 ล่าสุด <b>' + _tlFmtTime(last.ts) + '</b></span>'
-      + '<span>🏭 ผลิต <b>' + prodCount + '</b> รอบ</span>'
-      + '<span>🚚 ส่ง <b>' + shipCount + '</b> รอบ</span>'
-      + '<span>📝 รวม <b>' + rows.length + '</b> เหตุการณ์</span>'
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
+      + chip('#EEF2F7', '#475569', '📅 เริ่ม',  _tlFmtTime(first.ts))
+      + chip('#EEF2F7', '#475569', '🏁 ล่าสุด', _tlFmtTime(last.ts))
+      + chip('#FFF7ED', '#C2410C', '🏭 ผลิต',   prodCount + ' รอบ')
+      + chip('#F0FDF4', '#15803D', '🚚 ส่ง',    shipCount + ' รอบ')
+      + chip('#EFF6FF', '#1D4ED8', '📝 รวม',    rows.length + ' เหตุการณ์')
       + '</div>';
   }
-  // รายการเหตุการณ์
-  const html = rows.map(function(e, i){
-    const icon = _tlIcon(e.action);
-    const isLast = i === rows.length - 1;
-    return '<div style="display:flex;gap:10px;">'
-      + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">'
-      +   '<div style="width:28px;height:28px;border-radius:50%;background:#EFF6FF;border:1.5px solid #BFDBFE;display:flex;align-items:center;justify-content:center;font-size:14px;">' + icon + '</div>'
-      +   (isLast ? '' : '<div style="width:2px;flex:1;background:#E2E8F0;min-height:12px;"></div>')
-      + '</div>'
-      + '<div style="padding-bottom:' + (isLast?'0':'14px') + ';flex:1;min-width:0;">'
-      +   '<div style="font-size:11px;color:#94A3B8;">' + _tlFmtTime(e.ts) + ' · ' + _esc(_tlActor(e)) + '</div>'
-      +   '<div style="font-size:13px;font-weight:800;color:#1E293B;margin:1px 0;">' + _esc(e.action||'-') + '</div>'
-      +   (e.detail ? '<div style="font-size:12px;color:#475569;line-height:1.5;">' + _esc(e.detail) + '</div>' : '')
+  // รายการเหตุการณ์ — เส้นเดียวซ้าย การ์ดเต็มกว้าง กระชับ + หัววันที่คั่น
+  let lastDay = null;
+  const parts = rows.map(function(e){
+    const st  = _tlStyle(e.action);
+    const day = _tlFmtDay(e.ts);
+    let out = '';
+    if (day !== lastDay) { out += '<div class="otl-day"><span>📅 ' + _esc(day) + '</span></div>'; lastDay = day; }
+    out += '<div class="otl-ev">'
+      + '<div class="otl-dot" style="border-color:' + st.c + ';background:' + st.soft + ';">' + st.icon + '</div>'
+      + '<div class="otl-card" style="border-left:3px solid ' + st.c + ';">'
+      +   '<div class="otl-time">🕒 ' + _tlFmtClock(e.ts) + ' · ' + _esc(_tlActor(e)) + '</div>'
+      +   '<div class="otl-act" style="color:' + st.c + ';">' + _esc(e.action||'-') + '</div>'
+      +   (e.detail ? '<div class="otl-det">' + _esc(e.detail) + '</div>' : '')
       + '</div>'
       + '</div>';
+    return out;
   }).join('');
-  body.innerHTML = html;
+  body.innerHTML = '<div class="otl-tl">' + parts + '</div>';
 }
 function closeOrderTimeline(){
   const ov = document.getElementById('orderTimelineOverlay');
