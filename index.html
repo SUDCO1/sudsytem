@@ -11349,7 +11349,7 @@ function renderHistorySummary() {
   const sub = document.getElementById('histSummarySub');
 
   function autoSumStatus(o, items) {
-    const totalQty  = items.reduce((s,it) => s+(it.qty||0), 0);
+    const totalQty  = items.reduce((s,it) => s+getItemProdTarget(it), 0);   // เป้าหมาย: ท่อนสำหรับของแบ่งท่อน
     const totalDel  = items.reduce((s,it) => s+(it.delivered||0), 0);
     const totalStk  = items.reduce((s,it) => s+(it.stockDelivered||0), 0);
     const totalProd = items.reduce((s,it,idx) => s + getTotalProduced(o.orderNum, it.pileType, idx, _pidx), 0);
@@ -11428,12 +11428,12 @@ function renderHistorySummary() {
       ${opts}
     </select>`;
   }
-  function deliveredBar(del, qty) {
+  function deliveredBar(del, qty, unit) {
     const pct = qty > 0 ? Math.round(del/qty*100) : 0;
     const barColor = pct >= 100 ? '#16A34A' : pct > 0 ? '#2563EB' : '#CBD5E1';
     return `<div style="display:flex;align-items:center;gap:6px;">
       <span style="font-weight:700;color:${pct>=100?'#16A34A':'#1E293B'}">${del}</span>
-      <span style="color:#94A3B8;font-size:11px;">/ ${qty} ต้น</span>
+      <span style="color:#94A3B8;font-size:11px;">/ ${qty} ${unit||'ต้น'}</span>
     </div>`;
   }
   const _specBadges = (it) => [
@@ -11457,12 +11457,15 @@ function renderHistorySummary() {
       const _sc = _specBadges(it);
       const del = it.delivered || 0;
       const qty = it.qty || 0;
+      const _tgt = getItemProdTarget(it);          // เป้าหมายผลิต/ส่ง (ท่อนสำหรับแบ่งท่อน)
+      const _u   = getItemProdUnit(it);            // ท่อน/ต้น/ตัว
+      const _duS = it.prodMode==='split'?' ท่อน':'';
       const prod = getTotalProduced(o.orderNum, it.pileType, idx, _pidx);
       const stockDel = it.stockDelivered || 0;
       const effProd = prod + stockDel;
-      const prodPct = qty>0 ? Math.min(Math.round(effProd/qty*100),100) : 0;
+      const prodPct = _tgt>0 ? Math.min(Math.round(effProd/_tgt*100),100) : 0;
       const prodBarC = prodPct>=100?'#22C55E':prodPct>=50?'#F59E0B':'#F97316';
-      const delPct = qty>0 ? Math.min(Math.round(del/qty*100),100) : 0;
+      const delPct = _tgt>0 ? Math.min(Math.round(del/_tgt*100),100) : 0;
       const delBarC = delPct>=100?'#16A34A':delPct>0?'#2563EB':'#CBD5E1';
       const stockTag = stockDel>0 ? `<span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:0 4px;font-weight:700;">+${stockDel}</span>` : '';
       return `<div style="padding:8px 0;${idx>0?'border-top:1px dashed #E5E7EB;':''}">
@@ -11471,11 +11474,11 @@ function renderHistorySummary() {
           <span style="font-size:12px;font-weight:800;color:#0F172A;white-space:nowrap;">${qty} ต้น</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;margin-bottom:2px;">
-          <span style="color:#9A3412;">🏭 ผลิต ${effProd}/${qty} ${stockTag}</span><span style="color:${prodPct>=100?'#166534':'#9A3412'};">${prodPct}%</span>
+          <span style="color:#9A3412;">🏭 ผลิต ${effProd}/${_tgt}${_duS} ${stockTag}</span><span style="color:${prodPct>=100?'#166534':'#9A3412'};">${prodPct}%</span>
         </div>
         <div style="height:6px;background:#E2E8F0;border-radius:3px;overflow:hidden;margin-bottom:6px;"><div style="height:100%;border-radius:3px;width:${prodPct}%;background:${prodBarC};"></div></div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;margin-bottom:2px;">
-          <span style="color:#1D4ED8;">🚚 ส่ง ${del}/${qty}</span><span style="color:${delPct>=100?'#16A34A':'#1D4ED8'};">${delPct}%</span>
+          <span style="color:#1D4ED8;">🚚 ส่ง ${del}/${_tgt}${_duS}</span><span style="color:${delPct>=100?'#16A34A':'#1D4ED8'};">${delPct}%</span>
         </div>
         <div style="height:6px;background:#E2E8F0;border-radius:3px;overflow:hidden;"><div style="height:100%;border-radius:3px;width:${delPct}%;background:${delBarC};"></div></div>
       </div>`;
@@ -11509,13 +11512,15 @@ function renderHistorySummary() {
         const label = '<div style="font-size:12px;font-weight:700;">' + it.pileType + '</div>' + (_sc ? '<div style="display:flex;flex-wrap:nowrap;gap:3px;margin-top:3px;align-items:center;">' + _sc + '</div>' : '');
         const del = it.delivered || 0;
         const qty = it.qty || 0;
+        const _tgt = getItemProdTarget(it);          // เป้าหมายผลิต/ส่ง (ท่อนสำหรับแบ่งท่อน)
+        const _u   = getItemProdUnit(it);            // ท่อน/ต้น/ตัว
         const prod = getTotalProduced(o.orderNum, it.pileType, idx, _pidx);
         const stockDel = it.stockDelivered || 0;
-        const prodColor = (prod + stockDel) >= qty ? '#15803D' : prod > 0 ? '#C2410C' : '#94A3B8';
+        const prodColor = (prod + stockDel) >= _tgt ? '#15803D' : prod > 0 ? '#C2410C' : '#94A3B8';
         const stockTag = stockDel > 0
           ? `<span style="font-size:10px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">(+${stockDel})</span>`
           : '';
-        const prodCell = `<span style="font-weight:700;color:${prodColor};">${prod}</span>${stockTag}<span style="color:#94A3B8;font-size:11px;"> / ${qty} ต้น</span>`;
+        const prodCell = `<span style="font-weight:700;color:${prodColor};">${prod}</span>${stockTag}<span style="color:#94A3B8;font-size:11px;"> / ${_tgt} ${_u}</span>`;
         if (idx === 0) {
           rows.push(`<tr style="border-top:2px solid #E2E8F0;${rowBg}">
             <td rowspan="${span}" style="${rowBg}vertical-align:middle;"><span class="order-id">${o.orderNum}</span></td>
@@ -11524,7 +11529,7 @@ function renderHistorySummary() {
             <td style="font-size:12px;">${label}</td>
             <td style="font-weight:700;">${qty} ต้น</td>
             <td>${prodCell}</td>
-            <td>${deliveredBar(del, qty)}</td>
+            <td>${deliveredBar(del, _tgt, _u)}</td>
             <td rowspan="${span}" style="vertical-align:middle;">${statusBadge(o)}${_tlBtnT}</td>
           </tr>`);
         } else {
@@ -11532,7 +11537,7 @@ function renderHistorySummary() {
             <td style="font-size:12px;">${label}</td>
             <td style="font-weight:700;">${qty} ต้น</td>
             <td>${prodCell}</td>
-            <td>${deliveredBar(del, qty)}</td>
+            <td>${deliveredBar(del, _tgt, _u)}</td>
           </tr>`);
         }
       });
@@ -16949,7 +16954,7 @@ function printQuotation(){
 
       g.rows.forEach(function(r, ri){
         var o = r.o, it = r.it;
-        var ordQ = (+it.qty || 0);
+        var ordQ = (typeof getItemProdTarget === "function") ? getItemProdTarget(it) : (+it.qty || 0);   // แบ่งท่อน = นับเป็นท่อน
         var del  = (+_delOf(o, it) || 0);
         var rem  = ordQ - del;
         var remHTML = rem > 0
