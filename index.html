@@ -13207,6 +13207,12 @@ function closeBill(orderNum) {
   if (_cpBack > 0) {
     try { logAudit('คืนเสาที่เหลือเข้าสต็อก (จบบิล)', orderNum,
       _cpLeft.length + ' รายการ · รวม ' + _cpBack + ' ' + PU()); } catch (e) {}
+    // [MOVE-LOG] บันทึกประวัติ: เสาที่เหลือคืนเข้าเป็นเสาค้างสต็อก (รวมตามชนิดเสา)
+    try {
+      const _mv = {};
+      _cpLeft.forEach(c => { if (!c.pileType) return; if (!_mv[c.pileType]) _mv[c.pileType] = { qty: 0, unit: c.unit }; _mv[c.pileType].qty += (c.qty || 0); });
+      Object.keys(_mv).forEach(pt => _logStockMove(pt, _mv[pt].qty, _mv[pt].unit, true, orderNum));
+    } catch (e) {}
   }
 
   renderOrders(); renderSummary();
@@ -15123,6 +15129,8 @@ function _releaseCardsNotNeeded(orderNum) {
     }
     try { logAudit('คืนเสาที่ไม่ต้องใช้แล้ว (แก้ไขออเดอร์)', pile,
       'Order ' + on + ' · ' + (sum - (need[pile] || 0)) + ' ' + PU()); } catch (e) {}
+    // [MOVE-LOG] บันทึกประวัติ: เสาส่วนเกินคืนเข้าเป็นเสาค้างสต็อก
+    try { _logStockMove(pile, (sum - (need[pile] || 0)), (list[0] && list[0].unit), true, on); } catch (e) {}
   });
   return back;
 }
@@ -15315,6 +15323,12 @@ function deleteOrder(orderNum) {
     [...new Set(_cpNow.map(c => c.pileType).filter(Boolean))]
       .forEach(pn => { _st[pn] = cpPileTotal(pn); });
     saveStock(_st);
+  } catch (e) {}
+  // [MOVE-LOG] บันทึกประวัติ: เสาที่จองไว้คืนเข้าเป็นเสาค้างสต็อก (รวมตามชนิดเสา)
+  try {
+    const _mv = {};
+    _cpNow.forEach(c => { if (!c.pileType) return; if (!_mv[c.pileType]) _mv[c.pileType] = { qty: 0, unit: c.unit }; _mv[c.pileType].qty += (c.qty || 0); });
+    Object.keys(_mv).forEach(pt => _logStockMove(pt, _mv[pt].qty, _mv[pt].unit, true, orderNum));
   } catch (e) {}
   // 2) งานผลิตที่ค้างของ Order นี้ → เอาออก (Order ไม่มีแล้ว ผลิตค้างไว้ก็ไม่มีปลายทาง)
   if (paRows.length) saveProdActive(getProdActive().filter(a => a.orderNum !== orderNum));
