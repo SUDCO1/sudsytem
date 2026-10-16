@@ -3979,7 +3979,7 @@ function tcRender() {
     html += `<div class="${cls}" onclick="tcToggleDay('${ds}')"><div class="tc-day-num">${d}${de.length>0&&!iS?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3B82F6;vertical-align:middle;margin-left:4px;margin-bottom:1px;"></span>`:''}${iS?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.7);vertical-align:middle;margin-left:4px;margin-bottom:1px;"></span>`:''}</div>${chips}${more}${mobDots}</div>`;
   }
   document.getElementById('tcGrid').innerHTML = html;
-  (function(){var g=document.getElementById('tcGrid');if(!g)return;var m={};evs.forEach(function(e){if(!e.timeOut)return;if(!m[e.date])m[e.date]={trips:0,piles:0};m[e.date].trips++;(e.selectedItems||[]).forEach(function(si){m[e.date].piles+=(parseInt(si.qty)||0);});});g.querySelectorAll('.tc-day').forEach(function(cell){var r=(cell.getAttribute('onclick')||'').match(/tcToggleDay..([^'"]+)/);if(!r)return;var info=m[r[1]];if(!info)return;var isSel=cell.classList.contains('is-selected');var b=document.createElement('div');b.className='cal-mob-badge';b.style.cssText='font-size:10px;font-weight:900;margin-top:3px;text-align:center;border-radius:4px;padding:1px 5px;background:'+(isSel?'rgba(255,255,255,0.2)':'#DBEAFE')+';color:'+(isSel?'rgba(255,255,255,0.9)':'#1E40AF')+';';b.textContent=info.trips+' รอบ / '+info.piles+' ต้น';cell.appendChild(b);});})();
+  (function(){var g=document.getElementById('tcGrid');if(!g)return;var m={};evs.forEach(function(e){if(!e.timeOut)return;if(!m[e.date])m[e.date]={trips:0,piles:0,units:{}};m[e.date].trips++;(e.selectedItems||[]).forEach(function(si){m[e.date].piles+=(parseInt(si.qty)||0);var _u=si.unit||'';if(_u)m[e.date].units[_u]=1;});});g.querySelectorAll('.tc-day').forEach(function(cell){var r=(cell.getAttribute('onclick')||'').match(/tcToggleDay..([^'"]+)/);if(!r)return;var info=m[r[1]];if(!info)return;var _uk=Object.keys(info.units||{});var _uL=_uk.length===1?_uk[0]:(typeof PU==='function'?PU():'ต้น');var isSel=cell.classList.contains('is-selected');var b=document.createElement('div');b.className='cal-mob-badge';b.style.cssText='font-size:10px;font-weight:900;margin-top:3px;text-align:center;border-radius:4px;padding:1px 5px;background:'+(isSel?'rgba(255,255,255,0.2)':'#DBEAFE')+';color:'+(isSel?'rgba(255,255,255,0.9)':'#1E40AF')+';';b.textContent=info.trips+' รอบ / '+info.piles+' '+_uL;cell.appendChild(b);});})();
   tcRenderAllDays()
 }
 
@@ -4077,7 +4077,7 @@ function tcShowEntryDetail(id) {
   };
   const row = (icon, label, val) => val && val !== '-' ? `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9;align-items:flex-start;"><span style="font-size:16px;width:24px;text-align:center;flex-shrink:0;">${icon}</span><div><div style="font-size:11px;color:#94A3B8;font-weight:600;margin-bottom:2px;">${label}</div><div style="font-size:13px;font-weight:700;color:#1E293B;">${_esc(val)}</div></div></div>` : '';
   const itemsHTML = (e.selectedItems||[]).length
-    ? (e.selectedItems||[]).map(si=>`<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;color:#166534;">📦 ${_esc(si.pileType||'')} ${si.spec?'('+_esc(si.spec)+')':''} ${si.qty||''} ต้น</div>`).join('')
+    ? (e.selectedItems||[]).map(si=>`<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;color:#166534;">📦 ${_esc(si.pileType||'')} ${si.spec?'('+_esc(si.spec)+')':''} ${si.qty||''} ${_esc(si.unit || _pileUnit(si.pileType))}</div>`).join('')
     : (e.piles ? `<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;color:#166534;">📦 ${_esc(e.piles)}</div>` : '');
   const stockBadge = e._stocked ? `<span style="font-size:11px;background:#DCFCE7;color:#166534;border:1px solid #86EFAC;border-radius:12px;padding:3px 10px;font-weight:700;">✅ ตัดสต็อกแล้ว</span>` : '';
 
@@ -4196,7 +4196,7 @@ function tcBuildDeliveryNoteDoc(e){
   const dateTH=(bp[0]&&bp[1]&&bp[2])?(+bp[2]+' '+thM[(+bp[1])-1]+' '+((+bp[0])+543)):(e.date||'');
   const timeOnly=function(dt){ if(!dt) return ''; const d=new Date(dt); if(isNaN(d.getTime())) return ''; return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
   const outT=timeOnly(e.timeOut), inT=timeOnly(e.timeIn);
-  let items=(e.selectedItems||[]).map(function(si){return {name:((si.pileType||'')+(si.spec?' ('+si.spec+')':'')).trim(), qty:(si.qty!=null&&si.qty!=='')?si.qty:'', unit:'ต้น'};});
+  let items=(e.selectedItems||[]).map(function(si){return {name:((si.pileType||'')+(si.spec?' ('+si.spec+')':'')).trim(), qty:(si.qty!=null&&si.qty!=='')?si.qty:'', unit:(si.unit||_pileUnit(si.pileType))};});
   if(!items.length && e.piles) items=[{name:e.piles,qty:'',unit:''}];
   const colItemL=58, colQtyL=425.3, colQtyR=505.3, colUnitR=575.3;
   const rowTops=[146,165,184,203,222,241], rowH=19;
@@ -4361,7 +4361,7 @@ function tcConfirmFinalize(id) {
   const entry = arr.find(e => e._id === id);
   if (!entry) return;
   if (entry._stocked) { showToast('✅ ตัดสต็อกไปแล้ว'); return; }
-  const itemsDesc = (entry.selectedItems||[]).map(si => si.pileType+' '+si.qty+' ต้น').join(', ') || entry.piles || '-';
+  const itemsDesc = (entry.selectedItems||[]).map(si => si.pileType+' '+si.qty+' '+(si.unit||_pileUnit(si.pileType))).join(', ') || entry.piles || '-';
   const imgCount = (entry.images && entry.images.length) || 0;
   const imgNote = imgCount ? '\n\n📸 รูปภาพ '+imgCount+' รูปจะถูกลบอัตโนมัติเพื่อประหยัดพื้นที่' : '';
   if (!confirm('ยืนยันส่งจบ?\n\nลูกค้า: '+(entry.cust||'-')+'\nOrder: '+(entry.order||'-')+'\nสินค้า: '+itemsDesc+'\n\n→ ระบบจะตัดสต็อกและอัปเดตสถานะ Order'+imgNote)) return;
@@ -4621,13 +4621,14 @@ function _tcCpRowsHtml(orderNum, savedItems) {
       const cpStyle   = [it.length, it.weld, it.steel, it.ba].filter(x => x && x !== '-').join('/');
       const fullStyle = [it.length, it.weld, it.steel, it.ba, it.extra].filter(x => x && x !== '-').join('/');
       const _dlv = (typeof itemDelivered === 'function') ? itemDelivered(o, it, _i) : (it.delivered||0);   // [FIX#B4]
-      const _rem = Math.max(0, (it.qty||0) - _dlv);
+      const _tgt = getItemProdTarget(it);                 // เป้าหมายส่งจริง: แบ่งท่อน = จำนวนท่อน (เช่น 100 ต้น = 200 ท่อน)
+      const _rem = Math.max(0, _tgt - _dlv);
       itemPool.push({
         pileType: it.pileType || '',
         cpStyle, fullStyle,
         specTokens: fullStyle.split('/').filter(Boolean),
-        ordered: it.qty || 0,          // [FIX#T] สั่งไว้เท่าไร — เอาไปโชว์บนแถว
-        unit:    _unitOf(it.unit),
+        ordered: _tgt,                 // [FIX#T] สั่งไว้ (นับเป็นท่อนสำหรับของแบ่งท่อน) — เอาไปโชว์บนแถว
+        unit:    getItemProdUnit(it),
         remain:  _rem,
         budget:  _rem,                 // [FIX#T] โควตาที่ยังเหลือ แบ่งกันระหว่างหลายกองที่ชี้ item เดียวกัน
         shipped: _dlv,
@@ -4723,7 +4724,7 @@ function _tcCpRowsHtml(orderNum, savedItems) {
       <input type="hidden" id="tc_cp_stk_${i}" value="${g.isStock?'1':'0'}">
       <div style="flex:1;min-width:0;">
         <div style="font-size:12px;font-weight:700;color:${textColor};">${_esc(g.pileType)}${specLabel}${stockTag}</div>
-        <div style="font-size:10px;color:#64748B;margin-top:1px;line-height:1.7;">🪵 มี <span style="color:${textColor};font-weight:700;">${g.qty} ${_u}</span>${ordered!==null?` · 📋 สั่งไว้ <span style="color:#1E40AF;font-weight:700;">${ordered} ${_mi.unit}</span>`:''}${shipped!==null&&shipped>0?` · ✅ ส่งแล้ว <span style="color:#166534;font-weight:700;">${shipped} ${_mi.unit}</span>`:''}${toShip!==null?` · 🚚 เหลือส่ง <span style="color:#DC2626;font-weight:700;">${toShip} ${_mi.unit}</span>`:''}${(_mi && !_unitEq(_mi.unit, _u))?` <span style="background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">⚠️ หน่วยไม่ตรง</span>`:''}${toShip===null?` <span style="background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">⚠️ ไม่พบรายการนี้ในออเดอร์</span>`:''}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:1px;line-height:1.7;">🪵 มี <span style="color:${textColor};font-weight:700;">${g.qty} ${_u}</span>${ordered!==null?` · 📋 สั่งไว้ <span style="color:#1E40AF;font-weight:700;">${ordered} ${_u}</span>`:''}${shipped!==null&&shipped>0?` · ✅ ส่งแล้ว <span style="color:#166534;font-weight:700;">${shipped} ${_u}</span>`:''}${toShip!==null?` · 🚚 เหลือส่ง <span style="color:#DC2626;font-weight:700;">${toShip} ${_u}</span>`:''}${toShip===null?` <span style="background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">⚠️ ไม่พบรายการนี้ในออเดอร์</span>`:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
         <input type="number" id="tc_cp_qty_${i}" value="${Math.min(defQty,g.qty)}" min="0" max="${g.qty}"
@@ -4828,11 +4829,12 @@ function tcFinalizeDelivery(entry) {
 
     // ── 2. ตัด main stock (ยอดรวม = ผลรวมการ์ดจริงเสมอ) ──
     const stock = getStock(), log = getStockLog() || [];
+    const _siU = _unitOf(si.unit || _pileUnit(si.pileType));
     stock[si.pileType] = _dr.total;
     log.unshift({ ts:nowTs(), typeVal:'📤 เบิกออก (ส่งของ)', name:si.pileType,
-      qty:sendQty, newStock:stock[si.pileType], qtyDisplay:'-'+sendQty,
+      qty:sendQty, unit:_siU, newStock:stock[si.pileType], qtyDisplay:'-'+sendQty,
       ref:entry.order||'-', staff:'-',
-      note:'🚛 ขนส่ง: ส่ง '+(entry.cust||'-')+' ('+si.pileType+')'+(fromStockSent>0?' [สต็อกเก่า '+fromStockSent+' ต้น]':'') });
+      note:'🚛 ขนส่ง: ส่ง '+(entry.cust||'-')+' ('+si.pileType+')'+(fromStockSent>0?' [สต็อกเก่า '+fromStockSent+' '+_siU+']':'') });
     saveStock(stock); saveStockLog(log);
     _warnShort(si.pileType, _dr.short, 'ขนส่ง Order ' + (entry.order || '-'));
     anyDeducted = true;
@@ -4873,12 +4875,12 @@ function tcFinalizeDelivery(entry) {
         );
         // เติมรายการที่ยัง "ขาด" มากที่สุดก่อน เพื่อกลบช่องว่างให้เท่ากัน
         const _fillOrder = _sameSpec.slice().sort((a,b) =>
-          ((b.qty||0)-(b.delivered||0)) - ((a.qty||0)-(a.delivered||0))
+          (getItemProdTarget(b)-(b.delivered||0)) - (getItemProdTarget(a)-(a.delivered||0))
         );
         let _remain = sendQty, _stockRemain = fromStockSent;
         for (let _k = 0; _k < _fillOrder.length && _remain > 0; _k++) {
           const _t = _fillOrder[_k];
-          const _room = Math.max(0, (_t.qty||0) - (_t.delivered||0));
+          const _room = Math.max(0, getItemProdTarget(_t) - (_t.delivered||0));   // เป้าหมายเป็นท่อนสำหรับของแบ่งท่อน
           if (_room <= 0) continue;
           const _put = Math.min(_room, _remain);
           _t.delivered = (_t.delivered||0) + _put;
@@ -5004,10 +5006,11 @@ function submitTransport() {
             return s + (cp ? cp.qty||0 : 0);
           }, 0);
           if (qty > totalGroupQty) {
-            alert('⚠️ จำนวนเกินที่มีใน batch ' + pt + (sp?' สเปค '+sp:'') + '\nมีใน group: ' + totalGroupQty + ' ต้น');
+            alert('⚠️ จำนวนเกินที่มีใน batch ' + pt + (sp?' สเปค '+sp:'') + '\nมีใน group: ' + totalGroupQty + ' ' + _pileUnit(pt));
             return;
           }
-          selectedItems.push({ cpIds, pileType: pt, spec: sp, qty });
+          const _cpU = (getCustPoles().find(x => cpIds.indexOf(x.id) >= 0) || {}).unit;
+          selectedItems.push({ cpIds, pileType: pt, spec: sp, qty, unit: _unitOf(_cpU) });
         }
       }
     }
@@ -5026,15 +5029,15 @@ function submitTransport() {
       const _cpQtyV = getCustPoles().filter(p=>p.pileType===it.pileType).reduce((s,p)=>s+(p.qty||0),0);
       const stockQty = _cpQtyV > 0 ? Math.min(_rawStock, _cpQtyV) : _rawStock;
       if (qty > stockQty) {
-        alert('⚠️ สต็อกไม่พอสำหรับ ' + it.pileType + '\nสต็อกมี: ' + stockQty + ' ต้น\nต้องการส่ง: ' + qty + ' ต้น');
+        alert('⚠️ สต็อกไม่พอสำหรับ ' + it.pileType + '\nสต็อกมี: ' + stockQty + ' ' + _unitOf(it.unit) + '\nต้องการส่ง: ' + qty + ' ' + _unitOf(it.unit));
         return;
       }
       const specPart = [it.length&&it.length!=='-'?it.length:null, it.weld&&it.weld!=='-'?it.weld:null].filter(Boolean).join('/');
-      selectedItems.push({ pileType: it.pileType, spec: specPart, qty });
+      selectedItems.push({ pileType: it.pileType, spec: specPart, qty, unit: _unitOf(it.unit) });
     }
   }
 
-  const piles   = selectedItems.map(it => it.pileType + (it.spec?' ('+it.spec+')':'') + ' ' + it.qty + ' ต้น').join(', ');
+  const piles   = selectedItems.map(it => it.pileType + (it.spec?' ('+it.spec+')':'') + ' ' + it.qty + ' ' + (it.unit || _pileUnit(it.pileType))).join(', ');
   const driver  = document.getElementById('tc_driver').value;
   const vehicle = document.getElementById('tc_vehicle').value;
   // สร้าง timeOut: รวม date + เวลาที่คีย์
@@ -8081,7 +8084,17 @@ function fmtSegSummary(segs) {
   return (segs || []).map(function (s) { return (s.qty || 0) + '×' + (s.len || 0).toFixed(2) + 'ม.'; }).join(' + ');
 }
 function getOrderTotalQty(o) {
-  return getOrderItems(o).reduce((s, it) => s + (it.qty||0), 0);
+  // นับเป็น "เป้าหมายที่ต้องส่งจริง" — ของที่แบ่งท่อนจะนับเป็นจำนวนท่อน (เช่น 100 ต้น = 200 ท่อน)
+  // ให้ตรงกับยอดส่ง (it.delivered) ที่เก็บเป็นท่อน และยอดจองสต็อก (custPole = ท่อน)
+  return getOrderItems(o).reduce((s, it) => s + getItemProdTarget(it), 0);
+}
+// หน่วยรวมของกลุ่มรายการ (ไว้โชว์หน่วยฝั่งส่ง/สต็อกให้ตรง): มีแบ่งท่อน → ท่อน
+function _grpDelUnit(items, fallback) {
+  try {
+    if ((items||[]).some(it => it && it.prodMode === 'split')) return 'ท่อน';
+    if ((items||[]).some(it => it && it.productType === 'girder')) return 'ตัว';
+  } catch(e){}
+  return fallback || 'ต้น';
 }
 function getOrderDelivered(o) {
   if (o.items && o.items.length > 0) {
@@ -8122,7 +8135,7 @@ function getReservedStock() {
     if (o.items && o.items.length > 0) {
       // Multi-item or tracked items: use exact per-item remaining
       items.forEach((item, _i) => {
-        const rem = Math.max(0, (item.qty||0) - itemDelivered(o, item, _i));   // [FIX#B4]
+        const rem = Math.max(0, getItemProdTarget(item) - itemDelivered(o, item, _i));   // [FIX#B4] นับเป็นท่อนให้ตรงกับสต็อก/ยอดส่ง
         if (rem > 0 && item.pileType && item.pileType !== '-') {
           reserved[item.pileType] = (reserved[item.pileType]||0) + rem;
         }
@@ -9054,11 +9067,13 @@ function editItemDelivered(orderNum, itemIdx) {
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o || !o.items || !o.items[itemIdx]) return;
   const item = o.items[itemIdx];
-  const newVal = prompt('ส่งแล้ว — ' + item.pileType + '\nสั่งไว้: ' + item.qty + ' ต้น (ใส่มากกว่านี้ได้ถ้าส่งเกิน)', item.delivered || 0);
+  const _tgt = getItemProdTarget(item);                 // เป้าหมายส่ง (ท่อนสำหรับแบ่งท่อน)
+  const _u   = getItemProdUnit(item);                   // หน่วย: ท่อน/ต้น/ตัว
+  const newVal = prompt('ส่งแล้ว — ' + item.pileType + '\nสั่งไว้: ' + _tgt + ' ' + _u + ' (ใส่มากกว่านี้ได้ถ้าส่งเกิน)', item.delivered || 0);
   if (newVal === null) return;
   const prevDel = item.delivered || 0;
   item.delivered = Math.max(parseInt(newVal)||0, 0);
-  if (item.delivered > item.qty && !confirm('⚠️ จำนวนที่ส่ง (' + item.delivered + ') มากกว่าที่สั่ง (' + item.qty + ')\nต้องการบันทึกส่งเกินใช่หรือไม่?')) { item.delivered = prevDel; return; }
+  if (item.delivered > _tgt && !confirm('⚠️ จำนวนที่ส่ง (' + item.delivered + ') มากกว่าที่สั่ง (' + _tgt + ')\nต้องการบันทึกส่งเกินใช่หรือไม่?')) { item.delivered = prevDel; return; }
   const delta = item.delivered - prevDel;
   o.delivered = o.items.reduce((s,it) => s+(it.delivered||0), 0);
   if (o.delivered >= getOrderTotalQty(o)) o.status = 'ส่งครบ';
@@ -9089,8 +9104,8 @@ function editItemDelivered(orderNum, itemIdx) {
       const specList = check.matched.map(s => '• ' + s.spec + ': ' + s.qty + ' ' + _unitOf(s.unit)).join('\n');
       const confirmed = confirm(
         '✅ ยืนยันส่งสเปค "' + num + '" — ' + item.pileType +
-        '\n\nจะหัก ' + delta + ' ต้น จากสเปค:\n' + specList +
-        '\n\nรวมมี: ' + check.totalQty + ' ต้น → เหลือ: ' + (check.totalQty - delta) + ' ต้น'
+        '\n\nจะหัก ' + delta + ' ' + _u + ' จากสเปค:\n' + specList +
+        '\n\nรวมมี: ' + check.totalQty + ' ' + _u + ' → เหลือ: ' + (check.totalQty - delta) + ' ' + _u
       );
       if (!confirmed) {
         item.delivered = prevDel;
@@ -9107,9 +9122,9 @@ function editItemDelivered(orderNum, itemIdx) {
     returnToStockOnUnship(item.pileType, item.length || '', -delta, o.orderNum, o.customer, item.unit);
     if (o.delivered < getOrderTotalQty(o) && o.status === 'ส่งครบ') { o.status = 'พร้อมส่ง'; saveOrders(orders); }
   }
-  try { logAudit('อัปเดตจำนวนส่ง (รายรายการ)', orderNum, (o.customer||'') + ' · ' + item.pileType + ' ส่งแล้ว ' + item.delivered + '/' + item.qty + ' ต้น' + (delta ? ' (' + (delta>0?'+':'') + delta + ')' : '')); } catch(e){}
+  try { logAudit('อัปเดตจำนวนส่ง (รายรายการ)', orderNum, (o.customer||'') + ' · ' + item.pileType + ' ส่งแล้ว ' + item.delivered + '/' + _tgt + ' ' + _u + (delta ? ' (' + (delta>0?'+':'') + delta + ')' : '')); } catch(e){}
   renderOrders(); renderSummary();
-  showToast('✅ ' + orderNum + ' · ' + item.pileType + ': ส่งแล้ว ' + item.delivered + '/' + item.qty + ' ต้น');
+  showToast('✅ ' + orderNum + ' · ' + item.pileType + ': ส่งแล้ว ' + item.delivered + '/' + _tgt + ' ' + _u);
 }
 
 // ── Edit Length ────────────────────────────────────────────────
@@ -9298,9 +9313,9 @@ function renderOrders() {
       pileShow.forEach((pile, pi) => {
         const pal    = PILE_PALETTE[pi % PILE_PALETTE.length];
         const isG    = (pile === 'Girder');
-        const u      = isG ? 'ตัว' : 'ต้น';
         const entries = pileGroups[pile];
-        const totalQty = entries.reduce((s,{it}) => s+(it.qty||0), 0);
+        const u      = isG ? 'ตัว' : _grpDelUnit(entries.map(e=>e.it), 'ต้น');   // แบ่งท่อน → ท่อน
+        const totalQty = entries.reduce((s,{it}) => s+getItemProdTarget(it), 0);   // เป้าหมายส่ง (ท่อนสำหรับแบ่งท่อน)
         const totalDel = entries.reduce((s,{it}) => s+(it.delivered||0), 0);
         const stockTotal = _stock[pile] || 0;
         const reserved   = _res[pile]  || 0;
@@ -9333,10 +9348,12 @@ function renderOrders() {
 
         entries.forEach(({o, it, idx}) => {
           const del   = (o.items && o.items.length > 1) ? (it.delivered || 0) : (it.delivered !== undefined ? it.delivered : (o.delivered||0));
-          const rem   = it.qty - del;
-          const over  = del > it.qty ? del - it.qty : 0;   // ส่งเกินที่สั่ง
-          const delDisp = over > 0 ? `${it.qty}<span style="color:#DC2626;font-weight:800;">(+${over})</span>` : `${del}`;
-          const iPct  = it.qty>0 ? Math.round(del/it.qty*100) : 0;
+          const _dtgt = getItemProdTarget(it);   // เป้าหมายส่ง: แบ่งท่อน = จำนวนท่อน, ต้นเต็ม = จำนวนต้น
+          const _duS  = it.prodMode==='split'?' ท่อน':'';
+          const rem   = _dtgt - del;
+          const over  = del > _dtgt ? del - _dtgt : 0;   // ส่งเกินที่สั่ง
+          const delDisp = over > 0 ? `${_dtgt}<span style="color:#DC2626;font-weight:800;">(+${over})</span>` : `${del}`;
+          const iPct  = _dtgt>0 ? Math.round(del/_dtgt*100) : 0;
           const iPctBar = Math.min(iPct, 100);
           const iBarC = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
           const iPctC = iPct>=100?'#166534':iPct>=50?'#92400E':'#991B1B';
@@ -9397,7 +9414,7 @@ function renderOrders() {
             <td><strong>${it.qty}</strong></td>
             <td style="min-width:140px;"><div style="display:flex;flex-direction:column;gap:4px;">
               <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span style="color:#9A3412;">🏭 ผลิต ${produced}/${_prodTgt}${it.prodMode==='split'?' ท่อน':''}</span><span style="color:${prodPctC};">${prodPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div></div>
-              <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''} style="color:#1D4ED8;">🚚 ส่ง ${delDisp}/${it.qty}</span><span style="color:${iPctC};">${iPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div>${over>0?`<div style="font-size:10px;color:#DC2626;margin-top:1px;">ส่งเกิน ${over}</div>`:''}</div>
+              <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;margin-bottom:2px;"><span class="${canDo('edit_order') ? 'edit-cell' : ''}" ${canDo('edit_order') ? `onclick="${editCall}"` : ''} style="color:#1D4ED8;">🚚 ส่ง ${delDisp}/${_dtgt}${_duS}</span><span style="color:${iPctC};">${iPctBar}%</span></div><div class="prog-bar"><div class="prog-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div>${over>0?`<div style="font-size:10px;color:#DC2626;margin-top:1px;">ส่งเกิน ${over}</div>`:''}</div>
             </div></td>
             <td style="font-size:12px;">${o.deliveryDate}${dlBadge}</td>
             <td style="font-size:12px;max-width:180px;">${o.site && o.site!=='-' ? '📍 '+_esc(o.site) : '<span style="color:#CBD5E1;">—</span>'}</td>
@@ -9455,9 +9472,9 @@ function renderOrders() {
   mPileShow.forEach((pile, pi) => {
     const pal  = PILE_PALETTE[pi % PILE_PALETTE.length];
     const isG  = (pile === 'Girder');
-    const u    = isG ? 'ตัว' : 'ต้น';
     const entries    = mPileGroups[pile];
-    const totalQty   = entries.reduce((s,{it}) => s+(it.qty||0), 0);
+    const u    = isG ? 'ตัว' : _grpDelUnit(entries.map(e=>e.it), 'ต้น');   // แบ่งท่อน → ท่อน
+    const totalQty   = entries.reduce((s,{it}) => s+getItemProdTarget(it), 0);   // เป้าหมายส่ง (ท่อนสำหรับแบ่งท่อน)
     const totalDel   = entries.reduce((s,{it}) => s+(it.delivered||0), 0);
     const stockTotal = _stock[pile] || 0;
     const reserved   = _res[pile]  || 0;
@@ -9482,7 +9499,7 @@ function renderOrders() {
       const stLabel = o.status||'รับ Order แล้ว';
       const valDisp = o.orderValue > 0 ? '฿'+o.orderValue.toLocaleString('th-TH') : '';
 
-      const oPileQty = es.reduce((s,{it}) => s+(it.qty||0), 0);
+      const oPileQty = es.reduce((s,{it}) => s+getItemProdTarget(it), 0);   // เป้าหมายส่งเป็นท่อน
       const oPileDel = es.reduce((s,{it}) => s + (isMultiItem ? (it.delivered||0) : (it.delivered!==undefined?it.delivered:(o.delivered||0))), 0);
       const oPct     = oPileQty>0 ? Math.round(oPileDel/oPileQty*100) : 0;
       const dlBadge  = deadlineBadge(o.deliveryDateISO, oPct);
@@ -9490,10 +9507,12 @@ function renderOrders() {
       const itemsHtml = es.map(({it, idx}) => {
         const iqty = it.qty || 0;
         const iu   = (it.productType==='girder') ? 'ตัว' : 'ต้น';
+        const _dtgt = getItemProdTarget(it);   // เป้าหมายส่ง: แบ่งท่อน = ท่อน, ต้นเต็ม = ต้น
+        const _duS  = it.prodMode==='split'?' ท่อน':'';
         const del  = isMultiItem ? (it.delivered||0) : (it.delivered!==undefined ? it.delivered : (o.delivered||0));
-        const over = del > iqty ? del - iqty : 0;
-        const delLbl = over > 0 ? `${iqty}(+${over})` : `${del}`;
-        const iPct   = iqty>0 ? Math.round(del/iqty*100) : 0;
+        const over = del > _dtgt ? del - _dtgt : 0;
+        const delLbl = over > 0 ? `${_dtgt}(+${over})` : `${del}`;
+        const iPct   = _dtgt>0 ? Math.round(del/_dtgt*100) : 0;
         const iPctBar = Math.min(iPct, 100);
         const iBarC  = iPct>=100?'#22C55E':iPct>=50?'#F59E0B':'#EF4444';
         const produced   = getTotalProduced(o.orderNum, pile, idx, _pidx);
@@ -9509,7 +9528,7 @@ function renderOrders() {
           <div class="mob-oe-prog">
             <div class="mob-oc-prog-lbl"><span class="mob-oc-prog-txt" style="color:#9A3412;">🏭 ผลิต ${produced}/${_prodTgt}${it.prodMode==='split'?' ท่อน':''}</span><span style="font-size:11px;font-weight:700;color:${prodPct>=100?'#166534':'#9A3412'};">${prodPctBar}%</span></div>
             <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${prodPctBar}%;background:${prodBarC};"></div></div>
-            <div class="mob-oc-prog-lbl" style="margin-top:3px;"><span class="mob-oc-prog-txt ${_canEditB?'mob-oe-del':''}" ${_canEditB?`onclick="${editCall}"`:''} style="color:#1D4ED8;">🚚 ส่ง ${delLbl}/${iqty}</span><span style="font-size:11px;font-weight:700;">${iPctBar}%</span></div>
+            <div class="mob-oc-prog-lbl" style="margin-top:3px;"><span class="mob-oc-prog-txt ${_canEditB?'mob-oe-del':''}" ${_canEditB?`onclick="${editCall}"`:''} style="color:#1D4ED8;">🚚 ส่ง ${delLbl}/${_dtgt}${_duS}</span><span style="font-size:11px;font-weight:700;">${iPctBar}%</span></div>
             <div class="mob-oc-bar"><div class="mob-oc-fill" style="width:${iPctBar}%;background:${iBarC};"></div></div>
           </div>
         </div>`;
@@ -9602,7 +9621,8 @@ function editDelivered(orderNum) {
   const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
   if (!o) return;
   const tq = getOrderTotalQty(o);
-  const newVal = prompt('จำนวนที่ส่งแล้ว (ต้น) — ' + orderNum + '\nสั่งไว้: ' + tq + ' ต้น (ใส่มากกว่านี้ได้ถ้าส่งเกิน)', o.delivered || 0);
+  const _ou = _grpDelUnit(getOrderItems(o), 'ต้น');   // หน่วยส่ง: ท่อน/ต้น/ตัว
+  const newVal = prompt('จำนวนที่ส่งแล้ว (' + _ou + ') — ' + orderNum + '\nสั่งไว้: ' + tq + ' ' + _ou + ' (ใส่มากกว่านี้ได้ถ้าส่งเกิน)', o.delivered || 0);
   if (newVal === null) return;
   const prevDelivered = o.delivered || 0;
   const newDelivered  = Math.max(parseInt(newVal)||0, 0);
@@ -9632,8 +9652,8 @@ function editDelivered(orderNum) {
         const specList = check.matched.map(s => '• ' + s.spec + ': ' + s.qty + ' ' + _unitOf(s.unit)).join('\n');
         const confirmed = confirm(
           '✅ ยืนยันส่งสเปค "' + num + '" — ' + item.pileType +
-          '\n\nจะหัก ' + delta + ' ต้น จากสเปค:\n' + specList +
-          '\n\nรวมมี: ' + check.totalQty + ' ต้น → เหลือ: ' + (check.totalQty - delta) + ' ต้น'
+          '\n\nจะหัก ' + delta + ' ' + _ou + ' จากสเปค:\n' + specList +
+          '\n\nรวมมี: ' + check.totalQty + ' ' + _ou + ' → เหลือ: ' + (check.totalQty - delta) + ' ' + _ou
         );
         if (!confirmed) {
           o.delivered = prevDelivered; // BugFix#1: was prevDelivered - delta
@@ -9694,8 +9714,8 @@ function editDelivered(orderNum) {
   saveOrders(orders);
   renderOrders();
   renderSummary();
-  logAudit('อัปเดตจำนวนส่ง', orderNum, (o.customer||'') + ' · ส่งแล้ว ' + o.delivered + '/' + tq + ' ต้น');
-  showToast('✅ อัปเดต ' + orderNum + ': ส่งแล้ว ' + o.delivered + '/' + tq + ' ต้น');
+  logAudit('อัปเดตจำนวนส่ง', orderNum, (o.customer||'') + ' · ส่งแล้ว ' + o.delivered + '/' + tq + ' ' + _ou);
+  showToast('✅ อัปเดต ' + orderNum + ': ส่งแล้ว ' + o.delivered + '/' + tq + ' ' + _ou);
 }
 
 // ── Accept Order by Production ─────────────────────────────────
@@ -11289,7 +11309,7 @@ function renderSummary() {
 
   document.getElementById('summaryGrid').innerHTML = `
     <div class="sum-card blue"><div class="sum-label">📦 Order ทั้งหมด</div><div class="sum-val">${totalO}</div><div class="sum-sub">ส่งครบแล้ว ${doneO} รายการ</div></div>
-    <div class="sum-card green"><div class="sum-label">🏗️ ส่งแล้ว</div><div class="sum-val">${totDel}<span style="font-size:16px;font-weight:400;color:#64748B;"> / ${totalQty}</span></div><div class="sum-sub">ต้นเสาเข็ม</div></div>
+    <div class="sum-card green"><div class="sum-label">🏗️ ส่งแล้ว</div><div class="sum-val">${totDel}<span style="font-size:16px;font-weight:400;color:#64748B;"> / ${totalQty}</span></div><div class="sum-sub">ต้น/ท่อน (ตามที่ผลิต)</div></div>
     <div class="sum-card red"><div class="sum-label">🏭 Error ผลิต</div><div class="sum-val">${pErr}</div><div class="sum-sub">เสียหาย ${pDmg} ต้น</div></div>
     ${sErr > 0 ? `<div class="sum-card purple"><div class="sum-label">🚛 Error ขนส่ง</div><div class="sum-val">${sErr}</div><div class="sum-sub">เสียหาย ${sDmg} ต้น</div></div>` : ''}
     ${hist.length > 0 ? `<div class="sum-card" style="background:linear-gradient(135deg,#F0FDF4,#DCFCE7);border-color:#86EFAC;"><div class="sum-label">✅ จบบิลแล้ว</div><div class="sum-val" style="color:#15803D;">${hist.length}</div><div class="sum-sub">รายการ</div></div>` : ''}
@@ -12306,12 +12326,13 @@ function shipCpToOrder(orderNum, pileType, maxQty, ids) {
   const itemIdx = o.items ? o.items.findIndex(it => it.pileType === pileType) : -1;
   if (itemIdx < 0) { alert('ไม่พบรายการ ' + pileType + ' ใน Order ' + orderNum); return; }
   const item = o.items[itemIdx];
-  const remaining = Math.max(0, (item.qty||0) - (item.delivered||0));
+  const _tgt = getItemProdTarget(item);   // เป้าหมายส่งจริง: แบ่งท่อน = จำนวนท่อน
+  const remaining = Math.max(0, _tgt - (item.delivered||0));
 
-  const _shipU = _unitOf(item.unit);   // [FIX#S12] หน่วยจริงของรายการในออเดอร์
+  const _shipU = getItemProdUnit(item);   // [FIX#S12] หน่วยจริง: ท่อน/ต้น/ตัว
   const newVal = prompt(
     '🚚 ส่ง ' + pileType + ' — Order ' + orderNum +
-    '\nสั่ง: ' + item.qty + ' ' + _shipU + ' · ส่งแล้ว: ' + (item.delivered||0) + ' · เหลือ: ' + remaining +
+    '\nสั่ง: ' + _tgt + ' ' + _shipU + ' · ส่งแล้ว: ' + (item.delivered||0) + ' · เหลือ: ' + remaining +
     '\nมีในกลุ่มที่เลือก: ' + maxQty + ' ' + _shipU +
     '\n\nกรอกจำนวนที่ต้องการส่ง (สูงสุด ' + Math.min(remaining, maxQty) + '):', Math.min(maxQty, remaining)
   );
@@ -12350,10 +12371,10 @@ function shipCpToOrder(orderNum, pileType, maxQty, ids) {
   item.stockDelivered = (item.stockDelivered || 0) + fromStockSent;
   saveOrders(orders);
 
-  try { logAudit('ส่งเสาเข้าออเดอร์', orderNum, pileType + ' · ' + sendQty + ' ' + _shipU + ' · ส่งแล้ว ' + item.delivered + '/' + item.qty + (o.customer ? ' · ' + o.customer : '')); } catch(e){}   // [FIX#S12]
+  try { logAudit('ส่งเสาเข้าออเดอร์', orderNum, pileType + ' · ' + sendQty + ' ' + _shipU + ' · ส่งแล้ว ' + item.delivered + '/' + _tgt + (o.customer ? ' · ' + o.customer : '')); } catch(e){}   // [FIX#S12]
   if (_sdCurrentPile) openStockDetail(_sdCurrentPile);
   renderOrders(); renderStockCards(); renderStockLog(true);
-  showToast('🚚 ส่ง ' + pileType + ' ' + sendQty + ' ' + _shipU + ' → Order ' + orderNum + ' · ส่งแล้ว ' + item.delivered + '/' + item.qty);
+  showToast('🚚 ส่ง ' + pileType + ' ' + sendQty + ' ' + _shipU + ' → Order ' + orderNum + ' · ส่งแล้ว ' + item.delivered + '/' + _tgt);
 }
 
 let _assignOrderIds = [], _assignOrderPile = '';
@@ -12380,12 +12401,13 @@ function openAssignOrderModal(ids, pileName) {
     list.innerHTML = orders.map(o => {
       const items  = getOrderItems(o);
       const item   = items.find(it => it.pileType === pileName);
-      const rem    = item ? Math.max(0, (item.qty||0) - (item.delivered||0)) : 0;
+      const rem    = item ? Math.max(0, getItemProdTarget(item) - (item.delivered||0)) : 0;
+      const _ru    = item ? getItemProdUnit(item) : 'ต้น';
       return `<button onclick="confirmAssignOrder('${(o.orderNum||'').replace(/'/g,"\\'")}',${JSON.stringify(ids).replace(/"/g,"'")})"
         style="width:100%;text-align:left;padding:12px 14px;border:1.5px solid #BFDBFE;border-radius:10px;background:#F0F7FF;cursor:pointer;font-family:inherit;">
         <div style="font-size:13px;font-weight:800;color:#1E40AF;">📋 ${escHtml(o.orderNum||'-')}</div>
         <div style="font-size:11px;color:#374151;margin-top:3px;">${escHtml(o.customer||'-')} · ${escHtml(o.status||'-')}</div>
-        <div style="font-size:11px;color:#166534;margin-top:2px;">เหลือส่ง: <strong>${rem}</strong> ต้น</div>
+        <div style="font-size:11px;color:#166534;margin-top:2px;">เหลือส่ง: <strong>${rem}</strong> ${_ru}</div>
       </button>`;
     }).join('');
   }
@@ -12474,6 +12496,17 @@ function _unitOf(u) {
   return (v === 'ต้น' || v === 'ท่อน' || v === 'ตัว') ? v : PU();
 }
 function _unitEq(a, b) { return _unitOf(a) === _unitOf(b); }
+
+// [SHIP-UNIT] หาหน่วยที่ถูกต้องของชนิดเสา (ท่อน/ต้น/ตัว) — ดูจากการ์ดจริงก่อน
+//   ใช้ตอนแสดงผลหน้าส่งของ/ใบส่งของ/ประวัติ กันไม่ให้โชว์ "ต้น" ตายตัวกับของที่เป็นท่อน
+function _pileUnit(pt) {
+  if (!pt) return PU();
+  try {
+    const c = (getCustPoles() || []).find(x => x.pileType === pt && x.unit);
+    if (c && c.unit) return _unitOf(c.unit);
+  } catch (e) {}
+  return PU();
+}
 
 // BugFix: ลบเสาค้างสต็อก (offline) ต้องหักยอดรวม stock[name] จริงด้วย
 // ไม่งั้นตัวเลขในการ์ดจะเด้งกลับเป็นยอดเดิมเมื่อ custPole หมด (การ์ด fallback ไป stock[name])
@@ -13122,15 +13155,16 @@ function showCustHistory(custName) {
   } else {
     tbody.innerHTML = hist.map(h => {
       const items = h.archivedItems || getOrderItems(h);
-      const itemsStr = items.map(it => escHtml(it.pileType) + (it.length&&it.length!=='-'?' '+escHtml(it.length):'') + ' ' + it.qty + ' ต้น').join('<br>');
+      const itemsStr = items.map(it => escHtml(it.pileType) + (it.length&&it.length!=='-'?' '+escHtml(it.length):'') + ' ' + getItemProdTarget(it) + ' ' + getItemProdUnit(it)).join('<br>');
       const totalDel = items.reduce((s,it)=>s+(it.delivered||0),0);
-      const totalQty = items.reduce((s,it)=>s+(it.qty||0),0);
+      const totalQty = items.reduce((s,it)=>s+getItemProdTarget(it),0);
+      const _hu      = _grpDelUnit(items, 'ต้น');
       const val = (h.orderValue||0)>0 ? (h.orderValue||0).toLocaleString('th-TH') + ' ฿' : '-';
       return `<tr>
         <td><span class="order-id">${escHtml(h.orderNum)}</span></td>
         <td style="font-size:11px;color:#64748B;">${escHtml(h.closedAt||'-')}</td>
         <td style="font-size:12px;">${itemsStr}</td>
-        <td style="font-size:12px;font-weight:700;color:#166534;">${totalDel}/${totalQty} ต้น</td>
+        <td style="font-size:12px;font-weight:700;color:#166534;">${totalDel}/${totalQty} ${_hu}</td>
         <td style="font-size:12px;">${escHtml(h.sale||'-')}</td>
       </tr>`;
     }).join('');
@@ -14980,8 +15014,9 @@ function renderEditItemsTable() {
   const rows = _editItemsDraft.map((it, i) => {
     const hasDel   = (it.delivered || 0) > 0;
     const _u       = it.unit || 'ต้น';
+    const _du      = getItemProdUnit(it);   // หน่วยยอดส่ง: แบ่งท่อน = ท่อน
     const qtyCell  = hasDel
-      ? `<span style="font-weight:700;" data-unit-lock>${it.qty} ${_u}</span><br><span style="font-size:10px;color:#94A3B8;" data-unit-lock>ส่งแล้ว ${it.delivered} ${_u} (ล็อก)</span>`
+      ? `<span style="font-weight:700;" data-unit-lock>${it.qty} ${_u}</span><br><span style="font-size:10px;color:#94A3B8;" data-unit-lock>ส่งแล้ว ${it.delivered} ${_du} (ล็อก)</span>`
       : `<input type="number" min="1" value="${it.qty}" style="width:70px;padding:5px 8px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:12px;outline:none;" onchange="editItemChangeQty(${i},this.value)" oninput="editItemChangeQty(${i},this.value)"/>`;
     const fld = (field, ph) => `<input type="text" value="${(it[field]&&it[field]!=='-'?it[field]:'')}" placeholder="${ph}" style="width:72px;padding:4px 6px;border:1.5px solid #E5E7EB;border-radius:6px;font-size:11px;outline:none;" onchange="editItemChangeField(${i},'${field}',this.value)"/>`;
     const delCell  = hasDel ? '<span style="font-size:10px;color:#94A3B8;">—</span>'
