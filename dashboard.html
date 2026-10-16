@@ -372,7 +372,8 @@ code.inline {
   </header>
 
   <nav class="tabs" id="tabs" role="tablist">
-    <button role="tab" data-tab="exec"      aria-selected="true">กราฟ</button>
+    <button role="tab" data-tab="action"    aria-selected="true">⚡ ต้องทำ</button>
+    <button role="tab" data-tab="exec"      aria-selected="false">กราฟ</button>
     <button role="tab" data-tab="overview"  aria-selected="false">ภาพรวม</button>
     <button role="tab" data-tab="sales"     aria-selected="false">ฝ่ายขาย</button>
     <button role="tab" data-tab="production" aria-selected="false">ฝ่ายผลิต</button>
@@ -1136,6 +1137,9 @@ function renderOverview(root) {
   );
   root.appendChild(kpi);
 
+  const cmp = compareCard();
+  if (cmp) root.appendChild(cmp);
+
   // ── ออเดอร์รายเดือน ──
   const mRows = DATA.monthly.slice(-monthsWindow).map((m) => ({
     label: monthLabel(m.month_label),
@@ -1234,6 +1238,42 @@ function renderSales(root) {
       ]),
     },
   }));
+
+  // ── ลูกค้าที่หายไป (เคยสั่งซ้ำ แต่เงียบนานเกิน 60 วัน) ──
+  const CHURN_DAYS = 60;
+  const now = Date.now();
+  const churned = (DATA.customers || []).map((c) => {
+    const t = c.last_order_date ? new Date(c.last_order_date).getTime() : NaN;
+    const gone = isNaN(t) ? null : Math.floor((now - t) / 86400000);
+    return { c, gone };
+  }).filter((x) => (Number(x.c.order_count) || 0) >= 2 && x.gone != null && x.gone >= CHURN_DAYS)
+    .sort((a, b) => b.gone - a.gone);
+
+  const churnCard = el('div', 'card');
+  const chHead = el('div', 'card-head');
+  const chH = el('div', 'card-title'); chH.textContent = '👋 ลูกค้าที่หายไป';
+  const chSub = el('div', 'card-sub');
+  chSub.textContent = `เคยสั่งซ้ำ แต่เงียบเกิน ${CHURN_DAYS} วัน ควรลองติดต่อกลับ`;
+  chHead.append(chH, chSub); churnCard.appendChild(chHead);
+  if (!churned.length) {
+    const e = el('div', 'empty');
+    e.innerHTML = '<span class="status-dot" style="background:var(--status-good)"></span>' +
+      'ไม่มีลูกค้าประจำที่หายไป — ลูกค้ายังสั่งต่อเนื่องดี';
+    churnCard.appendChild(e);
+  } else {
+    const wrap = el('div', 'tbl-wrap');
+    wrap.appendChild(buildTable({
+      head: ['ลูกค้า', 'เบอร์โทร', 'เคยสั่ง', 'มูลค่าสะสม', 'สั่งล่าสุด', 'หายไป'],
+      align: ['txt', 'txt', 'num', 'num', 'txt', 'num'],
+      rows: churned.map(({ c, gone }) => {
+        const color = gone >= 180 ? 'var(--status-critical)' : gone >= 120 ? 'var(--status-serious)' : 'var(--status-warning)';
+        return [c.customer, c.tel || '-', num(c.order_count), num(c.total_value), thaiDate(c.last_order_date),
+          { html: `<span class="pill" style="background:${color}22;color:${color}">${num(gone)} วัน</span>` }];
+      }),
+    }));
+    churnCard.appendChild(wrap);
+  }
+  root.appendChild(churnCard);
 }
 
 function renderProduction(root) {
@@ -1751,7 +1791,124 @@ async function renderWeekly(root) {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   ACTION — "ต้องทำ" รวมงานด่วนไว้ที่เดียว เปิดมาเห็นก่อน (ใช้ข้อมูลที่มีอยู่แล้ว)
+   ══════════════════════════════════════════════════════════════════════════ */
+function renderAction(root) {
+  const s = DATA.summary || {};
+  const overdue = DATA.overdue || [];
+  const shortStock = (DATA.pile || []).filter((p) => Number(p.stock_gap) < 0);
+  const pending = Number(s.pending_orders) || 0;
+  const errQty  = Number(s.prod_err_qty || 0) + Number(s.ship_err_qty || 0);
+
+  // แถบสรุปด่วน
+  const kpi = el('div', 'kpi-grid');
+  kpi.append(
+    statTile('เกินกำหนดส่ง', num(overdue.length),
+      overdue.length ? 'ต้องตามด่วน' : 'ไม่มีงานค้าง',
+      overdue.length ? 'critical' : 'good',
+      overdue.length ? 'var(--status-critical)' : 'var(--status-good)'),
+    statTile('สต็อกไม่พอ', num(shortStock.length),
+      shortStock.length ? 'ชนิดที่ต้องผลิตเพิ่ม' : 'สต็อกพอทุกชนิด',
+      shortStock.length ? 'critical' : 'good',
+      shortStock.length ? 'var(--status-critical)' : 'var(--status-good)'),
+    statTile('รอลูกค้าคอนเฟิร์ม', num(pending),
+      pending ? 'รายการ' : 'ไม่มี', '',
+      pending ? 'var(--status-warning)' : 'var(--status-good)'),
+    statTile('ของเสียสะสม', num(errQty),
+      `ผลิต ${num(s.prod_err_qty)} · ขนส่ง ${num(s.ship_err_qty)} ต้น`),
+  );
+  root.appendChild(kpi);
+
+  if (!overdue.length && !shortStock.length && !pending && !errQty) {
+    const card = el('div', 'card');
+    const e = el('div', 'empty');
+    e.innerHTML = '<span class="status-dot" style="background:var(--status-good)"></span>' +
+      'เยี่ยม! ตอนนี้ไม่มีงานด่วนที่ต้องรีบจัดการ';
+    card.appendChild(e);
+    root.appendChild(card);
+    return;
+  }
+
+  // ── เกินกำหนดส่ง ──
+  if (overdue.length) {
+    const card = el('div', 'card');
+    const head = el('div', 'card-head');
+    const h = el('div', 'card-title'); h.textContent = '🚚 เกินกำหนดส่ง';
+    const sub = el('div', 'card-sub'); sub.textContent = `${overdue.length} รายการ เรียงจากค้างนานสุด`;
+    head.append(h, sub); card.appendChild(head);
+    const wrap = el('div', 'tbl-wrap');
+    wrap.appendChild(buildTable({
+      head: ['Order', 'ลูกค้า', 'ชนิด', 'คงค้าง', 'กำหนดส่ง', 'เลยมา'],
+      align: ['txt', 'txt', 'txt', 'num', 'txt', 'num'],
+      rows: overdue.map((o) => {
+        const d = Number(o.days_overdue) || 0;
+        const color = d >= 14 ? 'var(--status-critical)' : d >= 7 ? 'var(--status-serious)' : 'var(--status-warning)';
+        const icon  = d >= 14 ? '⛔' : d >= 7 ? '⚠️' : '•';
+        return [o.order_num, o.customer || '-', o.pile_label || '-', num(o.remaining), thaiDate(o.delivery_date),
+          { html: `<span class="pill" style="background:${color}22;color:${color}">${icon} ${num(d)} วัน</span>` }];
+      }),
+    }));
+    card.appendChild(wrap); root.appendChild(card);
+  }
+
+  // ── สต็อกไม่พอ ──
+  if (shortStock.length) {
+    const card = el('div', 'card');
+    const head = el('div', 'card-head');
+    const h = el('div', 'card-title'); h.textContent = '📦 สต็อกไม่พอกับงานที่รับไว้';
+    const sub = el('div', 'card-sub'); sub.textContent = `${shortStock.length} ชนิด ควรผลิตเพิ่ม`;
+    head.append(h, sub); card.appendChild(head);
+    const wrap = el('div', 'tbl-wrap');
+    wrap.appendChild(buildTable({
+      head: ['ชนิดเสาเข็ม', 'ค้างส่ง', 'สต็อก', 'ขาดอีก'],
+      align: ['txt', 'num', 'num', 'num'],
+      rows: shortStock.slice().sort((a, b) => Number(a.stock_gap) - Number(b.stock_gap)).map((p) =>
+        [p.pile_type, num(p.outstanding_qty), num(p.stock_qty),
+          { html: `<span class="pill" style="background:var(--status-critical)22;color:var(--status-critical)">ขาด ${num(Math.abs(p.stock_gap))} ต้น</span>` }]),
+    }));
+    card.appendChild(wrap); root.appendChild(card);
+  }
+}
+
+/* % การเปลี่ยนแปลงเทียบค่าก่อนหน้า → {txt, dir} (dir: 1 ขึ้น, -1 ลง, 0 เท่าเดิม) */
+function pctChange(cur, prev) {
+  cur = Number(cur) || 0; prev = Number(prev) || 0;
+  if (prev === 0) return cur === 0 ? { txt: '—', dir: 0 } : { txt: 'ใหม่', dir: 1 };
+  const p = (cur - prev) / prev * 100;
+  return { txt: (p > 0 ? '+' : '') + p.toFixed(0) + '%', dir: p > 0.5 ? 1 : p < -0.5 ? -1 : 0 };
+}
+
+/* การ์ด "เทียบกับเดือนก่อน" — ใช้ 2 เดือนล่าสุดจาก DATA.monthly */
+function compareCard() {
+  const m = DATA.monthly || [];
+  if (m.length < 2) return null;
+  const cur = m[m.length - 1], prev = m[m.length - 2];
+  const card = el('div', 'card');
+  const head = el('div', 'card-head');
+  const h = el('div', 'card-title'); h.textContent = '📊 เทียบกับเดือนก่อน';
+  const sub = el('div', 'card-sub'); sub.textContent = `${monthLabel(cur.month_label)} เทียบ ${monthLabel(prev.month_label)}`;
+  head.append(h, sub); card.appendChild(head);
+  const grid = el('div', 'kpi-grid'); grid.style.margin = '14px 0 0';
+  [['จำนวน Order', 'order_count', 'รายการ', num],
+   ['มูลค่างาน', 'total_value', 'บาท', compact],
+   ['ส่งแล้ว', 'total_delivered', 'ต้น', num]].forEach(([label, key, unit, fmt]) => {
+    const c = pctChange(cur[key], prev[key]);
+    const color = c.dir > 0 ? 'var(--success-text)' : c.dir < 0 ? 'var(--status-critical)' : 'var(--text-muted)';
+    const arrow = c.dir > 0 ? '↑' : c.dir < 0 ? '↓' : '→';
+    const tile = el('div', 'tile');
+    tile.innerHTML = `<div class="label">${label}</div>` +
+      `<div class="value">${fmt(cur[key])} <span style="font-size:13px;color:var(--text-muted)">${unit}</span></div>` +
+      `<div class="sub" style="color:${color};font-weight:650">${arrow} ${c.txt} ` +
+      `<span style="color:var(--text-muted);font-weight:400">จาก ${fmt(prev[key])}</span></div>`;
+    grid.appendChild(tile);
+  });
+  card.appendChild(grid);
+  return card;
+}
+
 const RENDERERS = {
+  action:     renderAction,
   exec:       renderExec,
   overview:   renderOverview,
   sales:      renderSales,
@@ -1761,7 +1918,7 @@ const RENDERERS = {
   finance:    renderFinance,
   weekly:     renderWeekly,
 };
-let currentTab = 'exec';
+let currentTab = 'action';
 
 function render() {
   const main = $('#main');
@@ -1805,7 +1962,7 @@ $('#tabs').addEventListener('click', (e) => {
 /* ───────────── เปิด/ปิดการแสดงข้อมูลสต็อก ─────────────
    ปุ่มบนหัว dashboard: กดปิด = ซ่อนแท็บ/ข้อมูลฝั่งสต็อก (มาจากแอปที่เทส)
    ส่วนการเงิน + สรุปสัปดาห์ ยังแสดงปกติ  จำค่าไว้ในเครื่องนี้ (localStorage) */
-const STOCK_TABS = ['exec', 'overview', 'sales', 'production', 'delivery', 'stock'];
+const STOCK_TABS = ['action', 'exec', 'overview', 'sales', 'production', 'delivery', 'stock'];
 const stockToggleBtn = $('#stockToggleBtn');
 let showStock = (() => { try { return localStorage.getItem('sud_show_stock') !== '0'; } catch { return true; } })();
 
