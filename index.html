@@ -16848,10 +16848,14 @@ function printQuotation(){
   .paeb-tbl td.num{ width:66px; font-size:17px; font-weight:800; border-right:1px solid #9aa8bd; }
   .paeb-tbl td.num.ord{ color:#334155; }
   .paeb-tbl td.num.sent{ color:#0f766e; }
-  .paeb-tbl td.remain{ width:80px; border-right:1px solid #9aa8bd; }
+  .paeb-tbl td.remain{ width:104px; border-right:1px solid #9aa8bd; }
   .paeb-pill{ display:inline-block; min-width:48px; padding:5px 12px; border-radius:999px; font-size:14px; font-weight:800; }
   .paeb-pill.left{ background:#fff4ec; color:#ea580c; }
   .paeb-pill.done{ background:#eafaf2; color:#059669; }
+  .paeb-cbbtn{ display:inline-block; margin-top:7px; padding:5px 13px; font-size:12px; font-weight:800; line-height:1;
+    white-space:nowrap; background:#DC2626; color:#fff; border:none; border-radius:999px; cursor:pointer;
+    box-shadow:0 1px 3px rgba(220,38,38,.35); transition:background .12s; }
+  .paeb-cbbtn:hover{ background:#b91c1c; }
   .paeb-tbl tr.sub td{ border-top:1px dashed #e4e9f2; }
   .paeb-tbl tr.grp td{ border-top:2.5px solid #94a3b8; }
   .paeb-tbl tbody tr:first-child td{ border-top:none; }
@@ -16960,7 +16964,6 @@ function printQuotation(){
       + '<th>สั่ง</th><th>ส่ง</th><th>เหลือ</th>'
       + '</tr></thead><tbody>';
 
-    var _cbShown = {};   // กันปุ่มจบบิลซ้ำ เมื่อออเดอร์เดียวมีหลายสเปค
     gOrder.forEach(function(k){
       var g = groups[k];
       var isG = (g.pile === "Girder");
@@ -16977,13 +16980,11 @@ function printQuotation(){
         var remHTML = rem > 0
           ? '<span class="paeb-pill left">' + rem + '</span>'
           : '<span class="paeb-pill done">ครบ</span>';
-        // ปุ่มจบบิล — โชว์ครั้งเดียวต่อออเดอร์ เมื่อส่งครบทั้งใบแล้ว
+        // ปุ่มจบบิล — ทุกแถวที่ "ครบ" และออเดอร์ส่งครบทั้งใบแล้ว
         var _ost = o.status || '';
         if ((_ost === 'ส่งครบ' || _ost === 'ส่งครบแล้ว')
-            && (typeof canDo !== 'function' || canDo('change_order_status'))
-            && !_cbShown[o.orderNum]) {
-          _cbShown[o.orderNum] = true;
-          remHTML += '<button class="paeb-cbbtn" onclick=\'event.stopPropagation();closeBill(' + JSON.stringify(String(o.orderNum)) + ')\' style="display:block;margin:6px auto 0;padding:4px 10px;font-size:12px;font-weight:800;background:#DC2626;color:#fff;border:none;border-radius:8px;cursor:pointer;">🔴 จบบิล</button>';
+            && (typeof canDo !== 'function' || canDo('change_order_status'))) {
+          remHTML += '<br><button class="paeb-cbbtn" onclick=\'event.stopPropagation();closeBill(' + JSON.stringify(String(o.orderNum)) + ')\'>🔴 จบบิล</button>';
         }
         var name = o.customer || o.site || "(ไม่ระบุ)";
 
