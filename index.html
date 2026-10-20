@@ -2235,6 +2235,10 @@ body{font-family:'Segoe UI','Noto Sans Thai',sans-serif;background:#F0F4F8;min-h
 .full-col{grid-column:1/-1;}
 .order-value-box{padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;background:#F9FAFB;color:#94A3B8;font-weight:600;}
 .order-value-box.has-value{background:#F0FDF4;color:#166534;border-color:#86EFAC;}
+.pile-stack-status{padding:8px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:12.5px;font-weight:600;line-height:1.4;}
+.pile-stack-status.idle{background:#F8FAFC;color:#64748B;border-color:#E2E8F0;}
+.pile-stack-status.selected{background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE;}
+.pile-stack-status.stacking{background:#FFF7ED;color:#C2410C;border-color:#FED7AA;}
 
 /* ============================================================ BUTTONS ============================================================ */
 .btn{padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:opacity 0.15s,transform 0.1s;font-family:inherit;}
@@ -3171,10 +3175,11 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
                 <label class="field-label">ราคา/ต้น <span style="font-weight:400;color:#9CA3AF;">(บาท · ไม่บังคับ)</span></label>
                 <input type="number" id="f_price" placeholder="เช่น 850" min="0" step="0.01"/>
               </div>
-              <div class="field" style="align-self:flex-end;">
+              <div class="field" style="align-self:flex-end;display:flex;gap:6px;">
                 <button class="btn btn-ghost btn-sm" onclick="addOrderItem()" style="white-space:nowrap;">+ เพิ่มรายการ</button>
               </div>
             </div>
+            <div id="pileStackStatus" class="pile-stack-status idle" style="margin-top:8px;">คลิกที่แถวรายการเพื่อซ้อนท่อนเพิ่ม · หรือกรอกแล้วกด “เพิ่มรายการ” เพื่อเพิ่มรายการใหม่</div>
             <div id="orderValueBox" class="order-value-box" style="margin-top:8px;">— ยังไม่มีรายการสั่งซื้อ</div>
             </div><!-- /pileOrderBlock -->
             <!-- ===== รายการแบบ Girder (placeholder – รายละเอียดจะเพิ่มภายหลัง) ===== -->
@@ -7372,6 +7377,19 @@ function getStock() {
   });
   return out;
 }
+// [หน่วย] สต็อกจริงแยกตามหน่วย — { ชนิดเสา: { ต้น: n, ท่อน: n } }
+//   ต้น กับ ท่อน เป็นคนละกอง บวกกันไม่ได้ (ใช้ตอนเช็กสต็อก/คำนวณยอดคงเหลือให้ถูกหน่วย)
+function getStockByUnit() {
+  const out = {};
+  (_cache.custPoles || []).forEach(c => {
+    const n = c && c.pileType;
+    if (!n) return;
+    const u = _unitOf(c.unit);
+    (out[n] = out[n] || {});
+    out[n][u] = (out[n][u] || 0) + (c.qty || 0);
+  });
+  return out;
+}
 // ตัวเลขที่ "เคยบันทึกไว้" ในฐานข้อมูล — ใช้เฉพาะหน้าตรวจสอบสต็อก เพื่อดูว่าของเก่าเคยเพี้ยนไว้เท่าไหร่
 function getStoredStock() { return _cache.stock || {}; }
 function getStockLog() {
@@ -8078,7 +8096,8 @@ function getItemProdTarget(it) {
 // หน่วยของงานผลิตรายการนี้
 function getItemProdUnit(it) {
   if (it && it.productType === 'girder') return 'ตัว';
-  return (it && it.prodMode === 'split') ? 'ท่อน' : 'ต้น';
+  if (it && it.prodMode === 'split') return 'ท่อน';   // แบ่งท่อนตอนผลิต (โมเดลเดิม)
+  return _unitOf(it && it.unit);   // ที่เหลือยึดหน่วยที่คีย์จริง — ของที่คีย์ "ท่อน" จากฝั่งขายจะได้ "ท่อน" ถูกต้อง (ไม่ fix เป็น "ต้น")
 }
 // สรุปแผนแบ่งท่อนเป็นข้อความ เช่น "50×10.00ม. + 50×8.00ม."
 function fmtSegSummary(segs) {
@@ -8151,6 +8170,38 @@ function getReservedStock() {
         if (rem > 0 && item.pileType && item.pileType !== '-') {
           reserved[item.pileType] = (reserved[item.pileType]||0) + rem;
         }
+      });
+    }
+  });
+  return reserved;
+}
+
+// [หน่วย] ยอดจองสต็อกแยกตามหน่วย — { ชนิดเสา: { ต้น: n, ท่อน: n } }
+//   เหมือน getReservedStock() ทุกอย่าง แต่แยก key ตามหน่วยที่คีย์ในออเดอร์
+function getReservedStockByUnit() {
+  const reserved = {};
+  const _add = (pt, u, rem) => {
+    if (!(rem > 0) || !pt || pt === '-') return;
+    const _u = _unitOf(u);
+    (reserved[pt] = reserved[pt] || {});
+    reserved[pt][_u] = (reserved[pt][_u] || 0) + rem;
+  };
+  getOrders().forEach(o => {
+    const st = o.status || 'รับ Order แล้ว';
+    if (!RESERVE_FROM_STATUS.includes(st)) return;
+    const items = getOrderItems(o);
+    if (o.items && o.items.length > 0) {
+      items.forEach((item, _i) => {
+        const rem = Math.max(0, getItemProdTarget(item) - itemDelivered(o, item, _i));
+        _add(item.pileType, item.unit, rem);
+      });
+    } else {
+      const totalQty = items.reduce((s, it) => s + (it.qty||0), 0);
+      if (totalQty === 0) return;
+      const doneRatio = Math.min(1, getOrderDelivered(o) / totalQty);
+      items.forEach(item => {
+        const rem = Math.round((item.qty||0) * (1 - doneRatio));
+        _add(item.pileType, item.unit, rem);
       });
     }
   });
@@ -8488,6 +8539,47 @@ function homeGo(tab, perm) {
 // ── Multi-Item Draft ───────────────────────────────────────────
 let orderItemsDraft = [];
 
+// [STACK] สถานะการซ้อนท่อนเข้ารายการเดียวกัน
+let _selGrp    = null;   // grpId ของรายการที่ถูกคลิกเลือกอยู่
+let _stackMode = false;  // true = กำลังคีย์ท่อนใหม่เข้ารายการที่เลือก
+let _grpSeq    = 0;      // ตัวนับ grpId ไม่ให้ซ้ำ
+function _nextGrp() { return ++_grpSeq; }
+
+// คลิกแถวในตาราง = เลือก/ยกเลิกเลือกรายการที่จะซ้อนท่อนเข้าไป
+function selectPileGrp(grp) {
+  if (_selGrp === grp && !_stackMode) { _selGrp = null; }   // คลิกซ้ำ = ยกเลิกเลือก
+  else { _selGrp = grp; _stackMode = false; }
+  // ล็อกชนิดเสาให้ตรงกับรายการที่เลือก
+  if (_selGrp != null) {
+    const g = (orderItemsDraft.find(x => x.grpId === _selGrp) || {});
+    const sel = document.getElementById('f_type');
+    if (sel && g.pileType) sel.value = g.pileType;
+  }
+  renderOrderItemsDraft();
+  _syncStackUI();
+}
+
+// อัปเดตสถานะปุ่ม/แถบบอกสถานะ ให้รู้ว่ากำลังทำอะไรอยู่
+function _syncStackUI() {
+  const sel = document.getElementById('f_type');
+  const st  = document.getElementById('pileStackStatus');
+  const lockType = (_selGrp != null);
+  if (sel) sel.disabled = lockType;
+  if (!st) return;
+  if (_stackMode && _selGrp != null) {
+    const g = (orderItemsDraft.find(x => x.grpId === _selGrp) || {});
+    st.className = 'pile-stack-status stacking';
+    st.textContent = '➕ กำลังคีย์ท่อนใหม่เข้ารายการ ' + _esc(g.pileType || '') + ' — กรอก ยาว/เชื่อม/จำนวน แล้วกด “เพิ่มรายการ”';
+  } else if (_selGrp != null) {
+    const g = (orderItemsDraft.find(x => x.grpId === _selGrp) || {});
+    st.className = 'pile-stack-status selected';
+    st.textContent = '✓ เลือกรายการ ' + _esc(g.pileType || '') + ' แล้ว — กรอก ยาว/เชื่อม/จำนวน แล้วกด “เพิ่มรายการ” จะรวมเข้ารายการนี้ (คลิกแถวซ้ำเพื่อยกเลิก)';
+  } else {
+    st.className = 'pile-stack-status idle';
+    st.textContent = 'คลิกที่แถวรายการเพื่อซ้อนท่อนเพิ่ม · หรือกรอกแล้วกด “เพิ่มรายการ” เพื่อเพิ่มรายการใหม่';
+  }
+}
+
 function renderOrderItemsDraft() {
   // [FIX#B11] ค่าที่ผู้ใช้พิมพ์เอง (ความยาว/เชื่อม/เหล็กเสริม/เพิ่มเติม) ต้อง escape ก่อนใส่ลงตาราง
   const d = v => (v && v !== '-') ? _esc(v) : '—';
@@ -8495,6 +8587,9 @@ function renderOrderItemsDraft() {
   const listEl = document.getElementById('orderItemsList');
   const box    = document.getElementById('orderValueBox');
   let pileRows = '', pileQty = 0, pileVal = 0, pileCount = 0;
+  // [GROUP] รวมท่อนที่อยู่ "รายการเดียวกัน" (grpId) ไว้ใต้หัวเดียว
+  const pileGroups = {};   // grpId -> [{it, i}, ...]
+  const pileOrder  = [];   // ลำดับรายการตามที่คีย์เข้ามา
   // ── รายการ Girder ──────────────────────────────────────────────
   const gListEl = document.getElementById('girderItemsList');
   const gBox    = document.getElementById('girderValueBox');
@@ -8516,20 +8611,56 @@ function renderOrderItemsDraft() {
         + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
     } else {
       pileCount++; pileQty += (it.qty || 0); pileVal += (it.value || 0);
-      const priceDisp = (it.price !== null && it.price !== undefined && it.price > 0)
-        ? it.price.toLocaleString('th-TH') + ' ฿' : '—';
-      const amtDisp = it.value > 0 ? it.value.toLocaleString('th-TH') + ' ฿' : '—';
-      pileRows += '<tr><td style="font-weight:600;">' + _esc(it.pileType) + '</td>'
-        + '<td style="font-weight:700;color:#1E293B;" data-unit-lock>' + it.qty + ' ' + _esc(it.unit || 'ต้น') + '</td>'
-        + '<td style="color:#64748B;">' + d(it.length) + '</td>'
-        + '<td style="color:#64748B;">' + d(it.weld) + '</td>'
-        + '<td style="color:#64748B;">' + d(it.steel) + '</td>'
-        + '<td style="color:#64748B;">' + d(it.ba) + '</td>'
-        + '<td style="color:#64748B;">' + d(it.extra) + '</td>'
-        + '<td style="color:#0F172A;text-align:right;white-space:nowrap;">' + priceDisp + '</td>'
-        + '<td style="font-weight:700;color:#166534;text-align:right;white-space:nowrap;">' + amtDisp + '</td>'
-        + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td></tr>';
+      if (it.grpId == null) it.grpId = _nextGrp();   // รายการเก่า/ปกติ → แยกกลุ่มของตัวเอง
+      const _k = it.grpId;
+      if (!pileGroups[_k]) { pileGroups[_k] = []; pileOrder.push(_k); }
+      pileGroups[_k].push({ it, i });
     }
+  });
+
+  // [GROUP] สร้างแถวของฝั่งเสาเข็ม: ชนิดเดียวแถวเดียว = แสดงปกติ, หลายแถว = รวมใต้หัวเดียว
+  const _weldLabel = w => (w === '1' ? 'ท่อนปลาย' : w === '2' ? 'ท่อนกลาง' : '');
+  const _pileTailCells = (it, i) => {
+    const priceDisp = (it.price !== null && it.price !== undefined && it.price > 0)
+      ? it.price.toLocaleString('th-TH') + ' ฿' : '—';
+    const amtDisp = it.value > 0 ? it.value.toLocaleString('th-TH') + ' ฿' : '—';
+    return '<td style="color:#64748B;">' + d(it.length) + '</td>'
+      + '<td style="color:#64748B;">' + d(it.weld) + '</td>'
+      + '<td style="color:#64748B;">' + d(it.steel) + '</td>'
+      + '<td style="color:#64748B;">' + d(it.ba) + '</td>'
+      + '<td style="color:#64748B;">' + d(it.extra) + '</td>'
+      + '<td style="color:#0F172A;text-align:right;white-space:nowrap;">' + priceDisp + '</td>'
+      + '<td style="font-weight:700;color:#166534;text-align:right;white-space:nowrap;">' + amtDisp + '</td>'
+      + '<td><button class="item-del-btn" onclick="removeOrderItem(' + i + ')">✕</button></td>';
+  };
+  pileOrder.forEach(grp => {
+    const rows = pileGroups[grp];
+    const type = rows[0].it.pileType;
+    const unit = _esc(rows[0].it.unit || 'ต้น');
+    const selOn = (_selGrp === grp);
+    const selCss = selOn ? 'background:#DBEAFE;box-shadow:inset 3px 0 0 #2563EB;' : '';
+    if (rows.length === 1) {
+      const it = rows[0].it, i = rows[0].i;
+      pileRows += '<tr style="cursor:pointer;' + selCss + '" onclick="selectPileGrp(' + JSON.stringify(grp) + ')">'
+        + '<td style="font-weight:600;">' + _esc(it.pileType) + '</td>'
+        + '<td style="font-weight:700;color:#1E293B;" data-unit-lock>' + it.qty + ' ' + _esc(it.unit || 'ต้น') + '</td>'
+        + _pileTailCells(it, i) + '</tr>';
+      return;
+    }
+    // รวมกลุ่ม: รายการเดียวกันที่มีหลายท่อน
+    const sumQty  = rows.reduce((a, r) => a + (r.it.qty || 0), 0);
+    pileRows += '<tr style="cursor:pointer;border-top:1.5px solid #BFDBFE;' + (selOn ? selCss : 'background:#EFF6FF;') + '" onclick="selectPileGrp(' + JSON.stringify(grp) + ')">'
+      + '<td style="font-weight:700;color:#1D4ED8;">🏗️ ' + _esc(type) + '</td>'
+      + '<td style="font-weight:700;color:#1D4ED8;" data-unit-lock>รวม ' + sumQty + ' ' + unit + '</td>'
+      + '<td colspan="7" style="color:#1D4ED8;font-weight:600;">แบ่งท่อน ' + rows.length + ' แบบ</td>'
+      + '<td></td></tr>';
+    rows.forEach(r => {
+      const it = r.it, i = r.i;
+      const wl = _weldLabel((it.weld || '').trim());
+      pileRows += '<tr><td style="padding-left:22px;color:#475569;">└ ' + (wl || 'ท่อน') + '</td>'
+        + '<td style="font-weight:700;color:#1E293B;" data-unit-lock>' + it.qty + ' ' + _esc(it.unit || 'ต้น') + '</td>'
+        + _pileTailCells(it, i) + '</tr>';
+    });
   });
 
   if (listEl) {
@@ -8541,11 +8672,16 @@ function renderOrderItemsDraft() {
   if (box) {
     if (pileCount === 0) { box.className = 'order-value-box'; box.removeAttribute('data-unit-lock'); box.textContent = '— ยังไม่มีรายการสั่งซื้อ'; }
     else {
-      const _pUnits = new Set(orderItemsDraft.filter(x => x.productType !== 'girder').map(x => x.unit || 'ต้น'));
-      const _totUnit = _pUnits.size === 1 ? [..._pUnits][0] : 'ต้น';
+      // แยกยอดตามหน่วยที่คีย์จริง (เช่น 100 ต้น + 200 ท่อน) ไม่รวมคนละหน่วยเป็นเลขเดียว
+      const _qbu = {};
+      orderItemsDraft.filter(x => x.productType !== 'girder').forEach(x => {
+        const u = _unitOf(x.unit);
+        _qbu[u] = (_qbu[u] || 0) + (x.qty || 0);
+      });
+      const _qtyLabel = Object.keys(_qbu).map(u => _qbu[u].toLocaleString('th-TH') + ' ' + u).join(' + ') || (pileQty + ' ต้น');
       box.className = 'order-value-box has-value';
       box.setAttribute('data-unit-lock', '');
-      box.textContent = 'รวม ' + pileQty + ' ' + _totUnit
+      box.textContent = 'รวม ' + _qtyLabel
         + (pileVal > 0 ? ' · รวมเงิน ' + pileVal.toLocaleString('th-TH') + ' ฿' : '');
     }
   }
@@ -8597,6 +8733,7 @@ function addGirderItem() {
 
 function addOrderItem() {
   const type = document.getElementById('f_type').value;
+  if (!type) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
   const qty  = parseInt(document.getElementById('f_qty').value) || 0;
   const len   = (document.getElementById('f_length').value || '').trim();
   const weld  = (document.getElementById('f_weld').value  || '').trim();
@@ -8609,11 +8746,18 @@ function addOrderItem() {
   const priceRaw = (document.getElementById('f_price') || {}).value;
   const price = (priceRaw !== undefined && priceRaw !== '' && !isNaN(parseFloat(priceRaw)))
     ? parseFloat(priceRaw) : null;
-  if (!type) { showToast('⚠️ กรุณาเลือกชนิดเสาก่อน'); return; }
-  if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (' + unit + ')'); return; }
+  if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (' + (_selGrp != null ? 'ท่อน' : unit) + ')'); return; }
   const value = (price !== null && price > 0) ? Math.round(price * qty) : calcOrderValue(type, qty);
-  orderItemsDraft.push({ productType: 'pile', pileType: type, qty, unit, length: len || '-', weld: weld || '-', steel: steel || '-', ba: ba || '-', extra: extra || '-', price, value });
-  document.getElementById('f_type').selectedIndex = 0;
+  if (_selGrp != null) {
+    // ซ้อนท่อนใหม่เข้ารายการที่เลือก — หน่วยเป็น "ท่อน" และผูก grpId เดิม
+    orderItemsDraft.push({ productType: 'pile', pileType: type, qty, unit: 'ท่อน', length: len || '-', weld: weld || '-', steel: steel || '-', ba: ba || '-', extra: extra || '-', price, value, grpId: _selGrp });
+    _stackMode = false;   // ออกจากโหมดคีย์ แต่คงเลือกรายการเดิมไว้ (ซ้อนต่อได้)
+  } else {
+    // รายการใหม่ — ได้ grpId ของตัวเอง
+    orderItemsDraft.push({ productType: 'pile', pileType: type, qty, unit, length: len || '-', weld: weld || '-', steel: steel || '-', ba: ba || '-', extra: extra || '-', price, value, grpId: _nextGrp() });
+    _selGrp = null;
+    document.getElementById('f_type').selectedIndex = 0;
+  }
   document.getElementById('f_qty').value    = '';
   document.getElementById('f_length').value = '';
   document.getElementById('f_weld').value   = '';
@@ -8622,11 +8766,18 @@ function addOrderItem() {
   document.getElementById('f_extra').value  = '';
   const priceEl = document.getElementById('f_price'); if (priceEl) priceEl.value = '';
   renderOrderItemsDraft();
+  _syncStackUI();
 }
 
 function removeOrderItem(i) {
+  const gone = orderItemsDraft[i] ? orderItemsDraft[i].grpId : null;
   orderItemsDraft.splice(i, 1);
+  // ถ้ารายการที่เลือกไว้ถูกลบจนหมดกลุ่ม → ล้างสถานะเลือก
+  if (_selGrp != null && !orderItemsDraft.some(x => x.grpId === _selGrp)) {
+    _selGrp = null; _stackMode = false;
+  }
   renderOrderItemsDraft();
+  _syncStackUI();
 }
 
 // ── Order Value Preview (legacy compat) ────────────────────────
@@ -8655,6 +8806,17 @@ function submitOrder() {
 
   const totalQty   = orderItemsDraft.reduce((s,it) => s+(it.qty||0), 0);
   const totalValue = orderItemsDraft.reduce((s,it) => s+(it.value||0), 0);
+  // [UNIT] สรุปจำนวนแบบ "แยกตามหน่วยที่คีย์จริง" (เช่น 100 ต้น + 200 ท่อน) ไม่รวมคนละหน่วยเป็นเลขเดียว
+  const _qtyByUnit = {};
+  orderItemsDraft.forEach(it => {
+    if (it.productType === 'girder') return;
+    const u = _unitOf(it.unit);
+    _qtyByUnit[u] = (_qtyByUnit[u] || 0) + (it.qty || 0);
+  });
+  const _qtyUnits  = Object.keys(_qtyByUnit);
+  const totalQtyLabel = _qtyUnits.length
+    ? _qtyUnits.map(u => _qtyByUnit[u].toLocaleString('th-TH') + ' ' + u).join(' + ')
+    : (totalQty + ' ต้น');
   const firstItem  = orderItemsDraft[0];
   const pileLabel  = orderItemsDraft.length === 1
     ? firstItem.pileType
@@ -8696,16 +8858,27 @@ function submitOrder() {
     pileLabel,
   };
 
-  // ── ตรวจสอบสต็อกก่อนบันทึก ────────────────────────────────
-  const _stockNow = getStock();
-  const _stockRes  = getReservedStock();
+  // ── ตรวจสอบสต็อกก่อนบันทึก (แยกตามหน่วย: ต้น/ท่อน คนละกอง เทียบแยกกัน) ──
+  const _stockByU = getStockByUnit();
+  const _resByU   = getReservedStockByUnit();
   const _stockCfg  = getConfig();
   const _warnings = [];
+  // รวมความต้องการต่อ "ชนิดเสา + หน่วย" ก่อน (หลายท่อน/หลายแถวชนิดเดียวกันต้องบวกกันก่อนเทียบสต็อก)
+  const _needByKey = {};
   orderItemsDraft.forEach(it => {
     if (it.productType === 'girder') return; // Girder ยังไม่ผูกกับสต็อกเสาเข็ม
-    const avail = (_stockNow[it.pileType]||0) - (_stockRes[it.pileType]||0);
-    if (avail < it.qty) {
-      _warnings.push('⚠️ ' + it.pileType + ': ต้องการ ' + it.qty + ' ต้น แต่คงเหลือจริง ' + Math.max(0,avail) + ' ต้น');
+    const u = _unitOf(it.unit);
+    const k = it.pileType + '||' + u;
+    if (!_needByKey[k]) _needByKey[k] = { pileType: it.pileType, unit: u, qty: 0 };
+    _needByKey[k].qty += (it.qty || 0);
+  });
+  Object.keys(_needByKey).forEach(k => {
+    const { pileType: pt, unit: u, qty: need } = _needByKey[k];
+    const have  = (_stockByU[pt] && _stockByU[pt][u]) || 0;
+    const res   = (_resByU[pt]  && _resByU[pt][u])  || 0;
+    const avail = have - res;
+    if (avail < need) {
+      _warnings.push('⚠️ ' + pt + ' (' + u + '): ต้องการ ' + need + ' ' + u + ' แต่คงเหลือจริง ' + Math.max(0,avail) + ' ' + u);
     }
   });
   if (_warnings.length > 0) {
@@ -8723,7 +8896,7 @@ function submitOrder() {
     orders.unshift(order);
     saveOrders(orders);
     _lastSubmittedOrder = JSON.parse(JSON.stringify(order));
-    logAudit(isPending ? 'สร้างออเดอร์ (รอคอนเฟิร์ม)' : 'สร้างออเดอร์', isPending ? '(ยังไม่มีเลข)' : finalOrderNum, customer + ' · ' + pileLabel + ' รวม ' + totalQty + ' ต้น');
+    logAudit(isPending ? 'สร้างออเดอร์ (รอคอนเฟิร์ม)' : 'สร้างออเดอร์', isPending ? '(ยังไม่มีเลข)' : finalOrderNum, customer + ' · ' + pileLabel + ' รวม ' + totalQtyLabel);
 
     autoSaveCustomer(customer, tel, g('f_cust_addr').trim());
 
@@ -8733,7 +8906,7 @@ function submitOrder() {
     const valPart = '';
     document.getElementById('successDetail').innerHTML =
       '<strong>' + _esc(customer) + '</strong> · ' + _esc(tel) + '<br>'
-      + _esc(pileLabel) + ' · รวม ' + totalQty + ' ต้น' + valPart
+      + _esc(pileLabel) + ' · รวม ' + totalQtyLabel + valPart
       + '<br>📍 ' + _esc(order.site) + '<br>📅 วันส่ง: ' + _esc(order.deliveryDate)
       + (isPending ? '<br><span style="color:#C2410C;font-weight:700;">⏳ ยังไม่ลงเลข Order — รอลูกค้าคอนเฟิร์ม แล้วค่อยกด "✅ คอนเฟิร์ม" ในหน้าสถานะเพื่อใส่เลข</span>' : '');
 
@@ -10740,9 +10913,9 @@ function submitFinishProd() {
     dateISO, date: isoToThai(dateISO), startedAt: a.startedAt || null, finishedAt,
     qtyRequired: required, qtyProduced: qty,
     qtyDefect: defect, qtyNet: netQty, qtyExcess: stockToAdd,
-    // [FIX] งาน "ท่อน" ไม่ได้บวกเข้าสต็อก (ดูเงื่อนไขด้านล่าง _u !== 'ท่อน') → ต้องไม่ติดธงว่าบวกสต็อก
-    //   ไม่งั้นตอนลบประวัติผลิตจะไปหักสต็อกทั้งที่ตอนผลิตไม่เคยบวกเข้าไป
-    addedToStock: netQty > 0 && (a.productType === 'girder' ? 'ตัว' : _unitOf(a.unit)) !== 'ท่อน',
+    // [ท่อน-MODE FIX] ตอนนี้ท่อนก็เข้าสต็อก (เก็บเป็นท่อน) เหมือนกัน → ต้องติดธงว่าบวกสต็อกด้วย
+    //   เพื่อให้ตอนลบ/แก้ประวัติผลิต หักสต็อกท่อนคืนได้ถูกต้อง (การ์ดผูกด้วย prodLogKey)
+    addedToStock: netQty > 0,
     unit: (a.productType === 'girder' ? 'ตัว' : _unitOf(a.unit)),
     lane: a.lane||'', tong: a.tong||'', wire: a.wire||'', standRows: a.standRows||[], ...(a.itemIdx !== undefined ? { itemIdx: a.itemIdx } : {}), ...(a.segIdx !== undefined ? { segIdx: a.segIdx } : {}) };
   if (a.productType === 'girder') _newLog.productType = 'girder';
@@ -12974,6 +13147,7 @@ function renderStockCards() {
   let totalValue = 0;
   const grid = document.getElementById('stockCardsGrid');
   const reservedAll = getReservedStock(); // เรียกครั้งเดียว ใช้ซ้ำทุกการ์ด (กันคำนวณซ้ำ)
+  const reservedByUnit = getReservedStockByUnit(); // [หน่วย] ยอดจองแยกหน่วย ใช้คิดสถานะต่อหน่วย
   // [FIX#S6] แสดงทุกกองที่มีของจริง ไม่ใช่แค่ที่อยู่ในรายการชนิดเสา
   const cards = allPileNames().filter(n => n !== 'Girder').map(name => {
     const qty      = stock[name] || 0;
@@ -12987,7 +13161,18 @@ function renderStockCards() {
     // → การ์ดขึ้น "200" คู่กับป้าย "🚨 ต่ำมาก" ได้ · ตอนนี้ใช้ฐานเดียวกันคือการ์ดจริง
     const res      = (reservedAll[name] || 0);
     const mismatch = total !== qty;
-    const avail    = total - res;
+    // [หน่วย] ยอดคงเหลือคิด "แยกตามหน่วย" แล้วเอาหน่วยที่เหลือน้อยสุดมาตัดสินสถานะ
+    //   (ต้น กับ ท่อน เป็นคนละกอง บวกกันไม่ได้ — เดิมเอามารวมแล้วตัวเลขเพี้ยน)
+    const _stU = cpByUnit[name] || {};
+    const _reU = reservedByUnit[name] || {};
+    const _aUnits = new Set([...Object.keys(_stU), ...Object.keys(_reU)]);
+    let avail;
+    if (_aUnits.size > 0) {
+      avail = Infinity;
+      _aUnits.forEach(u => { avail = Math.min(avail, (_stU[u] || 0) - (_reU[u] || 0)); });
+    } else {
+      avail = total - res; // ไม่มีข้อมูลหน่วย → คิดแบบเดิม
+    }
     let cls = 'stock-ok';
     if (avail < cfg.stockLow)       cls = 'stock-low';
     else if (avail < cfg.stockWarn) cls = 'stock-warn';
@@ -16049,8 +16234,11 @@ function saveEditProdLog(fbKey) {
     }
   }
 
+  // [ท่อน-MODE FIX] นับว่า "เข้าสต็อกแล้ว" ถ้าธงติด หรือมีการ์ดที่ผูก prodLogKey (รวมท่อน + ข้อมูลเก่า)
+  const _wasStocked = log.addedToStock || getCustPoles().some(cp => cp.prodLogKey === fbKey);
+  const _uDisp = _unitOf(log.unit);
   // ปรับสต็อกถ้ามีการเพิ่มสต็อกไปแล้ว
-  if (log.addedToStock && (diff !== 0 || update.steel)) {
+  if (_wasStocked && (diff !== 0 || update.steel)) {
     const oldSpecLabel = [log.length, log.weld, log.steel, log.ba, log.extra]
       .filter(x => x && x !== '-').join('/') || '-';
     const newSpecLabel = [update.length||log.length, update.weld||log.weld, update.steel||log.steel, update.ba||log.ba, update.extra||log.extra]
@@ -16080,13 +16268,13 @@ function saveEditProdLog(fbKey) {
       newStock: (getStock()[log.pileType] || 0),
       ref: log.orderNum || '-',
       staff: (_currentUser && _currentUser.email) || '-',
-      note: '✏️ แก้ไข prodLog: ' + fbKey + ' (' + (diff > 0 ? '+' : '') + diff + ' ต้น)'
+      note: '✏️ แก้ไข prodLog: ' + fbKey + ' (' + (diff > 0 ? '+' : '') + diff + ' ' + _uDisp + ')'
     });
     saveStockLog(logArr);
   }
 
   // อัปเดต custPole entry ที่ตรงกัน
-  if (log.addedToStock) {
+  if (_wasStocked) {
     const oldSpecLabel = [log.length, log.weld, log.steel, log.ba, log.extra]
       .filter(x => x && x !== '-').join('/') || '';
     const newSpecLabel = [update.length||log.length, update.weld||log.weld, update.steel||log.steel, update.ba||log.ba, update.extra||log.extra]
@@ -16111,8 +16299,8 @@ function saveEditProdLog(fbKey) {
 
   db.ref(K_PROD_LOG + '/' + fbKey).update(update).then(() => {
     document.getElementById('_editProdLogModal')?.remove();
-    logAudit('แก้ไขประวัติผลิต', log.orderNum || log.pileType || '-', (log.pileType||'') + (diff!==0 ? ' · สต็อก '+(diff>0?'+':'')+diff+' ต้น' : ''));
-    showToast('✅ แก้ไขแล้ว' + (log.addedToStock && diff !== 0 ? ' | สต็อก ' + (diff > 0 ? '+' : '') + diff + ' ต้น' : ''));
+    logAudit('แก้ไขประวัติผลิต', log.orderNum || log.pileType || '-', (log.pileType||'') + (diff!==0 ? ' · สต็อก '+(diff>0?'+':'')+diff+' '+_uDisp : ''));
+    showToast('✅ แก้ไขแล้ว' + (_wasStocked && diff !== 0 ? ' | สต็อก ' + (diff > 0 ? '+' : '') + diff + ' ' + _uDisp : ''));
     // [SEG→ต้น] แก้ประวัติผลิตของงานแบ่งท่อน → ประกอบ/หักต้นเต็มให้ตรงยอดท่อนล่าสุด
     try {
       const _on = log.orderNum, _ii = (itemIdx !== undefined ? itemIdx : log.itemIdx);
@@ -16145,7 +16333,7 @@ function adminDeleteLog(type, fbKey) {
       if (e) { _adTarget = e.name || type; _adDesc = (e.typeVal||'') + ' ' + (e.qtyDisplay||e.qty||'') + (e.ref&&e.ref!=='-'?' · '+e.ref:''); }
     } else if (type === 'prodLog') {
       const e = getProdLog().find(x => x._fbKey === fbKey);
-      if (e) { _adTarget = e.orderNum || e.pileType || type; _adDesc = (e.pileType||'') + ' ' + ((e.qtyProduced||e.qty||0)) + ' ต้น'; }
+      if (e) { _adTarget = e.orderNum || e.pileType || type; _adDesc = (e.pileType||'') + ' ' + ((e.qtyProduced||e.qty||0)) + ' ' + _unitOf(e.unit); }
     } else if (type === 'prodErr') {
       const e = (getProdErrs()||[]).find(x => x._fbKey === fbKey);
       if (e) { _adTarget = e.order || type; _adDesc = (e.errorType||'') + ' · ' + (e.cause||''); }
@@ -16154,10 +16342,13 @@ function adminDeleteLog(type, fbKey) {
 
   if (type === 'prodLog') {
     const log = getProdLog().find(l => l._fbKey === fbKey);
-    if (log && log.addedToStock) {
+    // [ท่อน-MODE FIX] ของที่งานผลิตนี้สร้างการ์ดสต็อกไว้ (ผูกด้วย prodLogKey) ก็ต้องหักคืน
+    //   แม้ธง addedToStock เก่าจะเป็น false (ข้อมูลท่อนที่บันทึกก่อนแก้บั๊กนี้)
+    const _hasLinkedCard = log && getCustPoles().some(cp => cp.prodLogKey === fbKey);
+    if (log && (log.addedToStock || _hasLinkedCard)) {
       const qtyNet = log.qtyNet !== undefined ? log.qtyNet : Math.max(0, (log.qtyProduced||log.qty||0) - (log.qtyDefect||log.defect||0));
-      // [FIX] งาน "ท่อน" ตอนผลิตไม่ได้บวกเข้าสต็อก → ตอนลบก็ต้องไม่หักสต็อก (กันข้อมูลเก่าที่ติดธงผิดไว้ด้วย)
-      const _wasStocked = _unitOf(log.unit) !== 'ท่อน';
+      // ของที่เข้าสต็อกแล้ว (รวมท่อน) ต้องหักคืนเสมอ — ยึดจากการ์ดที่ผูก prodLogKey
+      const _wasStocked = true;
 
       // 1. คืนสต็อก (ลบออกจาก spec stock)
       if (qtyNet > 0 && _wasStocked) {
