@@ -3344,7 +3344,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
             <select id="spf_seg" onchange="spfSegChange()" style="width:100%;padding:8px 10px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;"></select>
           </div>
           <div class="field">
-            <label class="field-label">จำนวนที่เทลงราง <span id="spfUnitPile"><select id="spf_unit" class="unit-pick-local" title="หน่วยของรายการนี้"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></span><span id="spfUnitGirder" style="display:none;font-weight:700;color:#7C3AED;">ตัว</span> <span class="req">*</span></label>
+            <label class="field-label">จำนวนที่เทลงราง <span id="spfUnitPile" style="font-weight:700;color:#0F766E;">ต้น</span><span id="spfUnitGirder" style="display:none;font-weight:700;color:#7C3AED;">ตัว</span><input type="hidden" id="spf_unit" value="ต้น"/> <span class="req">*</span></label>
             <input type="number" id="spf_qty" min="1" placeholder="เช่น 50"/>
           </div>
           <div class="field">
@@ -3465,7 +3465,7 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <div style="font-size:11px;font-weight:700;color:#92400E;letter-spacing:0.05em;margin-bottom:8px;">🏗️ รายละเอียดการผลิต</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div><label class="field-label" style="font-size:11px;">วันที่ผลิต</label><input type="date" id="eap_date" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
-          <div><label class="field-label" style="font-size:11px;">จำนวนในราง <select id="eap_unit" class="unit-pick-local" title="หน่วยของรายการนี้"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label><input type="number" id="eap_qty" min="1" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
+          <div><label class="field-label" style="font-size:11px;">จำนวนในราง <span id="eap_unit" style="font-weight:700;color:#0F766E;">ต้น</span></label><input type="number" id="eap_qty" min="1" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
           <div><label class="field-label" style="font-size:11px;">เลน</label><input type="text" id="eap_lane" placeholder="เช่น 1, 2, A" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
           <div><label class="field-label" style="font-size:11px;">ท้อง</label><input type="text" id="eap_tong" placeholder="เช่น มี, ไม่มี" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
           <div style="grid-column:1/-1;"><label class="field-label" style="font-size:11px;">หมายเหตุ</label><input type="text" id="eap_note" placeholder="หมายเหตุ" style="width:100%;padding:7px 9px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:12px;"/></div>
@@ -8913,6 +8913,8 @@ function submitOrder() {
     const navStatus = document.getElementById('nav-status'); if (navStatus) navStatus.classList.add('has-new');
     updateHeaderCount();
     orderItemsDraft = [];
+    // [FIX] รีเซ็ตสถานะเลือกแถว (ซ้อนท่อน) ด้วย ไม่งั้นค้าง → ช่องชนิดเสาถูกล็อก คีย์ออเดอร์ใหม่ไม่ได้
+    _selGrp = null; _stackMode = false; _syncStackUI();
   } catch (err) {
     console.error('submitOrder error:', err);
     alert('❌ บันทึก Order ไม่สำเร็จ: ' + (err && err.message ? err.message : err));
@@ -9203,7 +9205,10 @@ function resetFormOnly() {
   fillLoggedInUser();
   var gPosDefault = document.querySelector('input[name="g_position"][value="ตัวกลาง"]'); if (gPosDefault) gPosDefault.checked = true;
   orderItemsDraft = [];
+  // [FIX] รีเซ็ตสถานะเลือกแถว (ซ้อนท่อน) + ปลดล็อกช่องชนิดเสา ก่อนเริ่มคีย์ออเดอร์ใหม่
+  _selGrp = null; _stackMode = false;
   renderOrderItemsDraft();
+  _syncStackUI();
   var todayEl = document.getElementById('f_order_date');
   if (todayEl) todayEl.value = new Date().toISOString().slice(0, 10);
   var submitBtn = document.getElementById('submitBtn');
@@ -10212,10 +10217,6 @@ function renderProdSection() {
           <span style="font-size:12px;font-weight:700;color:${remaining<=0?'#166534':'#1E40AF'};" title="เหลือผลิต">${remaining} ${u}</span>
         </div>
         ${tags ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${tags}</div>` : ''}
-        ${isG ? '' : `<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:6px 9px;margin-bottom:8px;flex-wrap:wrap;">
-          <span style="font-size:11px;font-weight:700;color:#9A3412;">⚙️ ${isSplit ? ('แบ่งท่อน: ' + fmtSegSummary(segs) + ' · เชื่อม ' + (segs.length-1) + ' จุด/ต้น') : ('ต้นเต็ม · ยาว ' + (_prodLenNum(it.length)?_prodLenNum(it.length).toFixed(2):'-') + 'ม.')}</span>
-          ${canDo('log_production') ? `<button onclick="openProdPlan('${o.orderNum}',${itemIdx})" style="background:#fff;color:#9A3412;border:1px solid #FB923C;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">ตั้งวิธีผลิต</button>` : ''}
-        </div>`}
         <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B;margin-bottom:4px;">
           <span>ผลิตแล้ว <strong style="color:${pct>=100?'#166534':'#1E293B'};">${totalProduced}</strong> / ${target} ${u}</span>
           <span style="font-weight:700;color:${pct>=100?'#166534':'#92400E'};">${pct}%</span>
@@ -10270,6 +10271,9 @@ function openEditActiveProd(id) {
   document.getElementById('eap_id').value   = id;
   document.getElementById('eap_date').value = a.prodDate || new Date().toISOString().slice(0,10);
   document.getElementById('eap_qty').value  = a.qtyCasting || a.qtyRequired || '';
+  // ล็อกหน่วยตามที่คีย์ไว้ (ยึดจากรายการผลิตเดิม)
+  { const _eu = a.unit ? _unitOf(a.unit) : ((a.pileType==='Girder'||a.productType==='girder')?'ตัว':'ต้น');
+    const _eul = document.getElementById('eap_unit'); if (_eul) _eul.textContent = _eu; }
   document.getElementById('eap_lane').value = a.lane || '';
   document.getElementById('eap_tong').value = a.tong || '';
   document.getElementById('eap_note').value = a.note || '';
@@ -10604,26 +10608,33 @@ function openStartProdForm(orderNum, pileType, qtyRequired, length, itemIdx) {
   document.getElementById('spf_time').value = _now.toTimeString().slice(0, 5);
   const specLabel = (length && length !== '-') ? ' · ' + length : '';
   const _isG = (pileType === 'Girder');
-  let _u   = _isG ? 'ตัว' : 'ต้น';
-  const _up  = document.getElementById('spfUnitPile');
-  const _ug  = document.getElementById('spfUnitGirder');
-  if (_up) _up.style.display = _isG ? 'none' : '';
-  if (_ug) _ug.style.display = _isG ? '' : 'none';
-  // ── รายการแบ่งท่อน: แสดงตัวเลือกท่อน + นับเป็นท่อน ──
-  const _segField = document.getElementById('spf_seg_field');
-  const _segSel   = document.getElementById('spf_seg');
-  let _itSplit = null;
+  // ── ล็อกหน่วยตามที่คีย์ไว้ตอนต้นทาง (ออเดอร์) — ไม่มีช่องให้เลือกแล้ว ──
+  let _itKeyed = null;
   try {
     const _o = getOrders().find(x => x.orderNum === orderNum);
     if (_o && itemIdx !== undefined) {
-      const _it = getOrderItems(_o)[itemIdx];
-      if (_it && _it.prodMode === 'split') _itSplit = _it;
+      _itKeyed = getOrderItems(_o)[itemIdx] || null;
     }
   } catch (e) {}
+  let _u = _isG ? 'ตัว'
+         : (_itKeyed && typeof getItemProdUnit === 'function') ? getItemProdUnit(_itKeyed)
+         : (_itKeyed && _itKeyed.unit) ? _unitOf(_itKeyed.unit)
+         : 'ต้น';
+  const _up  = document.getElementById('spfUnitPile');
+  const _ug  = document.getElementById('spfUnitGirder');
+  if (_up) { _up.textContent = _u; _up.style.display = _isG ? 'none' : ''; }
+  if (_ug) _ug.style.display = _isG ? '' : 'none';
+  const _uh = document.getElementById('spf_unit');
+  if (_uh) _uh.value = _u;
+  // ── รายการแบ่งท่อน: แสดงตัวเลือกท่อน + นับเป็นท่อน ──
+  const _segField = document.getElementById('spf_seg_field');
+  const _segSel   = document.getElementById('spf_seg');
+  let _itSplit = (_itKeyed && _itKeyed.prodMode === 'split') ? _itKeyed : null;
   if (_itSplit && _segSel) {
     _u = 'ท่อน';
-    if (_up) _up.style.display = 'none';
+    if (_up) { _up.textContent = _u; _up.style.display = ''; }
     if (_ug) _ug.style.display = 'none';
+    if (_uh) _uh.value = _u;
     const _pidxLocal = buildProdIndex();
     const _segs = getItemSegs(_itSplit);
     _segSel.innerHTML = _segs.map(function (s, i) {
@@ -16060,6 +16071,13 @@ function openEditProdErr(idx) {
   document.getElementById('epe_cause').value = e.cause || '';
   document.getElementById('epe_fix').value   = (e.fix && e.fix !== '-') ? e.fix : '';
   document.getElementById('epe_date').value  = thaiDateToISO(e.date);
+  // ล็อกหน่วยตามที่คีย์ไว้ในออเดอร์ (ยึดต้นทาง)
+  { let _epu = 'ต้น';
+    try { if (e.order) { const _eo = getOrders().find(x => x.orderNum === e.order);
+      if (_eo) { const _eit = getOrderItems(_eo)[0];
+        if (_eit && typeof getItemProdUnit === 'function') _epu = getItemProdUnit(_eit);
+        else if (_eit && _eit.unit) _epu = _unitOf(_eit.unit); } } } catch(_x){}
+    const _epuEl = document.getElementById('epe_unit'); if (_epuEl) _epuEl.textContent = _epu; }
   document.getElementById('epeOrderLabel').textContent = (e.order || '') + (e.date ? ' · ' + e.date : '');
   document.getElementById('editProdErrOverlay').style.display = 'flex';
 }
@@ -16115,6 +16133,20 @@ function openEditProdLog(fbKey) {
     }
   }
 
+  // ล็อกหน่วยตามที่คีย์ไว้ในออเดอร์ (ยึดต้นทาง)
+  let _finUnit = 'ต้น';
+  try {
+    if (log.orderNum && log.orderNum !== 'STOCK') {
+      const _fo = getOrders().find(x => x.orderNum === log.orderNum);
+      if (_fo) {
+        const _fits = getOrderItems(_fo);
+        const _fit = (log.itemIdx !== undefined && _fits[log.itemIdx]) ? _fits[log.itemIdx] : _fits[0];
+        if (_fit && typeof getItemProdUnit === 'function') _finUnit = getItemProdUnit(_fit);
+        else if (_fit && _fit.unit) _finUnit = _unitOf(_fit.unit);
+      }
+    }
+  } catch(e){}
+
   const existing = document.getElementById('_editProdLogModal');
   if (existing) existing.remove();
 
@@ -16136,11 +16168,11 @@ function openEditProdLog(fbKey) {
       <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">รายการที่ผลิต (Item)</label>
       <select id="_epli" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:12px;margin-bottom:14px;">${itemOptions}</select>
 
-      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">จำนวนผลิต <select id="fin_unit" class="unit-pick-local" title="หน่วยของรายการนี้"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label>
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">จำนวนผลิต <span id="fin_unit" style="font-weight:700;color:#0F766E;">${_esc(_finUnit)}</span></label>
       <input id="_eplq" type="number" min="0" value="${log.qtyProduced ?? log.qty ?? 0}"
         style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;margin-bottom:14px;box-sizing:border-box;" />
 
-      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">ของเสีย <select id="fin_defect_unit" class="unit-pick-local" title="หน่วยของรายการนี้"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label>
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">ของเสีย <span id="fin_defect_unit" style="font-weight:700;color:#0F766E;">${_esc(_finUnit)}</span></label>
       <input id="_epld" type="number" min="0" value="${log.qtyDefect ?? log.defect ?? 0}"
         style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #CBD5E1;font-size:13px;margin-bottom:14px;box-sizing:border-box;" />
 
@@ -16565,7 +16597,7 @@ function adminClearHistory(type) {
       <input type="hidden" id="epe_idx"/>
       <div class="form-grid">
         <div class="field">
-          <label class="field-label">จำนวนเสีย <select id="epe_unit" class="unit-pick-local" title="หน่วยของรายการนี้"><option value="ต้น">ต้น</option><option value="ท่อน">ท่อน</option></select></label>
+          <label class="field-label">จำนวนเสีย <span id="epe_unit" style="font-weight:700;color:#0F766E;">ต้น</span></label>
           <input type="number" id="epe_qty" min="0" placeholder="0"/>
         </div>
         <div class="field">
@@ -17067,6 +17099,10 @@ function printQuotation(){
   .paeb-p2{ background:#f4effe; color:#7c3aed; }
   .paeb-p3{ background:#eafaf2; color:#059669; }
   .paeb-box.zero{ background:#f6f7f9; color:#c3ccda; }
+  .paeb-gongs{ margin-top:6px; display:flex; flex-direction:column; gap:3px; align-items:center; }
+  .paeb-gchip{ font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px; background:#eef6fc; color:#0369a1; white-space:nowrap; }
+  .paeb-gchip.g2{ background:#f4effe; color:#7c3aed; }
+  .paeb-gchip.g3{ background:#eafaf2; color:#059669; }
   .paeb-tbl td.job{ text-align:left; padding-left:18px; border-right:1px solid #9aa8bd; cursor:pointer; }
   .paeb-tbl td.job .nm{ font-weight:700; font-size:15px; color:#1e293b; }
   .paeb-tbl td.job .nm .arw{ color:#c3ccda; font-weight:800; margin-left:6px; }
@@ -17083,6 +17119,7 @@ function printQuotation(){
     box-shadow:0 1px 3px rgba(220,38,38,.35); transition:background .12s; }
   .paeb-cbbtn:hover{ background:#b91c1c; }
   .paeb-tbl tr.sub td{ border-top:1px dashed #e4e9f2; }
+  .paeb-tbl tr.sub.sameord td{ border-top:none; }
   .paeb-tbl tr.grp td{ border-top:2.5px solid #94a3b8; }
   .paeb-tbl tbody tr:first-child td{ border-top:none; }
   .paeb-tbl tr.has-rem td.remain .paeb-pill.left{ box-shadow:0 0 0 2px #fdba74; }
@@ -17101,6 +17138,29 @@ function printQuotation(){
   function _baseLen(v){ return (v||"").toString().split("/")[0].trim(); }
   function _lenTxt(len){ return len ? (/^\d/.test(len) ? len+"ม." : len) : ""; }
   function _grpKey(pile, len){ return (pile||"") + "|" + _baseLen(len); }
+  // [สเปคเต็ม] แยกกลุ่ม/นับแพด้วยสเปคเต็ม (ชนิด|ยาว|เชื่อม|เหล็ก|บ่า) ให้ตรงกับแท็บลานสต็อก
+  function _nzSpec(x){ var v=(x==null?"":(""+x)).trim(); return (v==="-")?"":v; }
+  // รองรับ format เก่าที่ความยาวรวม "/" มา (ยาว/เชื่อม/เหล็ก/.../บ่า) → ดึงมาเติมเมื่อช่องแยกยังว่าง
+  function _embedSpec(o){
+    var s=(o.length||"").toString();
+    if(!s.includes("/")) return { weld:o.weld, steel:o.steel, ba:o.ba };
+    var p=s.split("/").map(function(x){return x.trim();});
+    var pick=function(cur,i){ return (cur&&cur!=="-")?cur:((p&&p[i])||cur); };
+    return { weld:pick(o.weld,1), steel:pick(o.steel,2), ba:pick(o.ba,4) };
+  }
+  function _specKeyFull(o){
+    var e=_embedSpec(o);
+    return (o.pileType||o.pile||"") + "|" + _baseLen(o.length) + "|"
+         + _nzSpec(e.weld) + "|" + _nzSpec(e.steel) + "|" + _nzSpec(e.ba);
+  }
+  // ป้ายสเปคย่อ: "1ช · สล.4012 · บ.2.50" (โชว์เฉพาะช่องที่มีค่า)
+  function _specExtraShort(w,s,b){
+    var p=[];
+    if(w && w!=="-") p.push(_nzSpec(w)+"ช");
+    if(s && s!=="-") p.push("สล."+_nzSpec(s));
+    if(b && b!=="-") p.push("บ."+_nzSpec(b));
+    return p.join(" · ");
+  }
 
   // อ่านตำแหน่งกองจากลาน (localStorage เดียวกับแท็บลาน) → รวมสต็อกต่อลาน A/B/C แยกตามสเปค(ชนิด+ยาว)
   function computeLaneStock(){
@@ -17110,6 +17170,8 @@ function printQuotation(){
       if (typeof _cache!=="undefined" && _cache.yardState!==null) STATE = _cache.yardState || {};
       else STATE = JSON.parse(localStorage.getItem("sud_yard_state_v1") || "{}") || {};
     }catch(e){ STATE = {}; }
+    // map[สเปคเต็ม][เลขออเดอร์] = { A, B, C, gongs:[{id,lane,qty,unit}] }
+    // แยกตามออเดอร์ที่ของแต่ละก้อนติดมา (inOrder = "#000, #001") → โชว์เฉพาะของที่มาจากออเดอร์นั้น
     var map = {};
     Object.keys(STATE).forEach(function(id){
       var lane = (id[0] || "").toUpperCase();
@@ -17117,11 +17179,31 @@ function printQuotation(){
       var lots = Array.isArray(STATE[id]) ? STATE[id] : [];
       lots.forEach(function(l){
         if (!l) return;
-        var k = _grpKey(l.pileType, l.length);
-        if (!map[k]) map[k] = { A:0, B:0, C:0 };
-        map[k][lane] += (+l.qty || 0);
+        var qty = (+l.qty || 0);
+        if (qty <= 0) return;
+        var k = _specKeyFull({ pileType:l.pileType, length:l.length, weld:l.weld, steel:l.steel, ba:l.ba });
+        // หน่วยจริงของของก้อนนี้ (ต้น/ท่อน/ตัว) — ติดไว้ที่ชิปกองเสมอ กันหน่วยปนกันแล้วอ่านผิด
+        var unit = (typeof _unitOf === "function") ? _unitOf(l.unit) : (l.unit || "ต้น");
+        // ของที่ไม่ผูกออเดอร์ (ผลิตเพิ่มสต็อก) → inOrder ว่าง → ไม่นับเข้าแถวออเดอร์ไหน
+        var ords = String(l.inOrder || "").split(",").map(function(s){ return s.replace(/#/g,"").trim(); }).filter(Boolean);
+        if (!ords.length) return;
+        ords.forEach(function(on){
+          if (!map[k]) map[k] = {};
+          if (!map[k][on]) map[k][on] = { A:0, B:0, C:0, _g:{} };
+          map[k][on][lane] += qty;
+          var gk = id + "|" + unit;                       // รวมของกองเดียวกัน+หน่วยเดียวกันเป็นชิปใบเดียว
+          if (!map[k][on]._g[gk]) map[k][on]._g[gk] = { id:id, lane:lane, qty:0, unit:unit };
+          map[k][on]._g[gk].qty += qty;
+        });
       });
     });
+    // แปลง _g (map) → gongs (array) เรียงตามชื่อกอง A1, A2, ...
+    Object.keys(map).forEach(function(k){ Object.keys(map[k]).forEach(function(on){
+      var r = map[k][on];
+      r.gongs = Object.keys(r._g).map(function(x){ return r._g[x]; })
+        .sort(function(a,b){ return a.id < b.id ? -1 : (a.id > b.id ? 1 : 0); });
+      delete r._g;
+    }); });
     return map;
   }
 
@@ -17146,29 +17228,21 @@ function printQuotation(){
 
     var laneStock = computeLaneStock();
 
-    // จัดกลุ่มรายการออเดอร์ตามสเปค (ชนิด+ยาว)
+    // จัดกลุ่มตาม "ออเดอร์" — หนึ่งออเดอร์ = หนึ่งกรอบใหญ่ รวมทุกรายการไว้ด้วยกัน
+    // (เลขแพ ลาน A/B/C แยกตามสเปคเต็มของแต่ละรายการในกรอบ)
     var groups = {}, gOrder = [];
     orders.forEach(function(o){
       var items = (typeof getOrderItems === "function") ? getOrderItems(o) : (o.items || [o]);
+      var rows = [];
       items.forEach(function(it, idx){
         var pile = it.pileType || o.pileType || "(ไม่ระบุ)";
         if (typeof _pileCatOK === "function" && !_pileCatOK(pile)) return;   // กรองตามแถบหมวดขนาดเสาที่เลือก
-        var len  = _baseLen(it.length);
-        var k = _grpKey(pile, len);
-        if (!groups[k]) { groups[k] = { pile:pile, len:len, rows:[] }; gOrder.push(k); }
-        groups[k].rows.push({ o:o, it:it, idx:idx });
+        rows.push({ o:o, it:it, idx:idx, pile:pile });
       });
-    });
-
-    // เรียงกลุ่ม: ตามลำดับชนิดเสาใน config แล้วค่อยความยาว
-    var cfgPiles = [];
-    try{ cfgPiles = (getConfig().pileTypes || []); }catch(e){}
-    gOrder.sort(function(a,b){
-      var ga = groups[a], gb = groups[b];
-      var ai = cfgPiles.indexOf(ga.pile), bi = cfgPiles.indexOf(gb.pile);
-      ai = ai===-1?99:ai; bi = bi===-1?99:bi;
-      if (ai !== bi) return ai - bi;
-      return (parseFloat(ga.len)||0) - (parseFloat(gb.len)||0);
+      if (!rows.length) return;   // ออเดอร์นี้ไม่มีรายการตรงหมวดที่เลือก → ข้าม
+      var k = String(o.orderNum);
+      if (!groups[k]) { groups[k] = { o:o, rows:[] }; gOrder.push(k); }
+      groups[k].rows = groups[k].rows.concat(rows);   // เผื่อ orderNum ซ้ำ ให้รวมไว้กรอบเดียว
     });
 
     if (!gOrder.length) {
@@ -17190,41 +17264,62 @@ function printQuotation(){
       + '<th>สั่ง</th><th>ส่ง</th><th>เหลือ</th>'
       + '</tr></thead><tbody>';
 
+    var box = function(v, cls){ return '<div class="paeb-box ' + (v>0?cls:'zero') + '">' + v + '</div>'; };
+    // เลขใหญ่ = รวมต่อลาน · ชิปข้างล่าง = กองไหนกี่ท่อน (ติดหน่วยเสมอ เช่น A2 · 24 ท่อน)
+    var paeCell = function(v, cls, lane, gongs){
+      var b = '<div class="paeb-box ' + (v>0?cls:'zero') + '">' + v + '</div>';
+      var gs = (gongs||[]).filter(function(g){ return g.lane===lane && (+g.qty||0)>0; });
+      if (!gs.length) return b;
+      var gcls = (lane==='B') ? ' g2' : (lane==='C' ? ' g3' : '');
+      var chips = gs.map(function(g){ return '<span class="paeb-gchip'+gcls+'">'+_esc(g.id)+' · '+g.qty+' '+_esc(g.unit)+'</span>'; }).join('');
+      return b + '<div class="paeb-gongs">' + chips + '</div>';
+    };
     gOrder.forEach(function(k){
       var g = groups[k];
-      var isG = (g.pile === "Girder");
-      var ls = laneStock[k] || { A:0, B:0, C:0 };
+      var o = g.o;
       var span = g.rows.length;
-      var specTxt = _esc(g.pile) + (g.len ? '<small>' + _esc(_lenTxt(g.len)) + '</small>' : '');
-      var box = function(v, cls){ return '<div class="paeb-box ' + (v>0?cls:'zero') + '">' + v + '</div>'; };
+      var name = o.customer || o.site || "(ไม่ระบุ)";
 
       g.rows.forEach(function(r, ri){
-        var o = r.o, it = r.it;
+        var it = r.it, pile = r.pile;
+        // สเปคเต็มของรายการนี้ — ใช้ทั้งทำป้ายสเปค และหาเลขแพของลาน A/B/C
+        var _specObj = { pileType:pile, length:it.length, weld:it.weld, steel:it.steel, ba:it.ba };
+        var _ex = _embedSpec(_specObj);
+        var _lsAll = laneStock[_specKeyFull(_specObj)] || {};
+        var ls = _lsAll[String(o.orderNum)] || { A:0, B:0, C:0, gongs:[] };
+        var _subParts = [];
+        var _len = _baseLen(it.length);
+        if (_len) _subParts.push(_lenTxt(_len));
+        var _exTxt = _specExtraShort(_ex.weld, _ex.steel, _ex.ba);
+        if (_exTxt) _subParts.push(_exTxt);
+        var _subTxt = _subParts.join(' · ');
+        var specTxt = _esc(pile) + (_subTxt ? '<small>' + _esc(_subTxt) + '</small>' : '');
+
         var ordQ = (typeof getItemProdTarget === "function") ? getItemProdTarget(it) : (+it.qty || 0);   // แบ่งท่อน = นับเป็นท่อน
         var del  = (+_delOf(o, it) || 0);
         var rem  = ordQ - del;
         var remHTML = rem > 0
           ? '<span class="paeb-pill left">' + rem + '</span>'
           : '<span class="paeb-pill done">ครบ</span>';
-        // ปุ่มจบบิล — ทุกแถวที่ "ครบ" และออเดอร์ส่งครบทั้งใบแล้ว
+        // ปุ่มจบบิล — โชว์บนแถวแรกของออเดอร์ที่ส่งครบทั้งใบแล้ว
         var _ost = o.status || '';
-        if ((_ost === 'ส่งครบ' || _ost === 'ส่งครบแล้ว')
+        if (ri === 0 && (_ost === 'ส่งครบ' || _ost === 'ส่งครบแล้ว')
             && (typeof canDo !== 'function' || canDo('change_order_status'))) {
           remHTML += '<br><button class="paeb-cbbtn" onclick=\'event.stopPropagation();closeBill(' + JSON.stringify(String(o.orderNum)) + ')\'>🔴 จบบิล</button>';
         }
-        var name = o.customer || o.site || "(ไม่ระบุ)";
 
-        var _rowCls = (ri===0?'grp':'sub') + (ri===span-1?' grpend':'') + (rem>0?' has-rem':'');
+        // แถวแรกของออเดอร์ = เส้นหนา (ขึ้นกรอบใหม่) · แถวถัดไปในออเดอร์เดียวกัน = ไม่ตีเส้น (กรอบใหญ่คลุม)
+        var _rowCls = (ri===0?'grp':'sub sameord') + (ri===span-1?' grpend':'') + (rem>0?' has-rem':'');
         html += '<tr class="orow ' + _rowCls + '" data-od="' + _esc(o.orderNum) + '">';
+        html += '<td class="spec">' + specTxt + '</td>'
+              + '<td class="pae">' + paeCell(ls.A, 'paeb-p1', 'A', ls.gongs) + '</td>'
+              + '<td class="pae">' + paeCell(ls.B, 'paeb-p2', 'B', ls.gongs) + '</td>'
+              + '<td class="pae">' + paeCell(ls.C, 'paeb-p3', 'C', ls.gongs) + '</td>';
         if (ri === 0) {
-          html += '<td class="spec" rowspan="' + span + '">' + specTxt + '</td>'
-                + '<td class="pae" rowspan="' + span + '">' + box(ls.A, 'paeb-p1') + '</td>'
-                + '<td class="pae" rowspan="' + span + '">' + box(ls.B, 'paeb-p2') + '</td>'
-                + '<td class="pae" rowspan="' + span + '">' + box(ls.C, 'paeb-p3') + '</td>';
+          html += '<td class="job" rowspan="' + span + '"><div class="nm">' + _esc(name) + '<span class="arw">›</span></div>'
+                + '<div class="cd">' + _esc(o.orderNum) + '</div></td>';
         }
-        html += '<td class="job"><div class="nm">' + _esc(name) + '<span class="arw">›</span></div>'
-              + '<div class="cd">' + _esc(o.orderNum) + '</div></td>'
-              + '<td class="num ord">' + ordQ + '</td>'
+        html += '<td class="num ord">' + ordQ + '</td>'
               + '<td class="num sent">' + del + '</td>'
               + '<td class="remain">' + remHTML + '</td>'
               + '</tr>';
