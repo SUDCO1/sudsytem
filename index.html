@@ -3881,6 +3881,11 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
       <!-- สินค้า/เสาที่จะส่ง -->
       <div id="tc_items_block" style="display:none;">
         <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px;">สินค้าที่จะส่ง <span style="font-weight:400;color:#94A3B8;">(เลือกและกรอกจำนวน)</span></div>
+        <div style="margin-bottom:8px;padding:8px 11px;background:#F1F5F9;border:1.5px solid #CBD5E1;border-radius:8px;font-size:11px;line-height:1.6;color:#475569;">
+          💡 ปุ่ม <span style="display:inline-flex;align-items:center;gap:3px;font-weight:700;padding:1px 7px;border-radius:999px;border:1.5px solid #CBD5E1;background:#F8FAFC;color:#475569;">🪵 นับ: ทั้งหมด</span> ใต้แต่ละรายการ กดเพื่อสลับว่ายอด "มี" ของรายการนั้นจะนับแบบไหน<br>
+          • <b>ทั้งหมด</b> = นับของทุกก้อนในสต็อก (รวมที่เพิ่งผลิตเสร็จ ยังไม่ได้จัดลงลาน)<br>
+          • <b>เฉพาะลงลาน</b> = นับเฉพาะของที่จัดลงลานแล้ว ของที่ยังไม่ลงลานจะส่งไม่ได้
+        </div>
         <div id="tc_items_list" style="display:flex;flex-direction:column;gap:6px;"></div>
       </div>
 
@@ -4607,6 +4612,54 @@ function _tcCpKey(cp) {
   return (cp.fromStock ? 'S|' : 'P|') + (cp.pileType || '') + '|'
        + (cp.spec || '') + '|' + _unitOf(cp.unit);
 }
+// นับยอด "ของที่จัดลงลานแล้ว" ของออเดอร์นี้ แยกตาม ชนิดเสา + สเปค
+// (lot.length ในลาน = cp.spec ในสต็อก 1 → จับคู่ตรงกันพอดี)
+function _tcLanePlacedMap(orderNum) {
+  const m = {};
+  let st = {};
+  try { st = JSON.parse(localStorage.getItem('sud_yard_state_v1') || '{}') || {}; } catch (e) { st = {}; }
+  const onNorm = String(orderNum).replace(/#/g, '').trim();
+  Object.keys(st).forEach(slot => {
+    (st[slot] || []).forEach(l => {
+      if (!l) return;
+      const ords = String(l.inOrder || '').split(',').map(s => s.replace(/#/g, '').trim()).filter(Boolean);
+      if (ords.indexOf(onNorm) < 0) return;
+      const key = (l.pileType || '') + '|' + (l.length || '');
+      m[key] = (m[key] || 0) + (+l.qty || 0);
+    });
+  });
+  return m;
+}
+// ปุ่มสลับต่อรายการ: "นับ: ทั้งหมด" ↔ "นับ: เฉพาะลงลาน"
+// ทั้งหมด = ของทุกก้อนในสต็อก (รวมเพิ่งผลิตยังไม่ลงลาน) · เฉพาะลงลาน = เฉพาะที่จัดลงลานแล้ว
+function tcRowLaneToggle(i) {
+  const inp  = document.getElementById('tc_cp_qty_' + i);
+  const btn  = document.getElementById('tc_cp_lanebtn_' + i);
+  const have = document.getElementById('tc_cp_have_' + i);
+  if (!inp || !btn) return;
+  const u       = inp.dataset.unit || PU();
+  const qtyAll  = parseInt(inp.dataset.qtyall)  || 0;
+  const qtyLane = parseInt(inp.dataset.qtylane) || 0;
+  const toLane  = inp.dataset.lanemode !== 'lane';   // กำลังจะสลับไปโหมดไหน
+  const newMax  = toLane ? qtyLane : qtyAll;
+  inp.dataset.lanemode = toLane ? 'lane' : 'all';
+  inp.dataset.curmax   = String(newMax);
+  inp.max = String(newMax);
+  // หนีบค่าที่คีย์ไว้ไม่ให้เกิน max ใหม่
+  let v = parseInt(inp.value) || 0;
+  if (v > newMax) inp.value = String(newMax);
+  // อัปเดตข้อความ "มี" และหน้าตาปุ่ม
+  if (have) have.textContent = newMax + ' ' + u;
+  if (toLane) {
+    btn.textContent = '📦 นับ: เฉพาะลงลาน';
+    btn.style.background = '#EFF6FF'; btn.style.borderColor = '#93C5FD'; btn.style.color = '#1D4ED8';
+  } else {
+    btn.textContent = '🪵 นับ: ทั้งหมด';
+    btn.style.background = '#F8FAFC'; btn.style.borderColor = '#CBD5E1'; btn.style.color = '#475569';
+  }
+  // รีเฟรชสีกรอบ/ป้ายเตือนให้ตรงกับ max ใหม่
+  tcClampStock(inp);
+}
 function _tcCpGroupCount(orderNum) {
   const cpRows = getCustPoles().filter(cp => cp.orderNum === orderNum && cp.online !== false);
   const keys = new Set();
@@ -4699,8 +4752,11 @@ function _tcCpRowsHtml(orderNum, savedItems) {
     gMap[key].qty += (cp.qty||0);
     gMap[key].ids.push(cp.id);
   });
+  // ยอด "ที่จัดลงลานแล้ว" ของแต่ละกลุ่ม — ใช้กับปุ่มสลับต่อรายการ (นับทั้งหมด ↔ เฉพาะที่ลงลาน)
+  const _laneMap = _tcLanePlacedMap(orderNum);
   return groups.map((g, i) => {
     const specLabel = g.spec && g.spec !== '-' ? ' · สเปค ' + _esc(g.spec) : '';
+    const laneQty = _laneMap[(g.pileType || '') + '|' + (g.spec || '')] || 0;  // ของกลุ่มนี้ที่จัดลงลานแล้ว
     const stockTag = g.isStock ? ' <span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:1px 5px;font-weight:700;">สต็อกเก่า</span>' : '';
     const saved = (savedItems||[]).find(s => s.cpIds && s.cpIds[0] === g.ids[0])
       || (savedItems||[]).find(s => s.pileType === g.pileType && s.spec === g.spec);
@@ -4729,13 +4785,15 @@ function _tcCpRowsHtml(orderNum, savedItems) {
       <input type="hidden" id="tc_cp_stk_${i}" value="${g.isStock?'1':'0'}">
       <div style="flex:1;min-width:0;">
         <div style="font-size:12px;font-weight:700;color:${textColor};">${_esc(g.pileType)}${specLabel}${stockTag}</div>
-        <div style="font-size:10px;color:#64748B;margin-top:1px;line-height:1.7;">🪵 มี <span style="color:${textColor};font-weight:700;">${g.qty} ${_u}</span>${ordered!==null?` · 📋 สั่งไว้ <span style="color:#1E40AF;font-weight:700;">${ordered} ${_u}</span>`:''}${shipped!==null&&shipped>0?` · ✅ ส่งแล้ว <span style="color:#166534;font-weight:700;">${shipped} ${_u}</span>`:''}${toShip!==null?` · 🚚 เหลือส่ง <span style="color:#DC2626;font-weight:700;">${toShip} ${_u}</span>`:''}${toShip===null?` <span style="background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">⚠️ ไม่พบรายการนี้ในออเดอร์</span>`:''}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:1px;line-height:1.7;">🪵 มี <span id="tc_cp_have_${i}" style="color:${textColor};font-weight:700;">${g.qty} ${_u}</span>${ordered!==null?` · 📋 สั่งไว้ <span style="color:#1E40AF;font-weight:700;">${ordered} ${_u}</span>`:''}${shipped!==null&&shipped>0?` · ✅ ส่งแล้ว <span style="color:#166534;font-weight:700;">${shipped} ${_u}</span>`:''}${toShip!==null?` · 🚚 เหลือส่ง <span style="color:#DC2626;font-weight:700;">${toShip} ${_u}</span>`:''}${toShip===null?` <span style="background:#FEF3C7;color:#92400E;border-radius:4px;padding:1px 5px;font-weight:700;">⚠️ ไม่พบรายการนี้ในออเดอร์</span>`:''}</div>
+        <button type="button" id="tc_cp_lanebtn_${i}" onclick="tcRowLaneToggle(${i})" title="สลับการนับยอด 'มี' ของรายการนี้:&#10;• ทั้งหมด = นับของทุกก้อนในสต็อก (รวมที่เพิ่งผลิตยังไม่ได้จัดลงลาน)&#10;• เฉพาะลงลาน = นับเฉพาะของที่จัดลงลานแล้ว (${laneQty} ${_u}) ของที่ยังไม่ลงลานจะส่งไม่ได้" style="margin-top:5px;display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;border:1.5px solid #CBD5E1;background:#F8FAFC;color:#475569;cursor:pointer;">🪵 นับ: ทั้งหมด</button>
       </div>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
         <input type="number" id="tc_cp_qty_${i}" value="${Math.min(defQty,g.qty)}" min="0" max="${g.qty}"
           ${isChecked?'':'disabled'}
           data-toship="${toShip===null?-1:toShip}" data-unit="${_u}"
-          style="width:60px;padding:5px 8px;border:1.5px solid ${borderColor};border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#fff;color:${textColor};opacity:${isChecked?'1':'0.4'};" oninput="tcClampStock(this,${g.qty})" onchange="tcConfirmOverOrder(this,${g.qty})">
+          data-qtyall="${g.qty}" data-qtylane="${laneQty}" data-curmax="${g.qty}" data-lanemode="all"
+          style="width:60px;padding:5px 8px;border:1.5px solid ${borderColor};border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#fff;color:${textColor};opacity:${isChecked?'1':'0.4'};" oninput="tcClampStock(this)" onchange="tcConfirmOverOrder(this)">
         <span style="font-size:11px;color:#64748B;">${_u}</span>
       </div>
     </div>`;
@@ -4946,6 +5004,8 @@ function _tcOverBadge(inp, over, toShip, unit) {
 }
 
 function tcClampStock(inp, maxVal) {
+  if (maxVal == null) maxVal = parseInt(inp.dataset.curmax);
+  if (isNaN(maxVal)) maxVal = parseInt(inp.max) || 0;
   const u = inp.dataset.unit || PU();
   let v = parseInt(inp.value)||0;
   if (v > maxVal) { inp.value = maxVal; v = maxVal; showToast('⚠️ จำกัดตามของที่มีจริง: '+maxVal+' '+u); }
@@ -4956,6 +5016,8 @@ function tcClampStock(inp, maxVal) {
 }
 // เตือนเมื่อคีย์จำนวนส่ง "เกินกว่าที่สั่ง" — ต้องกดยืนยันก่อนถึงจะส่งเกินได้
 function tcConfirmOverOrder(inp, stockMax) {
+  if (stockMax == null) stockMax = parseInt(inp.dataset.curmax);
+  if (isNaN(stockMax)) stockMax = parseInt(inp.max) || 0;
   const u = inp.dataset.unit || PU();
   const toShip = parseInt(inp.dataset.toship);
   let v = parseInt(inp.value)||0;
@@ -5796,7 +5858,7 @@ window.YARD = (function(){
     const act=e.action==="place"?'<span style="color:#2563eb;">📦 จัดลงลาน</span>':e.action==="move"?'<span style="color:#7c3aed;">↔️ ย้ายกอง</span>':e.action==="out"?'<span style="color:#dc2626;">🚚 เอาออก</span>':"•";
     return `<div style="border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px;margin-bottom:7px;background:#fff;">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748b;"><span>${act}</span><span>${esc(dt)}</span></div>
-      <div style="font-weight:600;margin-top:3px;">${esc(e.spec||"")} · ${e.qty} ${uTag(e.unit||"ต้น")}</div>
+      <div style="font-weight:600;margin-top:3px;">${esc(e.full||e.spec||"")} · ${e.qty} ${uTag(e.unit||"ต้น")}</div>
       <div style="font-size:12px;color:#475569;margin-top:2px;">${esc(e.from||"-")} → ${esc(e.to||"-")}</div>
     </div>`;
   }
@@ -17092,7 +17154,7 @@ function printQuotation(){
   .paeb-tbl td{ padding:12px 8px; text-align:center; vertical-align:middle; }
   .paeb-tbl td.spec{ background:#f5f8ff; font-weight:800; font-size:17px; color:#1e3a8a; line-height:1.25;
     border-left:5px solid #1e3a8a; border-right:1px solid #9aa8bd; width:120px; }
-  .paeb-tbl td.spec small{ display:block; font-size:12px; font-weight:600; color:#8795ab; margin-top:2px; }
+  .paeb-tbl td.spec small{ display:block; font-size:12px; font-weight:600; color:#8795ab; margin-top:2px; white-space:nowrap; overflow:hidden; }
   .paeb-tbl td.pae{ width:78px; border-right:1px solid #9aa8bd; }
   .paeb-box{ display:inline-block; min-width:46px; padding:7px 0; border-radius:10px; font-size:20px; font-weight:800; }
   .paeb-p1{ background:#eef6fc; color:#0369a1; }
@@ -17118,7 +17180,7 @@ function printQuotation(){
     white-space:nowrap; background:#DC2626; color:#fff; border:none; border-radius:999px; cursor:pointer;
     box-shadow:0 1px 3px rgba(220,38,38,.35); transition:background .12s; }
   .paeb-cbbtn:hover{ background:#b91c1c; }
-  .paeb-tbl tr.sub td{ border-top:1px dashed #e4e9f2; }
+  .paeb-tbl tr.sub td{ border-top:2px dashed #94a3b8; }
   .paeb-tbl tr.sub.sameord td{ border-top:none; }
   .paeb-tbl tr.grp td{ border-top:2.5px solid #94a3b8; }
   .paeb-tbl tbody tr:first-child td{ border-top:none; }
@@ -17181,7 +17243,7 @@ function printQuotation(){
         if (!l) return;
         var qty = (+l.qty || 0);
         if (qty <= 0) return;
-        var k = _specKeyFull({ pileType:l.pileType, length:l.length, weld:l.weld, steel:l.steel, ba:l.ba });
+        var k = _specKeyFull({ pileType:l.pileType, length:(typeof _baseLen==="function"?_baseLen(l.length):l.length), weld:l.weld, steel:l.steel, ba:l.ba });
         // หน่วยจริงของของก้อนนี้ (ต้น/ท่อน/ตัว) — ติดไว้ที่ชิปกองเสมอ กันหน่วยปนกันแล้วอ่านผิด
         var unit = (typeof _unitOf === "function") ? _unitOf(l.unit) : (l.unit || "ต้น");
         // ของที่ไม่ผูกออเดอร์ (ผลิตเพิ่มสต็อก) → inOrder ว่าง → ไม่นับเข้าแถวออเดอร์ไหน
@@ -17308,8 +17370,13 @@ function printQuotation(){
           remHTML += '<br><button class="paeb-cbbtn" onclick=\'event.stopPropagation();closeBill(' + JSON.stringify(String(o.orderNum)) + ')\'>🔴 จบบิล</button>';
         }
 
-        // แถวแรกของออเดอร์ = เส้นหนา (ขึ้นกรอบใหม่) · แถวถัดไปในออเดอร์เดียวกัน = ไม่ตีเส้น (กรอบใหญ่คลุม)
-        var _rowCls = (ri===0?'grp':'sub sameord') + (ri===span-1?' grpend':'') + (rem>0?' has-rem':'');
+        // แถวแรกของออเดอร์ = เส้นหนา (ขึ้นกรอบใหม่)
+        // แถวถัดไป: ถ้าเป็น "รายการเดียวกัน" (grpId เดียวกัน เช่นท่อนที่กดซ้อนต่อ) → ไม่ตีเส้น
+        //          ถ้าเป็น "คนละรายการ" (grpId ต่างกัน) → ตีเส้นบาง ๆ กั้นระหว่างรายการ
+        var _gid     = (r.it && r.it.grpId != null) ? r.it.grpId : ('_i' + ri);
+        var _prevGid = (ri > 0 && g.rows[ri-1].it && g.rows[ri-1].it.grpId != null) ? g.rows[ri-1].it.grpId : ('_i' + (ri-1));
+        var _sameItem = (ri > 0 && _gid === _prevGid);
+        var _rowCls = (ri===0 ? 'grp' : (_sameItem ? 'sub sameord' : 'sub')) + (ri===span-1?' grpend':'') + (rem>0?' has-rem':'');
         html += '<tr class="orow ' + _rowCls + '" data-od="' + _esc(o.orderNum) + '">';
         html += '<td class="spec">' + specTxt + '</td>'
               + '<td class="pae">' + paeCell(ls.A, 'paeb-p1', 'A', ls.gongs) + '</td>'
@@ -17336,6 +17403,27 @@ function printQuotation(){
       + '</div></div>';
 
     container.innerHTML = html;
+
+    // ข้อความสเปค (บรรทัดเล็ก) ให้อยู่บรรทัดเดียว — ถ้ายาวเกินช่อง ย่อขนาดตัวอักษรอัตโนมัติให้พอดี
+    try {
+      var _sm = container.querySelectorAll("td.spec small");
+      if (_sm.length) {
+        // รอบ 1: ย่อทุกตัวให้เล็กก่อน เพื่อให้ความกว้างคอลัมน์ยุบเท่าค่าจริง (ไม่ถูกตัวยาวดันกว้าง)
+        for (var _i = 0; _i < _sm.length; _i++) { _sm[_i].style.fontSize = "8px"; }
+        var _td0 = _sm[0].parentElement;
+        var _cs  = window.getComputedStyle(_td0);
+        var _pad = (parseFloat(_cs.paddingLeft) || 0) + (parseFloat(_cs.paddingRight) || 0);
+        var _bud = _td0.clientWidth - _pad - 2;   // พื้นที่ว่างในช่อง (กันขอบไว้ 2px)
+        // รอบ 2: ล็อกความกว้างไม่ให้ดันช่อง แล้วค่อย ๆ ลดขนาดจาก 12px จนพอดี (ต่ำสุด 8px)
+        for (var _j = 0; _j < _sm.length; _j++) {
+          var _el = _sm[_j];
+          if (_bud > 20) { _el.style.maxWidth = _bud + "px"; }
+          var _sz = 12, _g = 0;
+          _el.style.fontSize = _sz + "px";
+          while (_bud > 20 && _el.scrollWidth > _bud && _sz > 8 && _g < 40) { _sz -= 0.5; _el.style.fontSize = _sz + "px"; _g++; }
+        }
+      }
+    } catch (e) {}
 
     // แตะแถว → เปิดป๊อปแก้ไข Order เดิม
     container.querySelectorAll("tr.orow").forEach(function(tr){
