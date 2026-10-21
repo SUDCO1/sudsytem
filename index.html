@@ -4043,7 +4043,6 @@ function tcRenderImagePreview() {
     </div>`
   ).join('');
 }
-function tcClosePanel() { }
 
 function tcEntryHTML(e) {
   const st = tcShipStatus(e);
@@ -4594,12 +4593,6 @@ function tcShipStatus(e) {
   return           { label:'📋 จองรถ',            bg:'#EFF6FF', color:'#1E40AF', border:'#BFDBFE' };
 }
 
-function tcItemToggle(i) {
-  const chk = document.getElementById('tc_item_chk_'+i);
-  const qty = document.getElementById('tc_item_qty_'+i);
-  if (qty) qty.disabled = !chk.checked;
-  if (qty) qty.style.opacity = chk.checked ? '1' : '0.4';
-}
 function tcCpToggle(i) {
   const chk = document.getElementById('tc_cp_chk_'+i);
   const qty = document.getElementById('tc_cp_qty_'+i);
@@ -7344,7 +7337,6 @@ const getProdErrs  = () => _cache.prodErrors;
 const getShipErrs  = () => _cache.shipErrors;
 const getCustomers = () => _cache.customers;
 const getHistory   = () => _cache.orderHistory;
-const getCtr       = () => _cache.orderCounter;
 const getCustPoles = () => _cache.custPoles;
 function saveSingleCustPole(item) {
   const key = item._fbKey || db.ref().push().key;
@@ -7464,7 +7456,6 @@ function getConfig() {
 // ── Save helpers (write to Firebase) ──────────────────────────
 function saveOrders(arr)    { db.ref(K_ORDERS).set(arrToFbObj(arr)); }
 function saveProdErrs(arr)  { db.ref(K_PROD_ERR).set(arrToFbObj(arr)); }
-function saveShipErrs(arr)  { db.ref(K_SHIP_ERR).set(arrToFbObj(arr)); }
 function saveCustomers(arr) { db.ref(K_CUSTOMERS).set(arrToFbObj(arr)); }
 // [FIX#13] ประวัติ Order โหลดมาแค่ N รายการล่าสุด → ห้าม .set() ทับทั้งกอง
 // (ไม่งั้นประวัติเก่าที่ไม่ได้โหลดมาจะถูกลบทิ้ง) เขียนเฉพาะรายการที่ยังไม่มี key
@@ -8142,7 +8133,6 @@ function _prodLenNum(s) {
   return m ? parseFloat(m[0]) : 0;
 }
 // โหมดผลิตของรายการ: 'split' = แบ่งท่อน, ไม่งั้น = 'whole' (ต้นเต็ม, ค่าเริ่มต้น)
-function getItemProdMode(it) { return (it && it.prodMode === 'split') ? 'split' : 'whole'; }
 // ท่อนของรายการที่แบ่งท่อน → [{len, qty}] (คืน [] ถ้าเป็นต้นเต็ม)
 function getItemSegs(it) {
   if (!it || it.prodMode !== 'split') return [];
@@ -8347,9 +8337,6 @@ function calcOrderValue(pileType, qty) {
   const price = prices[pileType];
   if (!price || !qty) return 0;
   return price * qty;
-}
-function fmtBaht(v) {
-  return v > 0 ? v.toLocaleString('th-TH') + ' ฿' : '-';
 }
 
 // ── Toast ──────────────────────────────────────────────────────
@@ -8843,7 +8830,6 @@ function removeOrderItem(i) {
 }
 
 // ── Order Value Preview (legacy compat) ────────────────────────
-function updateOrderValue() { renderOrderItemsDraft(); }
 
 // ── Submit Order ───────────────────────────────────────────────
 function submitOrder() {
@@ -9369,17 +9355,6 @@ function editItemDelivered(orderNum, itemIdx) {
 }
 
 // ── Edit Length ────────────────────────────────────────────────
-function editLength(orderNum) {
-  const orders = getOrders(), o = orders.find(x => x.orderNum === orderNum);
-  if (!o) return;
-  const _oldLen = (o.length && o.length !== '-') ? o.length : 'ไม่ระบุ';   // [FIX#B34] เก็บค่าเดิม
-  const newVal = prompt('รายละเอียดเสา — ' + orderNum + '\nพิมพ์อิสระ เช่น 6, 6/9/12', o.length || '');
-  if (newVal === null) return;
-  o.length = newVal.trim() || '-';
-  saveOrders(orders); renderOrders();
-  try { logAudit('แก้ไขรายละเอียดเสา', orderNum, (o.customer||'') + ' · รายละเอียดเสา ' + _oldLen + ' → ' + (o.length === '-' ? 'ไม่ระบุ' : o.length)); } catch(e){}   // [FIX#B34] ก่อน→หลัง
-  showToast('✅ ' + orderNum + ': รายละเอียดเสา ' + (o.length === '-' ? 'ไม่ระบุ' : o.length + ''));
-}
 
 // ── Render Orders ──────────────────────────────────────────────
 // ── Pile color palette ─────────────────────────────────────────
@@ -10567,24 +10542,6 @@ function submitFreeProd() {
 //  วิธีผลิต (ต้นเต็ม / แบ่งท่อน) — Modal
 // ════════════════════════════════════════════════════════════════
 var _ppMode = 'whole', _ppSegs = [], _ppFull = 0, _ppQty = 0;
-function openProdPlan(orderNum, itemIdx) {
-  if (!canDo('log_production')) { showToast('⛔ คุณไม่มีสิทธิ์ตั้งค่าการผลิต'); return; }
-  var o = getOrders().find(function (x) { return x.orderNum === orderNum; });
-  if (!o) return;
-  var it = getOrderItems(o)[itemIdx]; if (!it) return;
-  document.getElementById('pp_order').value = orderNum;
-  document.getElementById('pp_item_idx').value = itemIdx;
-  _ppFull = _prodLenNum(it.length);
-  _ppQty  = it.qty || 0;
-  _ppMode = (it.prodMode === 'split') ? 'split' : 'whole';
-  var segs = getItemSegs(it);
-  _ppSegs = segs.length ? segs.map(function (s) { return { len: s.len, qty: s.qty }; })
-                        : [{ len: _ppFull / 2 || 0, qty: _ppQty }, { len: _ppFull / 2 || 0, qty: _ppQty }];
-  document.getElementById('pp_sub').textContent = orderNum + ' — ' + (it.pileType || o.pileType || '-')
-    + ' · สั่ง ' + _ppQty + ' ต้น · ยาวเต็ม ' + (_ppFull ? _ppFull.toFixed(2) : '-') + 'ม.';
-  ppRenderSegs(); ppApplyMode(); ppRender();
-  document.getElementById('prodPlanModal').style.display = 'flex';
-}
 function closeProdPlan() { document.getElementById('prodPlanModal').style.display = 'none'; }
 function ppSetMode(m) { _ppMode = m; ppApplyMode(); ppRender(); }
 function ppApplyMode() {
@@ -11253,9 +11210,6 @@ function renderProdLogHistory() {
     const defectBadge = defect > 0
       ? '<span style="color:#DC2626;font-weight:700;">'+defect+' ต้น</span>'
       : '<span style="color:#94A3B8;">0</span>';
-    const excessBadge = (l.qtyExcess||0) > 0
-      ? '<span style="color:#DC2626;font-weight:700;">+' + l.qtyExcess + ' ต้น</span>'
-      : '<span style="color:#94A3B8;">-</span>';
     const stockBadge = (l.addedToStock || isStock)
       ? '<span style="font-size:11px;background:#DCFCE7;color:#166534;padding:2px 7px;border-radius:4px;font-weight:700;">✅ เพิ่มสต็อกแล้ว</span>'
       : '<span style="color:#94A3B8;">-</span>';
@@ -11496,25 +11450,6 @@ function getMonthlyData(orders, months=6) {
   });
 }
 
-function svgBarChart(data, color='#3B82F6') {
-  if (!data.length || data.every(d=>d.v===0)) return '<div style="text-align:center;color:#94A3B8;padding:24px;font-size:12px;">ยังไม่มีข้อมูล</div>';
-  const W=300, H=130, padL=8, padR=8, padT=22, padB=28;
-  const cW = W-padL-padR, cH = H-padT-padB;
-  const max = Math.max(...data.map(d=>d.v), 1);
-  const bW = Math.max(12, Math.floor(cW/data.length*0.55));
-  const gap = (cW - bW*data.length) / (data.length+1);
-  const bars = data.map((d,i) => {
-    const x = padL + gap + i*(bW+gap);
-    const bh = Math.max(d.v>0?3:0, (d.v/max)*cH);
-    const y = padT + cH - bh;
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${bh.toFixed(1)}" fill="${color}" rx="3" opacity="${d.v>0?'0.85':'0.2'}"/>
-      ${d.v>0?`<text x="${(x+bW/2).toFixed(1)}" y="${(y-4).toFixed(1)}" text-anchor="middle" font-size="10" fill="#374151" font-weight="700">${d.v}</text>`:''}
-      <text x="${(x+bW/2).toFixed(1)}" y="${(H-4).toFixed(1)}" text-anchor="middle" font-size="9" fill="#94A3B8">${d.l}</text>`;
-  }).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${W}px;display:block;margin:0 auto;">
-    <line x1="${padL}" y1="${padT+cH}" x2="${W-padR}" y2="${padT+cH}" stroke="#E2E8F0" stroke-width="1"/>
-    ${bars}</svg>`;
-}
 
 function hBarChart(data) {
   if (!data.length) return '<div style="text-align:center;color:#94A3B8;padding:12px;font-size:12px;">ยังไม่มีข้อมูล</div>';
@@ -11973,37 +11908,6 @@ function quickFillStock(name) {
 
 
 // ── CustPoles helpers ─────────────────────────────────────────
-function cpSpecChips(specStr, fields) {
-  // format ใหม่: ถ้ามีฟิลด์แยก ให้แสดงชิปตามหมวดที่ถูกต้อง (กันตำแหน่งเลื่อน)
-  const _has = v => v && v !== '-';
-  if (fields && (_has(fields.base) || _has(fields.weld) || _has(fields.steel) || _has(fields.ba))) {
-    const chips = [];
-    if (_has(fields.base))  chips.push({ bg:'#EFF6FF', tc:'#1D4ED8', disp: escHtml(_fmtLen(fields.base)) });
-    if (_has(fields.weld))  chips.push({ bg:'#FEF9C3', tc:'#854D0E', disp: 'ช: '  + escHtml(fields.weld)  });
-    if (_has(fields.steel)) chips.push({ bg:'#F3E8FF', tc:'#6D28D9', disp: 'สล: ' + escHtml(fields.steel) });
-    if (_has(fields.ba))    chips.push({ bg:'#DBEAFE', tc:'#1D4ED8', disp: 'บ: '  + escHtml(fields.ba)    });
-    if (chips.length) return '<div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;">' +
-      chips.map(c => `<span style="background:${c.bg};color:${c.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">${c.disp}</span>`).join('') + '</div>';
-  }
-  if (!specStr || specStr === '-') return '<span style="color:#CBD5E1;">—</span>';
-  const DEFS = [
-    { icon:'📐', bg:'#EFF6FF', tc:'#1D4ED8' },
-    { icon:'ช:', bg:'#FEF9C3', tc:'#854D0E' },
-    { icon:'สล:', bg:'#F3E8FF', tc:'#6D28D9' },
-    null, // ช่อง 3 ของสตริงเก่า = ลวด (เลิกใช้แล้ว)
-    { icon:'บ:', bg:'#DBEAFE', tc:'#1D4ED8' },
-    { icon:'📝', bg:'#F1F5F9', tc:'#475569' },
-  ];
-  const parts = String(specStr).split('/').filter(Boolean);
-  if (!parts.length) return '<span style="color:#CBD5E1;">—</span>';
-  return '<div style="display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;">' +
-    parts.map((v,i) => {
-      if (i === 3) return '';   // ข้ามช่องลวด
-      const d = DEFS[i] || DEFS[4];
-      const disp = i === 0 ? escHtml(_fmtLen(v)) : d.icon + ' ' + escHtml(v);
-      return `<span style="background:${d.bg};color:${d.tc};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;">${disp}</span>`;
-    }).join('') + '</div>';
-}
 
 // ── ค้นหา (search) เสาลูกค้า + เสาค้างสต็อก ─────────────────────
 let _sdCpSearch = '';
@@ -12723,34 +12627,7 @@ function confirmAssignOrder(orderNum, ids) {
   showToast('🟢 ย้ายไปเสาลูกค้า Order ' + orderNum + ' (' + ids.length + ' รายการ)');
 }
 
-function toggleCpOnline(id) {
-  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
-  const arr = getCustPoles();
-  const item = arr.find(x => x.id === id);
-  if (!item) return;
-  item.online = true;
-  saveSingleCustPole(item);
-  try { logAudit('ย้ายกลับเสาลูกค้า', item.pileType, (item.orderNum ? 'Order ' + item.orderNum + ' · ' : '') + (item.qty||0) + ' ' + _unitOf(item.unit)); } catch(e){}
-  _logStockMove(item.pileType, item.qty||0, item.unit, false, item.orderNum);
-  if (_sdCurrentPile) openStockDetail(_sdCurrentPile);   // [FIX#S10]
-  renderStockCards();
-  showToast('🟢 ย้ายกลับเป็นเสาลูกค้าแล้ว');
-}
 
-function toggleCpOnlineAll(ids) {
-  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
-  const arr = getCustPoles();
-  let _pile = '-', _sum = 0, _uB = PU();
-  ids.forEach(id => {
-    const item = arr.find(x => x.id === id);
-    if (item) { _pile = item.pileType || _pile; _uB = _unitOf(item.unit); _sum += (item.qty||0); item.online = true; saveSingleCustPole(item); }
-  });
-  try { logAudit('ย้ายกลับเสาลูกค้า (กลุ่ม)', _pile, ids.length + ' รายการ · ' + _sum + ' ' + _uB); } catch(e){}
-  _logStockMove(_pile, _sum, _uB, false, '');
-  if (_sdCurrentPile) openStockDetail(_sdCurrentPile);   // [FIX#S10]
-  renderStockCards();
-  showToast('🟢 ย้ายกลับเสาลูกค้าแล้ว (' + ids.length + ' รายการ)');
-}
 
 // ══════════════════════════════════════════════════════════════
 // คีย์สเปคของการ์ดเสา — ใช้จับคู่ว่าการ์ดใบไหนคือ "สเปคเดียวกัน"
@@ -13702,7 +13579,6 @@ let _permRoles = [
 let _permSelectedColor = { ...PERM_PRESET_COLORS[0] };
 let _permUsingCustom = false;
 
-function _permInitials(label) { return label.charAt(0).toUpperCase(); }
 
 function _permAutoText(hex) {
   const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
@@ -13795,7 +13671,6 @@ function _renderPermTable() {
   wrap.innerHTML = html;
 }
 
-function permToggleGroup(gid) { /* no-op: old collapsible rows removed */ }
 
 function permToggleAddForm() {
   const f = document.getElementById('permAddForm');
@@ -13943,7 +13818,6 @@ function _permToggleSwitch(roleId, secId, val) {
   _permAutoSave();
 }
 // ชื่อเดิม — เก็บไว้เผื่อโค้ดเก่าเรียก (default = ฝ่ายขาย)
-function _permToggleSale(roleId, val) { _permToggleSwitch(roleId, 'sale', val); }
 
 // [FIX#B34] baseline สำหรับเทียบสิทธิ์ ก่อน→หลัง ตอนบันทึก audit
 let _permBaseline = null;
@@ -14132,14 +14006,6 @@ function addTag(type) {
   const key = TAG_MAP[type].key;
   if (!_cfg[key].includes(val)) { _cfg[key].push(val); renderTags(TAG_MAP[type].container, _cfg[key], type); autoSaveSettings(); logAudit('เพิ่มตัวเลือกตั้งค่า', type, val); }
   inp.value = '';
-}
-function removeTag(type, idx) {
-  if (!_cfg) return;
-  const _rmVal = _cfg[TAG_MAP[type].key][idx];
-  _cfg[TAG_MAP[type].key].splice(idx, 1);
-  renderTags(TAG_MAP[type].container, _cfg[TAG_MAP[type].key], type);
-  autoSaveSettings();
-  logAudit('ลบตัวเลือกตั้งค่า', type, _rmVal != null ? String(_rmVal) : '');
 }
 function autoSaveSettings() {
   if (_currentRole !== 'admin') return;
@@ -14356,24 +14222,6 @@ let _autoResBusy = false;
 function autoResOn() { try { return getConfig().autoReserve !== false; } catch(e) { return true; } }
 
 // เปิด/ปิดจองอัตโนมัติ (สวิตช์บนหัวข้อ 🟢 เสาลูกค้า ในหน้าต่างสต็อก)
-function setAutoReserve(on) {
-  const _chk = document.getElementById('sdAutoResChk');
-  if (!canDo('edit_stock')) {
-    showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก');
-    if (_chk) _chk.checked = autoResOn();
-    return;
-  }
-  try {
-    const cfg = JSON.parse(JSON.stringify(getConfig()));
-    cfg.autoReserve = !!on;
-    if (_cache && _cache.config) _cache.config.autoReserve = !!on;
-    saveConfigData(cfg);
-  } catch(e){}
-  try { logAudit('ตั้งค่าจองอัตโนมัติ', '-', on ? 'เปิด' : 'ปิด'); } catch(e){}
-  showToast(on ? '⚡ เปิดจองอัตโนมัติแล้ว — งานใหม่จะขึ้นที่หน้าสต็อกเอง' : '⏸ ปิดจองอัตโนมัติแล้ว');
-  if (on) autoReserveFromOrders();
-  if (_sdCurrentPile) openStockDetail(_sdCurrentPile);
-}
 
 // ตัดหน่วยท้ายความยาว ("10.00ม." / "10.00 m" → "10.00") เพื่อเทียบสเปคกับออเดอร์ได้
 function _lenNorm(v) {
@@ -14498,30 +14346,7 @@ function renderSdJobs() {
 }
 
 // ปุ่ม "⚡ จองเลย" — จองให้ออเดอร์นี้ทันทีแม้สถานะยังไม่ถึงเกณฑ์จองปกติ
-function forceReserveOrder(orderNum) {
-  if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
-  const on = String(orderNum || '').trim();
-  const orders = getOrders();
-  const o = orders.find(x => String(x.orderNum || '').trim() === on);
-  if (!o) { showToast('⚠️ ไม่พบ Order ' + on); return; }
-  o._forceRes = true;
-  delete o._noAutoRes;
-  saveOrders(orders);
-  const moved = autoReserveFromOrders();
-  if (!moved) showToast('⚠️ ยังไม่มีของในเสาค้างสต็อกให้จอง — รอผลิต/รับเข้าก่อน');
-  if (_sdCurrentPile) openStockDetail(_sdCurrentPile);
-}
 // ปิด/เปิดจองอัตโนมัติเฉพาะออเดอร์ใบเดียว
-function _autoResBlockOrder(orderNum) {
-  const on = String(orderNum || '').trim();
-  if (!on) return;
-  const orders = getOrders();
-  const o = orders.find(x => String(x.orderNum || '').trim() === on);
-  if (!o || o._noAutoRes) return;
-  o._noAutoRes = true;
-  saveOrders(orders);
-  try { showToast('⏸ ปิดจองอัตโนมัติของ Order ' + on + ' แล้ว'); } catch(e){}
-}
 function _autoResUnblockOrder(orderNum) {
   const on = String(orderNum || '').trim();
   if (!on) return;
@@ -14912,34 +14737,7 @@ function extractLengthNum(s) {
 
 // ── Similar Spec Hint (แจ้งเตือนสต็อกใกล้เคียง) ──────────────
 // ── Spec-aware available stock (นับเฉพาะ spec ที่ตัวเลขนำหน้าตรงกัน) ──
-function getSpecAwareAvail(pileName, specStr, reservedMap) {
-  const res = (reservedMap || {})[pileName] || 0;
-  const totalStock = (getStock()[pileName] || 0);
-  if (!specStr || specStr === '-') return totalStock - res;
-  const matched = findMatchingSpecs(pileName, specStr);
-  if (!matched.length) return totalStock - res; // ไม่มี spec variants → ใช้ยอดรวม
-  const specQty = matched.reduce((s, sp) => s + (sp.qty || 0), 0);
-  return specQty - res;
-}
 
-function getSimilarSpecHint(pileName, orderSpecStr) {
-  if (!orderSpecStr || orderSpecStr === '-') return '';
-  const allSpecs = getSpecs(pileName).filter(s => (s.qty||0) > 0);
-  if (!allSpecs.length) return '';
-  const orderNum = extractLengthNum(orderSpecStr);
-  // ถ้า spec text ตรงกันเลย ไม่ต้องแสดง hint
-  const exactText = allSpecs.find(s => s.spec === orderSpecStr);
-  if (exactText) return '';
-  // หา spec ที่ตัวเลขตรงกัน (เช่น "8.00ม." vs "8.00")
-  const numMatch = orderNum ? allSpecs.filter(s => extractLengthNum(s.spec) === orderNum) : [];
-  if (numMatch.length > 0) {
-    return '<br><span style="font-size:10px;background:#DBEAFE;color:#1E40AF;border-radius:4px;padding:2px 6px;font-weight:600;">'
-      + '💡 ใกล้เคียง: ' + numMatch.map(s => '"'+s.spec+'" '+s.qty+' ต้น').join(', ') + ' (อาจทดแทนได้)</span>';
-  }
-  // ไม่มีตัวเลขตรง — แสดง spec ที่มีในสต็อกทั้งหมดเผื่อพิจารณา
-  return '<br><span style="font-size:10px;background:#FEF3C7;color:#92400E;border-radius:4px;padding:2px 6px;font-weight:600;">'
-    + '💡 สต็อกมีสเปค: ' + allSpecs.map(s => '"'+s.spec+'" '+s.qty+' ต้น').join(', ') + '</span>';
-}
 // [หน่วย] จับคู่สเปคตามความยาว "และหน่วย" — ออเดอร์ที่สั่งเป็นต้น ต้องหักจากของที่นับเป็นต้น
 // เพราะ ต้น กับ ท่อน เป็นคนละอย่างและไม่มีสูตรแปลงตายตัว
 function findMatchingSpecs(pileName, lengthStr, unit) {
@@ -15407,9 +15205,6 @@ function editItemChangePrice(i, val) {
   _editRefreshTotals(i);
 }
 
-function editItemChangeLen(i, val) {
-  _editItemsDraft[i].length = val.trim() || '-';
-}
 function editItemChangeField(i, field, val) {
   _editItemsDraft[i][field] = val.trim() || '-';
 }
@@ -15692,10 +15487,6 @@ function deleteOrder(orderNum) {
 // ══════════════════════════════════════════════════════════════
 // ── EXPORT EXCEL (SheetJS) ────────────────────────────────────
 // ══════════════════════════════════════════════════════════════
-function xlsxStyleHeader(ws, range, bgColor, fontColor) {
-  // Apply bold + fill to header row (best-effort, SheetJS CE has limited style support)
-  if (!ws['!cols']) ws['!cols'] = [];
-}
 
 function buildOrdersSheet() {
   const orders = getOrders();
@@ -15783,29 +15574,7 @@ function buildStockSummarySheet() {
   return ws;
 }
 
-function exportOrdersXLSX() {
-  if (!window.XLSX) { showToast('⚠️ กำลังโหลด SheetJS...'); return; }
-  const orders = getOrders();
-  if (!orders.length) { showToast('ℹ️ ยังไม่มี Order'); return; }
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, buildOrdersSheet(), 'Orders ปัจจุบัน');
-  const fname = 'orders_' + new Date().toISOString().slice(0, 10) + '.xlsx';
-  XLSX.writeFile(wb, fname);
-  showToast('📊 Export Excel Orders เรียบร้อย!');
-}
 
-function exportFullXLSX() {
-  if (!window.XLSX) { showToast('⚠️ กำลังโหลด SheetJS...'); return; }
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, buildOrdersSheet(),      'Orders ปัจจุบัน');
-  XLSX.utils.book_append_sheet(wb, buildHistorySheet(),     'ประวัติ Order');
-  XLSX.utils.book_append_sheet(wb, buildStockSummarySheet(),'สต็อกปัจจุบัน');
-  XLSX.utils.book_append_sheet(wb, buildStockLogSheet(),    'ประวัติสต็อก');
-  const cfg   = getConfig();
-  const fname = (cfg.companyName || 'report') + '_' + new Date().toISOString().slice(0, 10) + '.xlsx';
-  XLSX.writeFile(wb, fname);
-  showToast('📊 Export Excel ทั้งหมด (4 sheet) เรียบร้อย!');
-}
 
 
 
@@ -16704,15 +16473,6 @@ function adminClearHistory(type) {
 <script>
 const _CM=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 function _cp(n){return String(n).padStart(2,'0');}
-function _parseTs(ts){
-  if(!ts)return null;
-  const m=ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
-  if(!m)return null;
-  const d=parseInt(m[1]),mo=parseInt(m[2]),yy=parseInt(m[3]);
-  // [FIX#2] yy คือ 2 หลักท้ายของปี พ.ศ. (69 = 2569 = ค.ศ. 2026) → 2500+69-543
-  const ce=yy<100?(1957+yy):(yy>2400?yy-543:yy);
-  return ce+'-'+_cp(mo)+'-'+_cp(d);
-}
 function _dow(){return['อา','จ','อ','พ','พฤ','ศ','ส'].map((d,i)=>'<div class="tc-dow'+(i===0?' sun':i===6?' sat':'')+'">'+ d+'</div>').join('');}
 function _dayLabel(ds){if(!ds)return'';const[y,m,d]=ds.split('-');return'📅 '+(+d)+' '+_CM[+m-1]+' '+(+y+543);}
 function _renderGrid(prefix,year,month,byDate,sel,dot,chipBg,chipText){
@@ -16748,9 +16508,6 @@ let _ocY,_ocM,_ocSel=null;
 const OC_DOT='#3B82F6',OC_BG='#DBEAFE',OC_TX='#1D4ED8';
 const OC_ST={'':'#FEF9C3|#854D0E','รับ Order แล้ว':'#FEF9C3|#854D0E','ยืนยัน Order แล้ว':'#FEF3C7|#92400E','กำลังผลิต':'#F3E8FF|#6D28D9','พร้อมส่ง':'#DBEAFE|#1D4ED8','ระหว่างขนส่ง':'#E0F2FE|#0369A1','ส่งแล้วบางส่วน':'#D1FAE5|#065F46','ส่งครบแล้ว':'#DCFCE7|#166534'};
 function ocInit(){const n=new Date();_ocY=n.getFullYear();_ocM=n.getMonth();ocRender();}
-function ocPrev(){_ocM--;if(_ocM<0){_ocM=11;_ocY--;}ocRender();}
-function ocNext(){_ocM++;if(_ocM>11){_ocM=0;_ocY++;}ocRender();}
-function ocDay(ds){_ocSel=_ocSel===ds?null:ds;ocRender();if(_ocSel)_scrollTo('ocd-'+ds);}
 function ocByDate(){const bd={};(typeof getOrders==='function'?getOrders():[]).forEach(o=>{const ds=o.deliveryDateISO||o.orderDateISO;if(!ds)return;(bd[ds]=bd[ds]||[]).push({...o,_chip:o.orderNum});});return bd;}
 function ocRender(){
   const bd=ocByDate();_renderGrid('oc',_ocY,_ocM,bd,_ocSel,OC_DOT,OC_BG,OC_TX);
@@ -16770,16 +16527,7 @@ function ocRender(){
 let _pcY,_pcM,_pcSel=null;
 const PC_DOT='#7C3AED',PC_BG='#EDE9FE',PC_TX='#5B21B6';
 function pcInit(){const n=new Date();_pcY=n.getFullYear();_pcM=n.getMonth();pcRender();}
-function pcPrev(){_pcM--;if(_pcM<0){_pcM=11;_pcY--;}pcRender();}
-function pcNext(){_pcM++;if(_pcM>11){_pcM=0;_pcY++;}pcRender();}
-function pcDay(ds){_pcSel=_pcSel===ds?null:ds;pcRender();if(_pcSel)_scrollTo('pcd-'+ds);}
 function pcByDate(){const bd={};(typeof getProdLog==='function'?getProdLog():[]).forEach(l=>{if(!l.dateISO)return;(bd[l.dateISO]=bd[l.dateISO]||[]).push({...l,_chip:l.pileType||'-'});});return bd;}
-function pcTodayTotal(){
-  const todayISO=new Date().toISOString().slice(0,10);
-  return (typeof getProdLog==='function'?getProdLog():[])
-    .filter(l=>l.dateISO===todayISO)
-    .reduce((s,l)=>{const n=l.qtyNet!==undefined?l.qtyNet:(l.qtyProduced!==undefined?l.qtyProduced:(l.qty||0));return s+n;},0);
-}
 function pcRender(){
   const bd=pcByDate();_renderGrid('pc',_pcY,_pcM,bd,_pcSel,PC_DOT,PC_BG,PC_TX);
   // ใส่ยอดต้นผลิตรวมในแต่ละช่องวัน
@@ -17199,7 +16947,6 @@ function printQuotation(){
   function _esc(s){ return (""+(s==null?"":s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function _baseLen(v){ return (v||"").toString().split("/")[0].trim(); }
   function _lenTxt(len){ return len ? (/^\d/.test(len) ? len+"ม." : len) : ""; }
-  function _grpKey(pile, len){ return (pile||"") + "|" + _baseLen(len); }
   // [สเปคเต็ม] แยกกลุ่ม/นับแพด้วยสเปคเต็ม (ชนิด|ยาว|เชื่อม|เหล็ก|บ่า) ให้ตรงกับแท็บลานสต็อก
   function _nzSpec(x){ var v=(x==null?"":(""+x)).trim(); return (v==="-")?"":v; }
   // รองรับ format เก่าที่ความยาวรวม "/" มา (ยาว/เชื่อม/เหล็ก/.../บ่า) → ดึงมาเติมเมื่อช่องแยกยังว่าง
