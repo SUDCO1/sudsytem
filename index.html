@@ -6458,6 +6458,11 @@ window.YARD = (function(){
       <button onclick="closeAssignOrderModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:#94A3B8;">✕</button>
     </div>
     <div style="font-size:12px;color:#64748B;margin-bottom:14px;" id="assignOrderPileInfo"></div>
+    <div id="assignMoveQtyWrap" style="margin-bottom:14px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:12px 14px;">
+      <label style="display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:6px;">จำนวนที่จะย้าย <span id="assignMoveQtyUnit">(ต้น)</span></label>
+      <input type="number" id="assignMoveQty" min="1" step="1" style="width:100%;padding:8px 10px;border:1.5px solid #CBD5E1;border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;" oninput="_assignClampQty(this)"/>
+      <div style="font-size:11px;color:#64748B;margin-top:6px;">มีทั้งหมด <strong id="assignMoveQtyMax">0</strong> · ใส่น้อยกว่าได้ถ้าจะแบ่งบางส่วน ที่เหลือจะค้างในสต็อก</div>
+    </div>
     <div id="assignOrderList" style="display:flex;flex-direction:column;gap:8px;"></div>
     <div style="margin-top:16px;display:flex;justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeAssignOrderModal()">ยกเลิก</button>
@@ -12568,11 +12573,31 @@ function shipCpToOrder(orderNum, pileType, maxQty, ids) {
   showToast('🚚 ส่ง ' + pileType + ' ' + sendQty + ' ' + _shipU + ' → Order ' + orderNum + ' · ส่งแล้ว ' + item.delivered + '/' + _tgt);
 }
 
-let _assignOrderIds = [], _assignOrderPile = '';
+let _assignOrderIds = [], _assignOrderPile = '', _assignOrderTotalQty = 0;
+
+// จำกัดจำนวนที่พิมพ์ในช่อง "จำนวนที่จะย้าย" ไม่ให้เกินของที่มี
+function _assignClampQty(inp) {
+  const mx = _assignOrderTotalQty || 0;
+  let v = parseInt(inp.value);
+  if (isNaN(v)) { inp.value = ''; return; }   // ปล่อยให้ลบจนว่างได้ตอนพิมพ์
+  if (v > mx) v = mx;
+  if (v < 1)  v = 1;
+  inp.value = v;
+}
 
 function openAssignOrderModal(ids, pileName) {
   _assignOrderIds = ids;
   _assignOrderPile = pileName;
+
+  // รวมจำนวนของการ์ดกลุ่มนี้ (ไว้ตั้งค่าเริ่มต้น + เพดานของช่องใส่จำนวน)
+  const _arr0 = getCustPoles();
+  let _tot = 0, _u = 'ต้น';
+  ids.forEach(id => { const it = _arr0.find(x => x.id === id); if (it) { _tot += (it.qty || 0); _u = _unitOf(it.unit); } });
+  _assignOrderTotalQty = _tot;
+  const _qi = document.getElementById('assignMoveQty');
+  if (_qi) { _qi.max = _tot; _qi.value = _tot; }
+  const _mx = document.getElementById('assignMoveQtyMax'); if (_mx) _mx.textContent = _tot + ' ' + _u;
+  const _uu = document.getElementById('assignMoveQtyUnit'); if (_uu) _uu.textContent = '(' + _u + ')';
 
   // หา orders ที่ active (ไม่ใช่ ส่งครบ/ยกเลิก) และมี pileType ตรงกัน
   const DONE_STATUSES = ['ส่งครบ', 'ยกเลิก'];
@@ -12614,17 +12639,62 @@ function closeAssignOrderModal() {
 function confirmAssignOrder(orderNum, ids) {
   if (!canDo('edit_stock')) { showToast('⛔ คุณไม่มีสิทธิ์แก้ไขสต็อก'); return; }
   const arr = getCustPoles();
-  let _apile = _assignOrderPile || '-', _asum = 0, _aunit = '';
-  ids.forEach(id => {
-    const item = arr.find(x => x.id === id);
-    if (item) { _apile = item.pileType || _apile; _aunit = item.unit; _asum += (item.qty||0); item.online = true; item.orderNum = orderNum; item.fromStock = true; saveSingleCustPole(item); }
-  });
+
+  // จำนวนรวมของกลุ่มนี้ + หน่วย/ชนิดเสา
+  let _apile = _assignOrderPile || '-', _aunit = '';
+  const _first = ids.map(id => arr.find(x => x.id === id)).find(Boolean);
+  if (_first) { _apile = _first.pileType || _apile; _aunit = _first.unit; }
+  const totalQty = _assignOrderTotalQty ||
+    ids.reduce((s, id) => { const it = arr.find(x => x.id === id); return s + (it ? (it.qty || 0) : 0); }, 0);
+
+  // จำนวนที่จะย้าย (รองรับแบ่งบางส่วน) — ค่าเริ่มต้นคือทั้งก้อน
+  const _qi = document.getElementById('assignMoveQty');
+  let moveQty = _qi ? (parseInt(_qi.value) || 0) : totalQty;
+  if (!moveQty || moveQty < 1) { alert('กรุณาใส่จำนวนที่จะย้าย'); return; }
+  if (moveQty > totalQty) moveQty = totalQty;
+
+  if (moveQty >= totalQty) {
+    // ── ย้ายทั้งก้อน (เหมือนเดิม) ──
+    ids.forEach(id => {
+      const item = arr.find(x => x.id === id);
+      if (item) { item.online = true; item.orderNum = orderNum; item.fromStock = true; saveSingleCustPole(item); }
+    });
+  } else {
+    // ── แบ่งบางส่วน: ย้าย moveQty ที่เหลือค้างในสต็อก ──
+    let remaining = moveQty;
+    for (const id of ids) {
+      if (remaining <= 0) break;
+      const item = arr.find(x => x.id === id);
+      if (!item) continue;
+      const have = item.qty || 0;
+      if (have <= 0) continue;
+      const take = Math.min(have, remaining);
+      if (take >= have) {
+        // ย้ายทั้งใบนี้
+        item.online = true; item.orderNum = orderNum; item.fromStock = true;
+        saveSingleCustPole(item);
+      } else {
+        // แบ่งใบนี้: ลดของเดิม (ยังค้างสต็อก) + สร้างใบใหม่ที่ย้ายไปออเดอร์
+        item.qty = have - take;
+        saveSingleCustPole(item);
+        const nw = Object.assign({}, item);
+        delete nw._fbKey;
+        nw.id = 'cp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        nw.qty = take;
+        nw.online = true; nw.orderNum = orderNum; nw.fromStock = true;
+        nw.createdAt = Date.now();
+        saveSingleCustPole(nw);
+      }
+      remaining -= take;
+    }
+  }
+
   _autoResUnblockOrder(orderNum);   // [AUTO-RES] ผูกเองแล้ว → เปิดจองอัตโนมัติของออเดอร์นี้กลับ
-  try { logAudit('ผูกเสาเข้าออเดอร์', orderNum, (_assignOrderPile || '-') + ' · ' + ids.length + ' รายการ'); } catch(e){}
-  _logStockMove(_apile, _asum, _aunit, false, orderNum);
+  try { logAudit('ผูกเสาเข้าออเดอร์', orderNum, (_assignOrderPile || '-') + ' · ' + moveQty + ' ' + _unitOf(_aunit)); } catch(e){}
+  _logStockMove(_apile, moveQty, _aunit, false, orderNum);
   closeAssignOrderModal();
   if (_sdCurrentPile) openStockDetail(_sdCurrentPile);
-  showToast('🟢 ย้ายไปเสาลูกค้า Order ' + orderNum + ' (' + ids.length + ' รายการ)');
+  showToast('🟢 ย้ายไปเสาลูกค้า Order ' + orderNum + ' · ' + moveQty + ' ' + _unitOf(_aunit));
 }
 
 
