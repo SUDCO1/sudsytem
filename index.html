@@ -5334,7 +5334,27 @@ document.addEventListener('DOMContentLoaded', () => {
   #yardApp .grow{ flex:1; }
   #yardApp .block{ border:2px solid #64748b; border-radius:8px; padding:6px; background:var(--band); }
   #yardApp .block.tight{ flex:none; width:120px; }
+  #yardApp .blkedit{ display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:5px; }
+  #yardApp .blkedit-lbl{ font-size:10.5px; font-weight:800; color:#475569; }
+  #yardApp .blkedit-btns{ display:flex; gap:4px; }
+  #yardApp .blkedit-btn{ width:22px; height:22px; line-height:1; border-radius:6px; border:1px solid #cbd5e1; background:#fff; color:#334155; font-size:15px; font-weight:800; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; }
+  #yardApp .blkedit-btn.plus{ border-color:#86efac; color:#15803d; background:#f0fdf4; }
+  #yardApp .blkedit-btn.minus{ border-color:#fca5a5; color:#b91c1c; background:#fef2f2; }
+  #yardApp .blkedit-btn:hover{ transform:translateY(-1px); box-shadow:0 2px 5px rgba(0,0,0,.12); }
   #yardApp .cols{ display:flex; gap:5px; } #yardApp .col{ flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+  .yard-hover{ position:fixed; z-index:70; display:none; pointer-events:none; background:#0f172a; color:#fff; border-radius:10px; padding:10px 12px; box-shadow:0 10px 30px rgba(0,0,0,.30); font-size:12px; line-height:1.5; }
+  .yard-hover .yh-body{ display:flex; flex-direction:column; flex-wrap:wrap; align-content:flex-start; max-height:76vh; gap:0 16px; }
+  .yard-hover .yh-row{ width:200px; box-sizing:border-box; }
+  .yard-hover .yh-more{ margin-top:6px; padding-top:6px; border-top:1px dashed rgba(255,255,255,.22); font-size:11px; font-weight:700; color:#fbbf24; }
+  .yard-hover .yh-head{ font-weight:800; font-size:12.5px; margin-bottom:5px; color:#bfdbfe; }
+  .yard-hover .yh-row{ padding:5px 0; border-top:1px solid rgba(255,255,255,.12); }
+  .yard-hover .yh-row:first-of-type{ border-top:none; padding-top:1px; }
+  .yard-hover .yh-top{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .yard-hover .yh-spec{ font-weight:700; flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; }
+  .yard-hover .yh-sub{ color:#cbd5e1; font-size:11px; white-space:nowrap; overflow:hidden; }
+  .yard-hover .yh-qty{ color:#fde68a; font-size:11px; flex:0 0 auto; white-space:nowrap; }
+  .yard-hover .yh-empty{ color:#94a3b8; }
+  .yard-hover .yh-foot{ margin-top:6px; font-size:10.5px; color:#93c5fd; }
   #yardApp .cell{ background:#fff; border:1px solid #cbd5e1; border-radius:7px; height:96px; padding:4px 5px; cursor:pointer; transition:.12s; display:flex; flex-direction:column; gap:2px; overflow:hidden; }
   #yardApp .cell:hover{ border-color:#2563eb; transform:translateY(-1px); box-shadow:0 2px 6px rgba(37,99,235,.15); }
   #yardApp .cell.empty{ border-style:dashed; color:#94a3b8; align-items:center; justify-content:center; background:#fbfdff; }
@@ -5543,8 +5563,42 @@ document.addEventListener('DOMContentLoaded', () => {
    ============================================================ */
 window.YARD = (function(){
   "use strict";
-  const OLD_DAYS=45, LS_STATE="sud_yard_state_v1", LS_LOG="sud_yard_log_v1";
-  const BLOCKS={ A:10, B:12, C:10, D:2, E:2, F:2 };
+  const OLD_DAYS=45, LS_STATE="sud_yard_state_v1", LS_LOG="sud_yard_log_v1", LS_BLOCKS="sud_yard_blocks_v1";
+  // จำนวนช่องของแต่ละบล็อก (ปรับเพิ่ม/ลดได้ · ซิงค์ขึ้น cloud)
+  const DEFAULT_BLOCKS={ A:10, B:12, C:10, D:2, E:2, F:2 };
+  let BLOCKS=Object.assign({}, DEFAULT_BLOCKS);
+  function _validBlocks(o){ const r={}; Object.keys(DEFAULT_BLOCKS).forEach(k=>{ let n=(o&&typeof o[k]==="number")?Math.floor(o[k]):DEFAULT_BLOCKS[k]; if(!n||n<1)n=1; if(n>60)n=60; r[k]=n; }); return r; }
+  function loadBlocks(){
+    try{ if(typeof _cache!=="undefined" && _cache.yardBlocks && typeof _cache.yardBlocks==="object"){ BLOCKS=_validBlocks(_cache.yardBlocks); return; } }catch(e){}
+    try{ const s=localStorage.getItem(LS_BLOCKS); if(s){ BLOCKS=_validBlocks(JSON.parse(s)); return; } }catch(e){}
+    BLOCKS=Object.assign({}, DEFAULT_BLOCKS);
+  }
+  function saveBlocks(){
+    try{ localStorage.setItem(LS_BLOCKS, JSON.stringify(BLOCKS)); }catch(e){}
+    try{ if(typeof db!=="undefined" && db) db.ref("sud/yardBlocks").set(BLOCKS); }catch(e){}   // [YARD-CLOUD] ซิงค์จำนวนช่องขึ้น Firebase
+  }
+  function applyCloudBlocks(obj){
+    BLOCKS=_validBlocks(obj);
+    try{ localStorage.setItem(LS_BLOCKS, JSON.stringify(BLOCKS)); }catch(e){}
+    try{ renderAll(); }catch(e){}
+  }
+  function _canEditYard(){ try{ return (typeof canDo==="function") ? canDo('edit_yard_slots') : true; }catch(e){ return false; } }
+  function addSlot(prefix){
+    if(!_canEditYard()){ alert("ไม่มีสิทธิ์แก้ไขช่องลาน (ขอสิทธิ์ที่หน้าตั้งค่า)"); return; }
+    if(BLOCKS[prefix]==null) return;
+    if(BLOCKS[prefix]>=60){ alert("บล็อก "+prefix+" เต็มแล้ว (สูงสุด 60 ช่อง)"); return; }
+    BLOCKS[prefix]=BLOCKS[prefix]+1;
+    saveBlocks(); renderAll();
+  }
+  function removeSlot(prefix){
+    if(!_canEditYard()){ alert("ไม่มีสิทธิ์แก้ไขช่องลาน (ขอสิทธิ์ที่หน้าตั้งค่า)"); return; }
+    const N=BLOCKS[prefix]||0;
+    if(N<=1){ alert("บล็อก "+prefix+" เหลือช่องเดียว ลบไม่ได้"); return; }
+    const lastId=prefix+N;
+    if(lotsOf(lastId).length){ alert("ช่อง "+lastId+" ยังมีของอยู่ ต้องย้ายของออกก่อนถึงจะลบช่องได้"); return; }
+    BLOCKS[prefix]=N-1;
+    saveBlocks(); renderAll();
+  }
   const nz=v=>(v==null||v==="")?"-":(""+v).trim();
   const fmtDate=iso=>{ if(!iso) return "วันนี้"; try{ return new Date(iso).toLocaleDateString("th-TH",{day:"2-digit",month:"short",year:"numeric"}); }catch(e){ return iso; } };
   const ageOf=dt=>dt?Math.floor((Date.now()-new Date(dt).getTime())/86400000):0;
@@ -5650,12 +5704,22 @@ window.YARD = (function(){
   // ---- แผนผัง ----
   function cellHTML(id){
     const lots=lotsOf(id);
-    if(!lots.length) return `<div class="cell empty" onclick="YARD.openOv('${id}')"><div class="sid">${id}</div><div>— ว่าง —</div></div>`;
+    if(!lots.length) return `<div class="cell empty" data-slot="${id}" onclick="YARD.openOv('${id}')"><div class="sid">${id}</div><div>— ว่าง —</div></div>`;
     const hasOld=lots.some(l=>ageOf(l.date)>OLD_DAYS);
     const items=lots.map(l=>{ const old=ageOf(l.date)>OLD_DAYS; return `<div class="lot" title="${esc(specFull(l))}"><span class="nm">${esc(specShort(l))}</span>${old?'<span class="lotold">🔴</span>':''}</div>`; }).join("");
-    return `<div class="cell${hasOld?' old':''}" onclick="YARD.openOv('${id}')"><div class="sid">${id}${lots.length>1?' · '+lots.length+' สเปค':''}</div><div class="lots">${items}</div></div>`;
+    return `<div class="cell${hasOld?' old':''}" data-slot="${id}" onclick="YARD.openOv('${id}')"><div class="sid">${id}${lots.length>1?' · '+lots.length+' สเปค':''}</div><div class="lots">${items}</div></div>`;
   }
-  function buildBlock(prefix){ const N=BLOCKS[prefix], cols=N/2; let html='<div class="cols">'; for(let k=0;k<cols;k++){ const top=N-2*k, bot=N-2*k-1; html+=`<div class="col">${cellHTML(prefix+top)}${cellHTML(prefix+bot)}</div>`; } return html+'</div>'; }
+  function buildBlock(prefix){
+    const N=BLOCKS[prefix]||0, cols=Math.ceil(N/2);
+    let html="";
+    if(_canEditYard()){
+      html+=`<div class="blkedit"><span class="blkedit-lbl">บล็อก ${prefix} · ${N} ช่อง</span><span class="blkedit-btns"><button class="blkedit-btn minus" title="ลบช่องสุดท้าย (ต้องว่าง)" onclick="event.stopPropagation();YARD.removeSlot('${prefix}')">−</button><button class="blkedit-btn plus" title="เพิ่มช่อง" onclick="event.stopPropagation();YARD.addSlot('${prefix}')">+</button></span></div>`;
+    }
+    html+='<div class="cols">';
+    // A1 อยู่ขวาสุด (คู่กับ A2) → เลขเพิ่มไปทางซ้าย · ช่องใหม่/ช่องโล่งไปโผล่ซ้ายสุด
+    for(let j=0;j<cols;j++){ const r=cols-1-j, lo=2*r+1, hi=2*r+2; html+=`<div class="col">${hi<=N?cellHTML(prefix+hi):''}${lo<=N?cellHTML(prefix+lo):''}</div>`; }
+    return html+'</div>';
+  }
   function clampLots(){
     document.querySelectorAll('#yardApp .plan .cell .lots').forEach(lots=>{
       const prev=lots.querySelector('.lotmore'); if(prev) prev.remove();
@@ -5751,6 +5815,30 @@ window.YARD = (function(){
     document.getElementById("ov").style.display="flex";
   }
   function closeOv(){ document.getElementById("ov").style.display="none"; }
+
+  // ---- ป๊อปอัพ hover: เอาเมาส์ชี้ช่องแล้วดูรายละเอียดกองได้เลย (ลอยตามเมาส์ · เอาเมาส์ออกก็หาย) ----
+  let _hoverEl=null, _hoverId=null;
+  function _ensureHover(){ if(_hoverEl) return _hoverEl; const d=document.createElement("div"); d.id="yardHover"; d.className="yard-hover"; document.body.appendChild(d); _hoverEl=d; return d; }
+  function _hoverHTML(id){
+    const lots=lotsOf(id);
+    if(!lots.length){ return `<div class="yh-head">ช่อง ${esc(id)}</div><div class="yh-empty">— ช่องว่าง —</div><div class="yh-foot">คลิกเพื่อเปิดค้าง</div>`; }
+    const MAX=24;                                  // ของเยอะ → ขยายเป็นหลายคอลัมน์ไปทางขวา · เกินนี้ค่อยสรุป
+    const body=lots.slice(0,MAX).map(l=>{ const age=l.date?ageOf(l.date):0, old=age>OLD_DAYS;
+      return `<div class="yh-row"><div class="yh-top"><span class="yh-spec">${esc(specLabel(l))}${old?' 🔴':''}</span><span class="yh-qty">${(+l.qty||0).toLocaleString("th-TH")} ${uTag(specUnit(l))}</span></div>${specExtra(l)?`<div class="yh-sub">${esc(specExtra(l))}</div>`:""}</div>`; }).join("");
+    const more=lots.length>MAX?`<div class="yh-more">…และอีก ${lots.length-MAX} สเปค</div>`:"";
+    const head=`<div class="yh-head">ช่อง ${esc(id)} · ${lots.length} สเปค · รวม ${unitBreak(lots)}</div>`;
+    return `${head}<div class="yh-body">${body}</div>${more}<div class="yh-foot">${lots.length>MAX?"คลิกเพื่อดูทั้งหมด":"คลิกเพื่อเปิดค้าง"}</div>`;
+  }
+  function _moveHover(x,y){ if(!_hoverEl) return; const pad=14, w=_hoverEl.offsetWidth, h=_hoverEl.offsetHeight; let nx=x+pad, ny=y+pad; if(nx+w>window.innerWidth-6) nx=x-w-pad; if(ny+h>window.innerHeight-6) ny=y-h-pad; if(nx<4)nx=4; if(ny<4)ny=4; _hoverEl.style.left=nx+"px"; _hoverEl.style.top=ny+"px"; }
+  function _fitHoverText(root){ root.querySelectorAll(".yh-spec,.yh-sub").forEach(el=>{ let fs=el.classList.contains("yh-spec")?12:11; el.style.fontSize=fs+"px"; let g=0; while(el.scrollWidth>el.clientWidth+1 && fs>8.5 && g<12){ fs-=0.5; el.style.fontSize=fs+"px"; g++; } }); }
+  function _showHover(id,x,y){ const d=_ensureHover(); if(_hoverId!==id){ d.innerHTML=_hoverHTML(id); _hoverId=id; d.style.display="block"; _fitHoverText(d); } else { d.style.display="block"; } _moveHover(x,y); }
+  function _hideHover(){ if(_hoverEl){ _hoverEl.style.display="none"; } _hoverId=null; }
+  function _wireHover(){
+    const plan=document.querySelector("#yardApp .plan"); if(!plan||plan._hoverWired) return; plan._hoverWired=true;
+    plan.addEventListener("mousemove", e=>{ const c=e.target.closest(".cell"); if(c&&plan.contains(c)){ const id=c.getAttribute("data-slot"); if(id){ _showHover(id, e.clientX, e.clientY); return; } } _hideHover(); });
+    plan.addEventListener("mouseleave", _hideHover);
+    plan.addEventListener("click", _hideHover, true);   // คลิกแล้วซ่อน hover (ป๊อปอัพค้างของเดิมจะเปิดแทน)
+  }
 
   // ---- จัดลงลาน ----
   function blockOptions(){ return ["A","B","C","D","E","F"].map(p=>`<option value="${p}">บล็อก ${p}</option>`).join(""); }
@@ -5864,12 +5952,12 @@ window.YARD = (function(){
   // ---- init ----
   function _active(){ const s=document.getElementById("sec-yard"); return s&&s.classList.contains("active"); }
   function anyModalOpen(){ return ["ov","placeOv","outOv","moveOv","histOv"].some(id=>{ const e=document.getElementById(id); return e&&e.style.display==="flex"; }); }
-  load();
+  load(); loadBlocks(); _wireHover();
   document.addEventListener("click",e=>{ ["ov","placeOv","outOv","moveOv","histOv"].forEach(id=>{ if(e.target&&e.target.id===id){ const e2=document.getElementById(id); if(e2) e2.style.display="none"; } }); });
   // ซิงก์กับสต็อก 1 อัตโนมัติทุก 4 วิ ขณะเปิดหน้าผังลาน (ไม่เพิ่ม listener Firebase ซ้ำ)
   setInterval(()=>{ if(_active()&&!anyModalOpen()) renderAll(); }, 4000);
 
-  return { renderAll, openOv, closeOv, openPlace, addPlaceRow, syncNums, placeRemain, savePlace, closePlace, openTakeOut, addTakeRow, takeRemain, saveTakeOut, closeTakeOut, openMove, syncMoveNums, moveRemain, saveMove, closeMove, openHist, closeHist, setQCat, applyCloudState, applyCloudLog };
+  return { renderAll, openOv, closeOv, openPlace, addPlaceRow, syncNums, placeRemain, savePlace, closePlace, openTakeOut, addTakeRow, takeRemain, saveTakeOut, closeTakeOut, openMove, syncMoveNums, moveRemain, saveMove, closeMove, openHist, closeHist, setQCat, applyCloudState, applyCloudLog, addSlot, removeSlot, applyCloudBlocks };
 })();
 </script>
 <!-- ================================================================ SECTION: ลูกค้า (NEW) ================================================================ -->
@@ -7140,6 +7228,7 @@ const K_PROD_ACTIVE = 'sud/prodActive';
 const K_AUDIT       = 'sud/auditLog';
 const K_YARD_STATE  = 'sud/yardState'; // ตำแหน่งจัดกองในลาน (ย้ายจาก localStorage ขึ้น cloud)
 const K_YARD_LOG    = 'sud/yardLog';   // ประวัติการเคลื่อนไหวในลาน (ย้ายขึ้น cloud)
+const K_YARD_BLOCKS = 'sud/yardBlocks';// จำนวนช่องของแต่ละบล็อกในลาน (เพิ่ม/ลบช่องได้ · ซิงค์ cloud)
 const AUDIT_FETCH_LIMIT = 300; // โหลดเฉพาะ log ล่าสุด N รายการ (ลด bandwidth)
 // [FIX#13] เดิม stockLog / orderHistory ใช้ .on('value') เปล่า ๆ → ทุกเครื่องดาวน์โหลดประวัติทั้งหมดใหม่ทุกครั้งที่มีการบันทึก
 const STOCK_LOG_FETCH_LIMIT = 1000;
@@ -7150,7 +7239,8 @@ const _cache = {
   orders:[], prodErrors:[], shipErrors:[], orderCounter:0,
   stock:{}, stockLog:[], config:null, customers:[], orderHistory:[],
   stockVariants:{}, prodLog:[], prodActive:[], custPoles:[], auditLog:[],
-  yardState:null, yardLog:[]   // [YARD-CLOUD] ตำแหน่งจัดกอง + ประวัติลาน (sync จาก Firebase · แหล่งความจริงหลัก)
+  yardState:null, yardLog:[],  // [YARD-CLOUD] ตำแหน่งจัดกอง + ประวัติลาน (sync จาก Firebase · แหล่งความจริงหลัก)
+  yardBlocks:null              // [YARD-CLOUD] จำนวนช่องของแต่ละบล็อกในลาน (เพิ่ม/ลบช่องได้)
 };
 let _fbReady = false;
 const _fbReadyCallbacks = [];
@@ -7317,6 +7407,21 @@ function startFirebaseListeners() {
     }
     _cache.yardLog = Array.isArray(v) ? v : Object.keys(v).map(k=>v[k]);
     if (typeof YARD !== 'undefined' && YARD.applyCloudLog) { try { YARD.applyCloudLog(v); } catch(e){} }
+  });
+  // ── ลานสต็อก: จำนวนช่องของแต่ละบล็อก (เพิ่ม/ลบช่อง · ย้ายขึ้น cloud) ──
+  db.ref(K_YARD_BLOCKS).on('value', snap => {
+    const v = snap.val();
+    if (v === null) {
+      // cloud ยังว่าง → ถ้าเครื่องนี้เคยปรับจำนวนช่องไว้ใน localStorage ให้ดันขึ้นครั้งแรก
+      try {
+        const ls = JSON.parse(localStorage.getItem('sud_yard_blocks_v1') || 'null');
+        if (ls && Object.keys(ls).length) db.ref(K_YARD_BLOCKS).set(ls);
+      } catch(e){}
+      _cache.yardBlocks = null;            // cloud ว่าง → ใช้ค่าตั้งต้น
+      return;
+    }
+    _cache.yardBlocks = v;                 // [YARD-CLOUD] แหล่งความจริงหลัก = cloud
+    if (typeof YARD !== 'undefined' && YARD.applyCloudBlocks) { try { YARD.applyCloudBlocks(v); } catch(e){} }
   });
 
   // ── Audit Log (โหลดเฉพาะล่าสุด N รายการ) ──
@@ -8421,11 +8526,13 @@ const PERM_SECTIONS = [
   { id:'histItem',    icon:'🕑', label:'ประวัติรายตัว',  type:'toggle' },
   // 📚 ประวัติรวม = กล่องประวัติรวมทุกฝ่าย (ผลิต/สต็อก/ลาน)
   { id:'histAll',     icon:'📚', label:'ประวัติรวม',     type:'toggle' },
+  // 🧱 แก้ไขช่องลาน = ปุ่มเพิ่ม/ลบช่องในผังลานสต็อก (เปิด = เห็นปุ่ม +/− ที่แต่ละบล็อก)
+  { id:'yardEdit',    icon:'🧱', label:'แก้ไขช่องลาน (เพิ่ม/ลบช่อง)', type:'toggle' },
 ];
 // Stored as arrays of levels (or boolean for toggle).
 // Levels: 'view' | 'edit' | 'delete'
 const DEFAULT_ROLE_PERMS = {
-  admin:   { overview:['view','edit'], dashboard:true, sale:true,  orderstatus:['view','edit','delete'], production:['view','edit','delete'], shipping:['view','edit','delete'], stock:['view','edit','delete'], customer:['view','edit','delete'], settings:['view','edit'], histItem:true, histAll:true },
+  admin:   { overview:['view','edit'], dashboard:true, sale:true,  orderstatus:['view','edit','delete'], production:['view','edit','delete'], shipping:['view','edit','delete'], stock:['view','edit','delete'], customer:['view','edit','delete'], settings:['view','edit'], histItem:true, histAll:true, yardEdit:true },
 };
 // Keep ALL_PERMISSIONS as empty stub so legacy references don't crash
 const ALL_PERMISSIONS = [];
@@ -8491,6 +8598,8 @@ function applyPermissions() {
     // 🕑 ประวัติรายตัว / 📚 ประวัติรวม — ติ๊กแยกต่างหาก
     view_hist_item:       has('histItem','on'),
     view_hist_all:        has('histAll','on'),
+    // 🧱 แก้ไขช่องลาน (เพิ่ม/ลบช่องในผังลานสต็อก)
+    edit_yard_slots:      has('yardEdit','on'),
   };
   _applyNav();
 }
