@@ -8912,8 +8912,8 @@ function addOrderItem() {
   if (qty < 1) { showToast('⚠️ กรุณากรอกจำนวน (' + (_selGrp != null ? 'ท่อน' : unit) + ')'); return; }
   const value = (price !== null && price > 0) ? Math.round(price * qty) : calcOrderValue(type, qty);
   if (_selGrp != null) {
-    // ซ้อนท่อนใหม่เข้ารายการที่เลือก — หน่วยเป็น "ท่อน" และผูก grpId เดิม
-    orderItemsDraft.push({ productType: 'pile', pileType: type, qty, unit: 'ท่อน', length: len || '-', weld: weld || '-', steel: steel || '-', ba: ba || '-', extra: extra || '-', price, value, grpId: _selGrp });
+    // ซ้อนรายการใหม่เข้ารายการที่เลือก — หน่วยยึดตามที่คีย์จริง (คีย์ต้น=ต้น, คีย์ท่อน=ท่อน) และผูก grpId เดิม
+    orderItemsDraft.push({ productType: 'pile', pileType: type, qty, unit, length: len || '-', weld: weld || '-', steel: steel || '-', ba: ba || '-', extra: extra || '-', price, value, grpId: _selGrp });
     _stackMode = false;   // ออกจากโหมดคีย์ แต่คงเลือกรายการเดิมไว้ (ซ้อนต่อได้)
   } else {
     // รายการใหม่ — ได้ grpId ของตัวเอง
