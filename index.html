@@ -17201,6 +17201,10 @@ function printQuotation(){
   .paeb-p2{ background:#f4effe; color:#7c3aed; }
   .paeb-p3{ background:#eafaf2; color:#059669; }
   .paeb-box.zero{ background:#f6f7f9; color:#c3ccda; }
+  .paeb-box.has-pos{ cursor:help; }
+  .paeb-tip-pop{ position:fixed; z-index:99999; background:#1e293b; color:#fff; font-size:12.5px; font-weight:700;
+    padding:7px 11px; border-radius:9px; box-shadow:0 8px 24px rgba(16,24,40,.28); pointer-events:none; line-height:1.6; }
+  .paeb-tip-pop div{ white-space:nowrap; }
   .paeb-gongs{ margin-top:6px; display:flex; flex-direction:column; gap:3px; align-items:center; }
   .paeb-gchip{ font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px; background:#eef6fc; color:#0369a1; white-space:nowrap; }
   .paeb-gchip.g2{ background:#f4effe; color:#7c3aed; }
@@ -17314,6 +17318,38 @@ function printQuotation(){
       : (it.delivered !== undefined ? it.delivered : (o.delivered || 0));
   }
 
+  // tooltip ตำแหน่งกอง (ของเราเอง) — ขึ้นทันทีที่เอาเมาส์ไปชี้เลขในช่องแพ · ลอยบน body จึงไม่โดนกรอบตัด
+  function _paebTipInit(){
+    if (window._paebTipReady) return;
+    window._paebTipReady = true;
+    var tip = document.createElement("div");
+    tip.className = "paeb-tip-pop";
+    tip.style.display = "none";
+    document.body.appendChild(tip);
+    function place(box){
+      var raw = box.getAttribute("data-pos") || "";
+      if (!raw) return;
+      tip.innerHTML = "";
+      raw.split("|").forEach(function(s){ var d = document.createElement("div"); d.textContent = s; tip.appendChild(d); });
+      tip.style.display = "block";
+      var r = box.getBoundingClientRect(), tr = tip.getBoundingClientRect();
+      var left = r.left + r.width/2 - tr.width/2;
+      left = Math.max(6, Math.min(left, window.innerWidth - tr.width - 6));
+      var top = r.top - tr.height - 8;
+      if (top < 6) top = r.bottom + 8;
+      tip.style.left = left + "px";
+      tip.style.top  = top + "px";
+    }
+    document.addEventListener("mouseover", function(e){
+      var box = e.target && e.target.closest ? e.target.closest(".paeb-box.has-pos") : null;
+      if (box) place(box);
+    });
+    document.addEventListener("mouseout", function(e){
+      var box = e.target && e.target.closest ? e.target.closest(".paeb-box.has-pos") : null;
+      if (box) tip.style.display = "none";
+    });
+  }
+
   window.renderPaeBoard = function(){
     var container = document.getElementById("ordersPaeBoard");
     if (!container) return;
@@ -17368,13 +17404,13 @@ function printQuotation(){
     var box = function(v, cls){ return '<div class="paeb-box ' + (v>0?cls:'zero') + '">' + v + '</div>'; };
     // เลขใหญ่ = รวมต่อลาน · ชิปข้างล่าง = กองไหนกี่ท่อน (ติดหน่วยเสมอ เช่น A2 · 24 ท่อน)
     var paeCell = function(v, cls, lane, gongs){
-      var b = '<div class="paeb-box ' + (v>0?cls:'zero') + '">' + v + '</div>';
       var gs = (gongs||[]).filter(function(g){ return g.lane===lane && (+g.qty||0)>0; });
-      if (!gs.length) return b;
-      var gcls = (lane==='B') ? ' g2' : (lane==='C' ? ' g3' : '');
-      var chips = gs.map(function(g){ return '<span class="paeb-gchip'+gcls+'">'+_esc(g.id)+' · '+g.qty+' '+_esc(g.unit)+'</span>'; }).join('');
-      return b + '<div class="paeb-gongs">' + chips + '</div>';
+      if (!gs.length) return '<div class="paeb-box ' + (v>0?cls:'zero') + '">' + v + '</div>';
+      // มีตำแหน่งกอง → โชว์แค่เลข ส่วนตำแหน่ง (A1·7ท่อน ...) ซ่อนไว้ เอาเมาส์ไปชี้ค่อยขึ้น (tooltip ของเราเอง ขึ้นทันที)
+      var pos = _esc(gs.map(function(g){ return g.id + ' · ' + g.qty + ' ' + g.unit; }).join('|'));
+      return '<div class="paeb-box ' + (v>0?cls:'zero') + ' has-pos" data-pos="' + pos + '">' + v + '</div>';
     };
+    _paebTipInit();
     gOrder.forEach(function(k){
       var g = groups[k];
       var o = g.o;
