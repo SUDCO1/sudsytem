@@ -177,6 +177,24 @@
     #bar h1 { display:none; }
     #legend, #legendOpen { bottom:12px; left:8px; }
   }
+
+  /* ---------- สวิตช์ปักหมุด (โผล่เฉพาะจอสัมผัส) ----------
+     เมาส์แยก "คลิก" กับ "ลาก" ออกจากกันได้ชัด นิ้วไม่ชัดแบบนั้น
+     นิ้วที่ตั้งใจเลื่อนแผนที่แต่ขยับไม่ถึงเกณฑ์ลาก จะถูกนับเป็นแตะ = ได้หมุดที่ไม่ได้ตั้งใจ
+     เลยให้กดสวิตช์ก่อนถึงจะปักได้ ปกติปิดไว้ แผนที่จึงเลื่อนได้โดยไม่ต้องระวัง
+     อยู่มุมขวาล่าง เพราะตารางสีอยู่ซ้ายล่าง และนิ้วโป้งเอื้อมถึงง่ายที่สุด */
+  #pinArm { position:fixed; right:12px; bottom:12px; z-index:1100;
+            display:none; align-items:center; gap:8px;
+            padding:12px 16px; border:0; border-radius:999px;
+            font-size:14px; font-weight:700; color:#fff; cursor:pointer;
+            font-family:inherit; -webkit-tap-highlight-color:transparent;
+            background:rgba(27,58,92,.85); backdrop-filter:blur(3px);
+            box-shadow:0 3px 12px rgba(0,0,0,.32); }
+  #pinArm.show { display:flex; }
+  #pinArm.on { background:#15803d; }
+  /* วงกลมโชว์สีที่กำลังจะปัก จะได้ไม่ต้องกวาดตาไปดูตารางสีอีกฝั่ง */
+  #pinArm .sw { width:15px; height:15px; border-radius:50%;
+                border:2px solid rgba(255,255,255,.9); background:transparent; }
 </style>
 </head>
 <body>
@@ -190,6 +208,10 @@
   <button id="clear" title="ลบหมุดทั้งหมด">ล้างหมุด</button>
 </div>
 <div id="barHandle" title="แถบเครื่องมือ (ชี้ขอบบน หรือแตะตรงนี้)"></div>
+
+<button id="pinArm" title="สลับระหว่างเลื่อนแผนที่กับปักหมุด">
+  <span class="sw"></span><span class="tx">ปักหมุด</span>
+</button>
 
 <div id="map"></div>
 
@@ -805,7 +827,14 @@ function refreshCounts() {
 let lastClick = { t:0, x:0, y:0 };
 
 // loaded: ก่อนโหลดข้อมูลเสร็จ ห้ามปัก เพราะหมุดที่ปักไว้จะถูกของจากเซิร์ฟเวอร์ทับหายไป
-const canPin = () => loaded && canEdit && legendOpen && !editing;
+
+/* จอสัมผัสต้องกดสวิตช์ก่อนถึงจะปักได้ เมาส์ปักได้เลยเหมือนเดิม
+   เช็คที่ "ชนิดตัวชี้" ไม่ใช่ความกว้างจอ เพราะแท็บเล็ตจอใหญ่ก็ใช้นิ้วเหมือนกัน */
+const IS_TOUCH  = matchMedia('(pointer: coarse)').matches;
+let   pinArmed  = !IS_TOUCH;
+const pinArmBtn = document.getElementById('pinArm');
+
+const canPin = () => loaded && canEdit && legendOpen && !editing && pinArmed;
 
 map.on('click', e => {
   if (!canPin()) return;
@@ -889,7 +918,12 @@ function updateHint() {
       ? 'คุณดูได้อย่างเดียว · คลิกหมุดเพื่อดูความยาว'
       : editing
         ? 'แก้สีและความยาวได้เลย · ตอนตั้งค่าจะยังไม่ปักหมุด'
-        : 'คลิกแผนที่เพื่อปักหมุด · คลิกหมุดเพื่อแก้/ลบ';
+        // จอสัมผัสต้องกดสวิตช์มุมขวาล่างก่อน บอกให้ตรงกับที่กดได้จริงตอนนั้น
+        // ถ้าเขียน "แตะแผนที่เพื่อปักหมุด" ทิ้งไว้ตลอด คนจะแตะแล้วไม่เกิดอะไรแล้วคิดว่าพัง
+        : IS_TOUCH
+          ? (pinArmed ? 'แตะแผนที่เพื่อปักหมุด · แตะหมุดเพื่อแก้/ลบ'
+                      : 'กดปุ่ม "ปักหมุด" มุมขวาล่างก่อนถึงจะปักได้ · แตะหมุดเพื่อแก้/ลบ')
+          : 'คลิกแผนที่เพื่อปักหมุด · คลิกหมุดเพื่อแก้/ลบ';
 }
 
 /* ซ่อนทุกปุ่มที่กดแล้วเปลี่ยนข้อมูล ตอนคนเปิดไม่มีสิทธิ์แก้
@@ -1004,7 +1038,24 @@ function setLegendOpen(v) {
 }
 function updatePinMode() {
   map.getContainer().classList.toggle('pinning', canPin());
+  if (!pinArmBtn) return;
+  // โชว์สวิตช์เฉพาะตอนที่กดแล้วได้ปักจริง ไม่งั้นเป็นปุ่มหลอกให้กดเปล่า
+  const usable = IS_TOUCH && canEdit && legendOpen && !editing;
+  pinArmBtn.classList.toggle('show', usable);
+  pinArmBtn.classList.toggle('on', pinArmed);
+  const tx = pinArmBtn.querySelector('.tx');
+  if (tx) tx.textContent = pinArmed ? 'กำลังปัก' : 'ปักหมุด';
+  const sw = pinArmBtn.querySelector('.sw');
+  if (sw) sw.style.background = (pinArmed && LV[selected]) ? LV[selected].color : 'transparent';
+  updateHint();                 // ข้อความใต้ตารางสีบอกวิธีใช้ ต้องเปลี่ยนตามสวิตช์ด้วย
 }
+
+if (pinArmBtn) pinArmBtn.addEventListener('click', e => {
+  e.stopPropagation();          // กันไม่ให้คลิกทะลุไปโดนแผนที่แล้วปักหมุดใต้ปุ่ม
+  pinArmed = !pinArmed;
+  updatePinMode();
+  toast(pinArmed ? 'แตะแผนที่เพื่อปักหมุด' : 'ปิดการปักแล้ว — เลื่อนแผนที่ได้ตามสบาย');
+});
 
 document.getElementById('collapse').onclick = () => {
   setLegendOpen(false);
