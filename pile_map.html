@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>แผนที่หมุดสี — ความยาวเสาเข็ม (เก็บบน Supabase)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root { --bar-h:48px; --ink:#1b3a5c; }
+  * { box-sizing:border-box; }
+  html, body { height:100%; margin:0; }
+  body {
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Thai", "Sarabun", sans-serif;
+    color:#222; overflow:hidden;
+  }
+  .leaflet-container, .leaflet-popup-content { font-family:inherit; }
+
+  /* ---------- แถบบน ---------- */
+  #bar { height:var(--bar-h); display:flex; align-items:center; gap:10px; padding:0 12px;
+         background:var(--ink); color:#fff; font-size:13px; }
+  #bar h1 { font-size:14px; font-weight:600; margin:0; white-space:nowrap; }
+  #bar .spacer { flex:1; }
+  #bar select, #bar button {
+    font:inherit; font-size:12px; border-radius:6px; border:1px solid rgba(255,255,255,.3);
+    background:rgba(255,255,255,.12); color:#fff; padding:5px 10px; cursor:pointer;
+  }
+  #bar button:hover, #bar select:hover { background:rgba(255,255,255,.22); }
+  #bar button:disabled { opacity:.35; cursor:default; }
+  #bar button:disabled:hover { background:rgba(255,255,255,.12); }
+  #bar select option { color:#222; }
+  #count { opacity:.75; font-size:12px; white-space:nowrap; }
+
+  /* ---------- ไฟบอกสถานะการซิงค์ ----------
+     ข้อมูลไม่ได้อยู่ในเครื่องแล้ว ถ้าบันทึกไม่ขึ้นต้องรู้ทันที
+     ไม่ใช่มารู้ตอนเปิดใหม่แล้วหมุดหาย */
+  #sync { font-size:11.5px; white-space:nowrap; display:flex; align-items:center; gap:5px;
+          padding:4px 9px; border-radius:12px; background:rgba(255,255,255,.12); cursor:default; }
+  #sync .dot { width:7px; height:7px; border-radius:50%; background:#8ac926; flex:none; }
+  #sync.saving .dot { background:#ffd21f; }
+  #sync.bad    { background:rgba(224,30,38,.35); cursor:pointer; }
+  #sync.bad .dot { background:#ff6b6b; }
+
+  /* ---------- แผนที่ ---------- */
+  #map { position:absolute; top:var(--bar-h); left:0; right:0; bottom:0; background:#dfe6ec; }
+  /* เคอร์เซอร์คือตัวบอกโหมด: กากบาท = คลิกแล้วได้หมุด, มือ = คลิกแล้วไม่ได้อะไร
+     ไม่ต้องมีข้อความอธิบาย เห็นจากหางตาได้เลยว่าตอนนี้ปักอยู่หรือเปล่า */
+  #map.leaflet-container { cursor:grab; }
+  #map.pinning.leaflet-container { cursor:crosshair; }
+  #map.leaflet-container.leaflet-drag-target { cursor:grabbing; }
+  .leaflet-interactive { cursor:pointer; }
+
+  /* ---------- ตารางสี ---------- */
+  #legend {
+    position:absolute; left:12px; bottom:18px; z-index:900; width:232px;
+    background:rgba(255,255,255,.96); border-radius:10px; padding:8px;
+    box-shadow:0 2px 12px rgba(0,0,0,.22); font-size:13px;
+    -webkit-user-select:none; user-select:none;
+    /* ตอนนี้เพิ่มสีได้ไม่จำกัด ถ้าไม่กันไว้ ใส่สักสิบกว่าสีตารางจะสูงเลยขอบจอ
+       ไปบังแถบบนจนกดอะไรไม่ได้ จำกัดความสูงแล้วให้เลื่อนในตัวแทน */
+    display:flex; flex-direction:column;
+    max-height:calc(100vh - var(--bar-h) - 36px);
+  }
+  #legend.hidden { display:none; }
+  #levels { overflow-y:auto; overscroll-behavior:contain; }
+  /* flex:none กันหัวตาราง ปุ่มเพิ่มสี และบรรทัดคำอธิบายถูกบีบ
+     ตอนรายการสียาวจนต้องเลื่อน — ให้ส่วนที่หดคือรายการสีเท่านั้น */
+  .lgd-head { display:flex; align-items:center; gap:4px; padding:0 2px 6px 6px; flex:none; }
+  .lgd-head .ttl { font-size:11px; font-weight:600; color:#67798c; flex:1; white-space:nowrap; }
+  /* #8a96a3 บนพื้นขาวจางจนแทบมองไม่เห็นในภาพหน้าจอ และลูกศรหุบคือสวิตช์เปิด-ปิด
+     การปักหมุด ไม่ใช่ปุ่มรอง เลยต้องหาเจอง่าย — ใช้ #5a6b7c ซึ่งเข้มพอเห็นชัด
+     แต่ยังไม่แย่งความสนใจไปจากตัวสีในตาราง */
+  .lgd-head button, #legendOpen {
+    font:inherit; border:none; background:none; cursor:pointer; color:#5a6b7c;
+    border-radius:6px; line-height:1; font-size:14px;
+  }
+  /* วัดแล้วตอนแรกปุ่มได้พื้นที่กดแค่ 21x17 และ 16x17 px ซึ่งเล็กเกินจะกดโดนด้วยนิ้ว
+     ขยายเป็น 30x26 โดยเพิ่ม padding ไม่ใช่เพิ่มขนาดไอคอน หน้าตาเลยไม่หนักขึ้น */
+  .lgd-head button { padding:6px 8px; min-width:30px; }
+  .lgd-head button:hover { background:#eef2f6; color:var(--ink); }
+  .lgd-head button.on { background:var(--ink); color:#fff; }
+
+  .lv { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:7px;
+        cursor:pointer; border:2px solid transparent; line-height:1.2; }
+  .lv:hover { background:#eef2f6; }
+  /* สีที่เลือกอยู่ต้องเด่น เพราะมันกำหนดว่าคลิกถัดไปจะได้หมุดสีอะไร */
+  .lv.on { background:#e8f0fa; border-color:var(--ink); font-weight:600; }
+  .sw { width:16px; height:16px; border-radius:50%; border:2px solid #fff;
+        box-shadow:0 0 0 1px rgba(0,0,0,.35); flex:none; }
+  .lv .nm { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lv .n { margin-left:auto; font-size:11px; color:#8a96a3; min-width:16px; text-align:right; }
+  .lv.on .n { color:var(--ink); }
+
+  /* ---------- โหมดตั้งค่า ---------- */
+  .lv.edit { cursor:default; gap:6px; padding:4px 6px; }
+  .lv.edit:hover { background:none; }
+  /* input type=color ปกติเป็นสี่เหลี่ยมมีกรอบหนา ปรับให้เป็นวงกลมเท่าหมุดจริง
+     จะได้เห็นทันทีว่าสีที่เลือกจะออกมาหน้าตาแบบไหนบนแผนที่ */
+  .ec { width:22px; height:22px; flex:none; padding:0; border:none; border-radius:50%;
+        background:none; cursor:pointer; -webkit-appearance:none; appearance:none; }
+  .ec::-webkit-color-swatch-wrapper { padding:0; }
+  .ec::-webkit-color-swatch { border:2px solid #fff; border-radius:50%;
+                              box-shadow:0 0 0 1px rgba(0,0,0,.35); }
+  .ec::-moz-color-swatch { border:2px solid #fff; border-radius:50%; }
+  .et { flex:1; min-width:0; font:inherit; font-size:12px; padding:4px 6px;
+        border:1px solid #d6dde4; border-radius:5px; background:#fff; }
+  .et:focus { outline:none; border-color:var(--ink); }
+  .ed { flex:none; font:inherit; font-size:15px; line-height:1; color:#b8c2cc; cursor:pointer;
+        border:none; background:none; padding:2px 4px; border-radius:5px; }
+  .ed:hover { background:#fdeaea; color:#b03030; }
+
+  #addLevel { display:none; flex:none; width:100%; font:inherit; font-size:12px; margin-top:4px;
+              padding:6px; border:1px dashed #c3ccd5; background:#fff; color:#5a6b7c;
+              border-radius:7px; cursor:pointer; }
+  #addLevel:hover { border-color:var(--ink); color:var(--ink); background:#f3f7fb; }
+  #legend.editing #addLevel { display:block; }
+
+  #legend .hint { font-size:11px; color:#8a96a3; padding:6px 6px 0; flex:none;
+                  border-top:1px solid #e7ecf1; margin-top:6px; line-height:1.5; }
+
+  /* ---------- ปุ่มตอนหุบ ---------- */
+  /* ตอนหุบต้องยังบอกได้ว่า "ตอนนี้คลิกแล้วไม่ปักหมุดนะ" เลยเขียนไว้บนปุ่มเลย
+     ไม่ใช่แค่ไอคอนลูกศรเปล่า ๆ ที่ต้องเดาเอง */
+  #legendOpen {
+    position:absolute; left:12px; bottom:18px; z-index:900;
+    background:rgba(255,255,255,.96); box-shadow:0 2px 12px rgba(0,0,0,.22);
+    padding:8px 12px; border-radius:10px; font-size:12.5px; color:#5a6b7c;
+    display:none; align-items:center; gap:7px;
+  }
+  #legendOpen.show { display:flex; }
+  #legendOpen:hover { color:var(--ink); }
+  #legendOpen .sw { width:13px; height:13px; }
+
+  /* ---------- ป๊อปอัปหมุด ---------- */
+  .leaflet-popup-content { margin:10px 12px; font-size:13px; }
+  .pp-now { display:flex; align-items:center; gap:7px; font-weight:600; margin-bottom:8px; }
+  .pp-lbl { font-size:11px; color:#8a96a3; margin-bottom:4px; }
+  .pp-row { display:flex; gap:5px; margin-bottom:9px; flex-wrap:wrap; max-width:190px; }
+  .pp-c { width:22px; height:22px; border-radius:50%; border:2px solid #fff; cursor:pointer;
+          box-shadow:0 0 0 1px rgba(0,0,0,.3); padding:0; }
+  .pp-c.on { box-shadow:0 0 0 2px var(--ink); }
+  .pp-del { font:inherit; font-size:12px; width:100%; padding:5px; cursor:pointer;
+            border:1px solid #e3b4b4; background:#fff6f6; color:#b03030; border-radius:6px; }
+  .pp-del:hover { background:#fdeaea; }
+
+  /* ---------- ข้อความแจ้งชั่วคราว ---------- */
+  #toast { position:absolute; left:50%; transform:translateX(-50%); top:calc(var(--bar-h) + 12px);
+           z-index:1000; background:rgba(27,58,92,.94); color:#fff; font-size:12.5px;
+           padding:7px 14px; border-radius:16px; pointer-events:none;
+           opacity:0; transition:opacity .18s; }
+  #toast.show { opacity:1; }
+
+  @media (max-width:640px) {
+    #bar h1 { display:none; }
+    #legend, #legendOpen { bottom:12px; left:8px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <h1>แผนที่หมุดสี — ความยาวเสาเข็ม</h1>
+  <span id="count">ยังไม่มีหมุด</span>
+  <span class="spacer"></span>
+  <span id="sync" title="ข้อมูลเก็บบน Supabase"><span class="dot"></span><span class="tx">กำลังโหลด…</span></span>
+  <select id="basemap" title="เปลี่ยนภาพพื้นหลังแผนที่"></select>
+  <button id="undo" disabled title="ย้อนการแก้ไขล่าสุด">เลิกทำ</button>
+  <button id="clear" title="ลบหมุดทั้งหมด">ล้างหมุด</button>
+</div>
+
+<div id="map"></div>
+
+<div id="legend">
+  <div class="lgd-head">
+    <span class="ttl">สี = ความยาวเสาเข็ม</span>
+    <button id="editToggle" title="ตั้งค่าสีและความยาว">&#9998;</button>
+    <button id="collapse" title="หุบตาราง (คลิกแผนที่จะไม่ปักหมุด)">&#9662;</button>
+  </div>
+  <div id="levels"></div>
+  <button id="addLevel">+ เพิ่มสี</button>
+  <div class="hint" id="hint"></div>
+</div>
+
+<button id="legendOpen" title="กางตารางสีเพื่อกลับมาปักหมุด">
+  &#9656; <span class="sw"></span> <span>คลิกแผนที่ไม่ปักหมุด</span>
+</button>
+
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+'use strict';
+
+/* ค่าพวกนี้เป็น "ความชอบของเครื่องนี้" ไม่ใช่ข้อมูลงาน
+   เปิดคอมที่ออฟฟิศอยากเห็นดาวเทียม เปิดที่บ้านอยากเห็นถนน ก็ควรต่างกันได้
+   เลยยังเก็บในเครื่องเหมือนเดิม ไม่ต้องขึ้นเซิร์ฟเวอร์ */
+const VIEW_KEY = 'pile_view_v2';
+const BASE_KEY = 'pile_base_v2';
+const OPEN_KEY = 'pile_legend_open_v2';
+
+/* ============================================================
+   ที่เก็บข้อมูล: Supabase (ไม่ใช่เครื่องนี้แล้ว)
+   ------------------------------------------------------------
+   หลักคิดสามข้อ
+   1) หน้าจอไม่รอเน็ต — คลิกแล้วหมุดขึ้นทันที แล้วค่อยส่งขึ้นเซิร์ฟเวอร์เบื้องหลัง
+   2) ส่งไม่ขึ้นก็ไม่ลบงานที่เพิ่งทำทิ้ง — ขึ้นไฟแดงบอกแล้วลองใหม่เรื่อย ๆ
+      (เคยคิดจะย้อนสถานะกลับเวลาส่งพลาด แต่นั่นคือหมุดที่เพิ่งปักหายไปหน้าต่อหน้า
+       ซึ่งแย่กว่าการค้างไว้แล้วบอกให้รู้ว่ายังไม่ได้บันทึก)
+   3) โหลดครั้งแรกไม่สำเร็จ = ห้ามเขียนอะไรขึ้นไปเลย
+      เพราะถ้าเขียน เราจะเอาค่าตั้งต้นในโค้ดไปทับตารางสีจริงที่แก้ไว้บนเซิร์ฟเวอร์
+   ============================================================ */
+const SUPA = {
+  url:    'https://dmxegqmhxarabyqduikb.supabase.co',
+  key:    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRteGVncW1oeGFyYWJ5cWR1aWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMTA2NjksImV4cCI6MjEwMjY4NjY2OX0.R1NyeKfVmjnp48zGHdMeB6XsChlHd8N5KD67k8RTWI8',
+  schema: 'sud',
+  group:  'default'     // เผื่ออนาคตอยากแยกแผนที่ตามโครงการ
+};
+
+const nowISO = () => new Date().toISOString();
+
+// รายการค่าสำหรับ ?col=in.(...) — ใส่อัญประกาศไว้ กันคีย์ที่มีอักขระแปลก ๆ ทำ query เพี้ยน
+const inList = arr => 'in.(' + arr.map(v => '"' + String(v).replace(/"/g, '') + '"').join(',') + ')';
+
+async function rest(path, opt) {
+  opt = opt || {};
+  const h = {
+    apikey: SUPA.key,
+    Authorization: 'Bearer ' + SUPA.key,
+    // สคีมา sud ไม่ใช่ public ถ้าไม่บอกสองหัวข้อนี้ PostgREST จะหาตารางไม่เจอ
+    'Accept-Profile':  SUPA.schema,
+    'Content-Profile': SUPA.schema
+  };
+  if (opt.body)   h['Content-Type'] = 'application/json';
+  if (opt.prefer) h.Prefer = opt.prefer;
+
+  const r = await fetch(SUPA.url + '/rest/v1/' + path, {
+    method:  opt.method || 'GET',
+    headers: h,
+    body:    opt.body ? JSON.stringify(opt.body) : undefined
+  });
+  const txt = await r.text();
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + txt.slice(0, 180));
+  return txt ? JSON.parse(txt) : null;
+}
+
+/* ---------- ดูอย่างเดียว หรือ แก้ได้ ----------
+   เว็บหลักมีระบบสิทธิ์อยู่แล้ว เลยให้มันเป็นคนบอกว่าคนที่เปิดอยู่แก้ได้มั้ย
+   ผ่าน window.PILEMAP_CANEDIT (ใส่เป็นค่าหรือฟังก์ชันก็ได้)
+   เปิดไฟล์นี้เดี่ยว ๆ ไม่มีใครตั้งค่าไว้ = แก้ได้ เพราะคนที่เปิดไฟล์ตรง ๆ คือเจ้าของเครื่อง
+
+   นี่เป็นแค่การซ่อนปุ่ม ไม่ใช่การป้องกันจริง — anon key เปิดสิทธิ์เขียนให้ทุกคนอยู่แล้ว
+   ใครเปิด view-source ก็ยิง API เองได้ ตัวนี้มีไว้กันกดพลาด ไม่ได้มีไว้กันคนตั้งใจ */
+let canEdit = true;
+function resolveCanEdit() {
+  try {
+    const v = window.PILEMAP_CANEDIT;
+    if (v !== undefined) return !!(typeof v === 'function' ? v() : v);
+    // สำรอง: ?edit=0/1 ใน URL เผื่อเว็บหลักเขียนค่าเข้ามาในหน้านี้ไม่ได้
+    // (เบราว์เซอร์กันการคุยข้ามกรอบตอนเปิดจากไฟล์ในเครื่อง)
+    const q = new URLSearchParams(location.search);
+    if (q.has('edit')) return q.get('edit') !== '0';
+    return true;
+  } catch (e) { return false; }
+}
+
+// อีเมลคนปัก เอาไว้ไล่ดูย้อนหลังว่าหมุดไหนใครทำ
+// ตอนอยู่ในเว็บหลักจะมีคนล็อกอินอยู่ ตอนเปิดไฟล์นี้เดี่ยว ๆ ไม่มี ก็ปล่อยว่าง
+function whoami() {
+  try {
+    const u = window.PILEMAP_USER;
+    const v = typeof u === 'function' ? u() : u;
+    return v ? String(v).slice(0, 120) : null;
+  } catch (e) { return null; }
+}
+
+async function fetchServer() {
+  const [lv, pn] = await Promise.all([
+    rest('pile_map_levels?select=k,color,label,sort&deleted_at=is.null&order=sort.asc,k.asc'),
+    rest('pile_map_pins?select=id,lat,lng,level_key&deleted_at=is.null'
+         + '&group_key=eq.' + encodeURIComponent(SUPA.group) + '&order=created_at.asc')
+  ]);
+  // ลำดับคีย์ต้องเป็น pins ก่อน levels ให้ตรงกับ stateNow()
+  // เพราะเราเทียบสองสถานะด้วย JSON.stringify ซึ่งคีย์สลับที่แล้วข้อความก็ไม่ตรงกันทันที
+  return {
+    pins:   pn.filter(p => isFinite(p.lat) && isFinite(p.lng))
+              .map(p => ({ id:p.id, lat:p.lat, lng:p.lng, k:p.level_key })),
+    levels: lv.map(l => ({ k:l.k, color:l.color, label:String(l.label == null ? '' : l.label) }))
+  };
+}
+
+/* ส่งขึ้นเซิร์ฟเวอร์เฉพาะส่วนที่ต่าง ไม่ใช่เขียนทับทั้งก้อน
+   เพราะถ้าเขียนทับทั้งก้อน คนสองคนทำพร้อมกันคนหลังจะลบงานคนแรกทิ้งหมด */
+async function push(before, after) {
+  const jobs = [];
+
+  /* ---------- ตารางสี ---------- */
+  const bLv = {};
+  before.levels.forEach((l, i) => bLv[l.k] = { l:l, i:i });
+  const upLv = [];
+  after.levels.forEach((l, i) => {
+    const o = bLv[l.k];
+    if (!o || o.l.color !== l.color || o.l.label !== l.label || o.i !== i) {
+      // sort เก็บเป็นลำดับในตาราง เพราะคนใช้เรียงสีจากสั้นไปยาว ลำดับจึงมีความหมาย
+      upLv.push({ k:l.k, color:l.color, label:l.label, sort:i + 1,
+                  deleted_at:null, updated_at:nowISO() });
+    }
+  });
+  if (upLv.length) {
+    jobs.push(rest('pile_map_levels?on_conflict=k',
+      { method:'POST', body:upLv, prefer:'resolution=merge-duplicates,return=minimal' }));
+  }
+
+  const keep = {};
+  after.levels.forEach(l => keep[l.k] = 1);
+  const goneLv = before.levels.filter(l => !keep[l.k]).map(l => l.k);
+  if (goneLv.length) {
+    jobs.push(rest('pile_map_levels?k=' + encodeURIComponent(inList(goneLv)),
+      { method:'PATCH', body:{ deleted_at:nowISO() }, prefer:'return=minimal' }));
+  }
+
+  /* ---------- หมุด ---------- */
+  const bPin = {};
+  before.pins.forEach(p => bPin[p.id] = p);
+
+  // หมุดที่ id ยังไม่เคยขึ้นไป = ปักใหม่ หรือ "เลิกทำ" การลบ
+  // ใช้ upsert ตัวเดียวครอบทั้งสองกรณี แถวที่ถูกลบนิ่มไว้จะถูกปลด deleted_at กลับมา
+  const addPin = after.pins.filter(p => !bPin[p.id]).map(p => ({
+    id:p.id, lat:p.lat, lng:p.lng, level_key:p.k, group_key:SUPA.group,
+    created_by:whoami(), deleted_at:null, updated_at:nowISO()
+  }));
+  if (addPin.length) {
+    jobs.push(rest('pile_map_pins?on_conflict=id',
+      { method:'POST', body:addPin, prefer:'resolution=merge-duplicates,return=minimal' }));
+  }
+
+  // หมุดเดิมที่เปลี่ยนสี — รวมเป็นกลุ่มตามสีใหม่ จะได้ยิงครั้งเดียวต่อสี ไม่ใช่ครั้งเดียวต่อหมุด
+  // (ไม่ต้องดู lat/lng เพราะแอปนี้ลากหมุดย้ายที่ไม่ได้ ตำแหน่งจึงไม่เคยเปลี่ยน)
+  const byLevel = {};
+  after.pins.forEach(p => {
+    const o = bPin[p.id];
+    if (o && o.k !== p.k) (byLevel[p.k] = byLevel[p.k] || []).push(p.id);
+  });
+  Object.keys(byLevel).forEach(k => {
+    jobs.push(rest('pile_map_pins?id=' + encodeURIComponent(inList(byLevel[k])),
+      { method:'PATCH', body:{ level_key:k, updated_at:nowISO() }, prefer:'return=minimal' }));
+  });
+
+  // ลบ = ลงเวลา deleted_at ไม่ได้ลบแถวจริง (สิทธิ์ลบจริงไม่ได้เปิดให้ด้วย)
+  // ใครกดล้างหมุดทั้งหมด ก็ยังกู้คืนได้ด้วย SQL บรรทัดเดียว
+  const live = {};
+  after.pins.forEach(p => live[p.id] = 1);
+  const gonePin = before.pins.filter(p => !live[p.id]).map(p => p.id);
+  if (gonePin.length) {
+    for (let i = 0; i < gonePin.length; i += 150) {   // กัน URL ยาวเกินตอนล้างหมุดเป็นพัน
+      jobs.push(rest('pile_map_pins?id=' + encodeURIComponent(inList(gonePin.slice(i, i + 150))),
+        { method:'PATCH', body:{ deleted_at:nowISO() }, prefer:'return=minimal' }));
+    }
+  }
+
+  await Promise.all(jobs);
+}
+
+/* ============================================================
+   ตารางสี — แก้ได้ เพิ่มได้ ลบได้ และจำไว้ในเครื่อง
+   ค่าตั้งต้นแบ่งเป็นช่วง ไม่ใช่ความยาวเดี่ยว ๆ เพราะงานจริงที่เคยบันทึกไว้
+   มีตั้งแต่ 6 ถึง 32 ม. กระจายเกือบทุกเมตร ถ้าทำสีละความยาวต้องใช้ 23 สี
+   ซึ่งแยกด้วยตาไม่ออกบนแผนที่ — แต่ตอนนี้แก้เป็นแบบไหนก็ได้ตามใจ
+   ============================================================ */
+const DEFAULT_LEVELS = [
+  { k:'a', color:'#1a9850', label:'ไม่เกิน 12 ม.' },
+  { k:'b', color:'#8ac926', label:'13 – 15 ม.'   },
+  { k:'c', color:'#ffd21f', label:'16 – 18 ม.'   },
+  { k:'d', color:'#fb8b24', label:'19 – 21 ม.'   },
+  { k:'e', color:'#e01e26', label:'22 – 24 ม.'   },
+  { k:'f', color:'#8e44ad', label:'25 ม. ขึ้นไป' }
+];
+// สีสำรองสำหรับปุ่ม "เพิ่มสี" เลือกให้ต่างจากชุดเดิมพอจะแยกออกด้วยตา
+const SPARE = ['#00b4d8','#7f5539','#ff5da2','#495057','#06d6a0','#9d4edd','#d62828','#118ab2'];
+
+let levels = [];
+const LV = {};
+function indexLevels() {
+  Object.keys(LV).forEach(k => delete LV[k]);
+  levels.forEach(l => LV[l.k] = l);
+}
+const newKey = () => 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+/* ============================================================
+   ข้อมูลหมุด — มีแค่ ตำแหน่ง + สี
+   ============================================================ */
+let pins = [];
+let selected = null;            // สีที่จะใช้กับหมุดถัดไป
+const layers = {};              // id -> circleMarker
+let undoStack = [];
+let editing = false;            // กำลังอยู่ในโหมดตั้งค่าสีหรือเปล่า
+let legendOpen = true;          // ตารางกางอยู่หรือเปล่า = ปักหมุดได้หรือเปล่า
+
+// id ของหมุดสร้างจากเครื่องนี้ ไม่ปล่อยให้เซิร์ฟเวอร์ตั้ง
+// เพราะเราวาดหมุดก่อนส่ง ถ้ารอ id จากเซิร์ฟเวอร์ หมุดบนจอจะยังไม่มี id ให้กดลบ/เปลี่ยนสี
+function uuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+/* ============================================================
+   ตัวซิงค์
+   ------------------------------------------------------------
+   serverMirror = สิ่งที่เราเชื่อว่าอยู่บนเซิร์ฟเวอร์แล้ว
+   ของจริงบนจอคือ pins/levels  ต่างกันเมื่อไหร่ = ยังมีของค้างต้องส่ง
+   ทุกการแก้ในแอปเรียก save() อันเดียว ไม่ต้องรู้ว่าตัวเองแก้อะไรไป
+   ตัวซิงค์ไปหาความต่างเอง — จุดที่ต้องแก้มีที่เดียว พลาดยากกว่า
+   ============================================================ */
+let serverMirror = { pins:[], levels:[] };
+let loaded  = false;     // โหลดครั้งแรกสำเร็จหรือยัง ถ้ายัง ห้ามเขียนขึ้นไป
+let pushing = false;
+let syncTimer = null, retryWait = 0, lastErr = '';
+
+const stateNow = () => ({
+  pins:   pins.map(p => ({ id:p.id, lat:p.lat, lng:p.lng, k:p.k })),
+  levels: levels.map(l => ({ k:l.k, color:l.color, label:l.label }))
+});
+const sig   = s => JSON.stringify(s);
+const dirty = () => sig(serverMirror) !== sig(stateNow());
+
+const syncEl = document.getElementById('sync');
+// เก็บโหมดล่าสุดไว้ เพราะสิทธิ์อาจมาถึงทีหลัง (เว็บหลักรู้ role ช้ากว่าโหลดหน้า)
+// แล้วต้องเขียนป้ายใหม่ด้วยคำของโหมดที่ค้างอยู่ ไม่ใช่เดาว่าเป็น ok
+let syncMode = 'saving';
+function setSync(mode) {
+  syncMode = mode;
+  syncEl.className = mode === 'ok' ? '' : mode;
+  // คนที่ดูอย่างเดียวไม่เคยบันทึกอะไร คำว่า "บันทึกแล้ว" เลยไม่มีความหมายกับเขา
+  // สิ่งที่เขาอยากรู้คือข้อมูลที่เห็นอยู่สดหรือเปล่า
+  syncEl.querySelector('.tx').textContent = canEdit
+    ? (mode === 'ok' ? 'บันทึกแล้ว' : mode === 'saving' ? 'กำลังบันทึก…' : 'บันทึกไม่ขึ้น')
+    : (mode === 'ok' ? 'ดูอย่างเดียว'  : mode === 'saving' ? 'กำลังโหลด…'   : 'โหลดไม่ได้');
+  syncEl.title = mode === 'bad'
+    ? 'กดเพื่อลองอีกครั้ง\n' + lastErr
+    : canEdit ? 'ข้อมูลเก็บบน Supabase ทุกเครื่องเห็นตรงกัน'
+              : 'คุณไม่มีสิทธิ์แก้แผนที่นี้ ดูได้อย่างเดียว';
+}
+
+function save() {
+  if (!loaded || !canEdit) return;
+  setSync('saving');
+  clearTimeout(syncTimer);
+  // หน่วงไว้ก่อน เพราะตอนพิมพ์ชื่อความยาวหรือเลื่อนจานสี save() ถูกเรียกทุกตัวอักษร
+  // ถ้ายิงทุกครั้งจะได้เป็นร้อยรีเควสต์จากการพิมพ์ชื่อเดียว
+  syncTimer = setTimeout(flush, 400);
+}
+
+async function flush() {
+  if (!loaded || pushing) return;   // รอบที่กำลังส่งอยู่จะเรียกตัวเองต่อเมื่อเสร็จ
+  const after = stateNow();
+  if (sig(serverMirror) === sig(after)) { setSync('ok'); return; }
+
+  pushing = true;
+  setSync('saving');
+  try {
+    await push(serverMirror, after);
+    serverMirror = after;
+    retryWait = 0; lastErr = '';
+    pushing = false;
+    // ระหว่างรอเน็ตผู้ใช้อาจแก้เพิ่มไปแล้ว เทียบอีกรอบ ถ้าต่างก็ส่งต่อให้จบ
+    if (dirty()) { flush(); return; }
+    setSync('ok');
+  } catch (err) {
+    pushing = false;
+    lastErr = String(err && err.message || err);
+    setSync('bad');
+    // ไม่ย้อนของที่ผู้ใช้เพิ่งทำทิ้ง แค่ลองใหม่ ถอยห่างขึ้นเรื่อย ๆ สูงสุด 15 วิ
+    retryWait = Math.min(retryWait ? retryWait * 2 : 2000, 15000);
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(flush, retryWait);
+  }
+}
+
+/* เอาสถานะจากเซิร์ฟเวอร์มาใส่จอ */
+function applyServer(s) {
+  serverMirror = { pins:s.pins.map(p => ({ id:p.id, lat:p.lat, lng:p.lng, k:p.k })),
+                   levels:s.levels.map(l => ({ k:l.k, color:l.color, label:l.label })) };
+  levels = serverMirror.levels.map(l => Object.assign({}, l));
+  // ตารางว่าง = เพิ่งสร้างฐานข้อมูล ใส่ชุดตั้งต้นให้แล้วปล่อยให้ตัวซิงค์ส่งขึ้นไปเอง
+  if (!levels.length) levels = DEFAULT_LEVELS.map(l => Object.assign({}, l));
+  indexLevels();
+  // ทิ้งหมุดที่อ้างสีซึ่งถูกลบไปแล้ว (เครื่องอื่นลบสีทิ้งระหว่างที่เราเปิดอยู่)
+  pins = serverMirror.pins.filter(p => LV[p.k]).map(p => Object.assign({}, p));
+  if (!LV[selected]) selected = levels[0].k;
+
+  // เลิกทำเก็บสถานะไว้ทั้งก้อน ถ้าของจากเครื่องอื่นเข้ามาแล้วยังกดย้อนได้
+  // จะกลายเป็นลบงานที่เขาเพิ่งทำทิ้ง เลยล้างประวัติทุกครั้งที่รับของใหม่
+  undoStack = [];
+  const ub = document.getElementById('undo');
+  if (ub) ub.disabled = true;
+
+  map.closePopup();
+  redrawAll();
+}
+
+async function loadFromServer() {
+  setSync('saving');
+  syncEl.querySelector('.tx').textContent = 'กำลังโหลด…';
+  const s = await fetchServer();
+  // ตั้ง loaded ก่อนวาด เพราะข้อความใต้ตารางสีอ่านค่านี้ไปตัดสินว่าจะบอกอะไร
+  // ถ้าตั้งทีหลัง คนที่กดลองใหม่จนสำเร็จจะยังเห็นบรรทัด "ยังโหลดข้อมูลไม่ได้" ค้างอยู่
+  loaded = true;
+  applyServer(s);
+  if (dirty()) save(); else setSync('ok');
+  updatePinMode();
+}
+
+/* ดึงมาดูเป็นรอบ ๆ ว่าเครื่องอื่นแก้อะไรไปหรือเปล่า
+   ไม่ใช้ realtime เพราะต้องเปิดฟีเจอร์เพิ่มบน Supabase และถือ websocket ค้างไว้
+   งานนี้คนปักพร้อมกันไม่กี่คน ช้าไป 15 วินาทีไม่มีผล */
+async function poll() {
+  if (!loaded || pushing || dirty() || editing || document.hidden) return;
+  try {
+    const s = await fetchServer();
+    // เช็กอีกรอบ เพราะระหว่างรอเน็ตผู้ใช้อาจเริ่มแก้ไปแล้ว ห้ามเขียนทับของที่เขาทำค้าง
+    if (pushing || dirty() || editing) return;
+    if (sig(s) === sig(serverMirror)) return;
+    applyServer(s);
+    toast('อัปเดตจากเครื่องอื่น');
+  } catch (e) { /* รอบหน้าค่อยลองใหม่ ไม่ต้องรบกวนผู้ใช้ */ }
+}
+
+syncEl.onclick = () => {
+  if (!syncEl.classList.contains('bad')) return;
+  retryWait = 0;
+  if (loaded) flush();
+  else loadFromServer().catch(err => { lastErr = String(err.message || err); setSync('bad'); });
+};
+
+// ปิดแท็บตอนยังบันทึกไม่ขึ้น = งานหาย เพราะไม่มีสำเนาในเครื่องแล้ว ต้องเตือน
+window.addEventListener('beforeunload', e => {
+  if (loaded && dirty()) { e.preventDefault(); e.returnValue = ''; }
+});
+
+/* เก็บสำเนาทั้งชุด (หมุด + ตารางสี) ก่อนเปลี่ยนทุกครั้ง
+   undo เลยย้อนได้ทุกแบบด้วยโค้ดชุดเดียว ไม่ต้องเขียนตัวย้อนแยกตามชนิดการกระทำ
+   จำกัด 50 ขั้น หมุดหนึ่งตัวหนักไม่ถึง 60 ไบต์ ไม่กินหน่วยความจำ */
+function snapshot() {
+  undoStack.push(JSON.stringify({ pins: pins, levels: levels }));
+  if (undoStack.length > 50) undoStack.shift();
+  document.getElementById('undo').disabled = false;
+}
+
+/* ============================================================
+   แผนที่
+   ============================================================ */
+const esri = n => 'https://server.arcgisonline.com/ArcGIS/rest/services/' + n + '/MapServer/tile/{z}/{y}/{x}';
+const BASEMAPS = {
+  street:    { label:'ถนน',           url: esri('World_Street_Map') },
+  gray:      { label:'เรียบ เทา-ขาว', url: esri('Canvas/World_Light_Gray_Base') },
+  satellite: { label:'ดาวเทียม',      url: esri('World_Imagery'),
+               overlay: esri('Reference/World_Boundaries_and_Places') },
+  topo:      { label:'ภูมิประเทศ',    url: esri('World_Topo_Map') }
+};
+
+const map = L.map('map', {
+  // zoomSnap 0 = ซูมละเอียดเป็นทศนิยม ล้อเลยไหลลื่นแทนที่จะกระโดดทีละขั้น
+  zoomSnap: 0,
+  zoomDelta: 1,
+  maxZoom: 19,
+  attributionControl: false,
+  // ปิดของ Leaflet เพราะข้างล่างเราดัก wheel เองแล้ว ถ้าเปิดทิ้งไว้สองตัวจะแย่งกันซูม
+  // แล้วภาพจะกระตุก (Leaflet แทรกซูมเป็นขั้น ๆ กลางคันระหว่างที่เราซูมลื่น ๆ อยู่)
+  scrollWheelZoom: false,
+  // ปิดดับเบิลคลิกซูม เพราะคลิกแผนที่ = ปักหมุด ถ้าเปิดไว้จะซูมพร้อมแถมหมุดมาด้วย
+  doubleClickZoom: false
+});
+
+const savedView = (() => { try { return JSON.parse(localStorage.getItem(VIEW_KEY)); } catch (e) { return null; } })();
+if (savedView && isFinite(savedView.lat)) map.setView([savedView.lat, savedView.lng], savedView.z);
+else map.setView([13.70, 100.68], 11);
+
+const BASE_OPTS  = { attribution:'Tiles &copy; Esri', maxZoom:19, maxNativeZoom:19, keepBuffer:2 };
+// ไทล์ป้ายชื่อดึงจากซูมลึกลงไปหนึ่งระดับแล้วย่อครึ่ง ป้ายเลยไม่ตัวโตบังภาพตอนซูมกว้าง
+const LABEL_OPTS = { maxZoom:19, maxNativeZoom:18, keepBuffer:2, tileSize:128, zoomOffset:1 };
+let baseLayer = null, baseOverlay = null;
+
+function setBasemap(key) {
+  const bm = BASEMAPS[key] || BASEMAPS.street;
+  const oldBase = baseLayer, oldOverlay = baseOverlay;
+  baseLayer = L.tileLayer(bm.url, BASE_OPTS).addTo(map);
+  baseLayer.bringToBack();
+  baseOverlay = bm.overlay ? L.tileLayer(bm.overlay, LABEL_OPTS).addTo(map) : null;
+  // ถอดชั้นเก่าหลังชั้นใหม่โหลดเสร็จ ไม่งั้นจอขาววาบระหว่างรอไทล์
+  const drop = () => {
+    if (oldBase) map.removeLayer(oldBase);
+    if (oldOverlay) map.removeLayer(oldOverlay);
+  };
+  if (oldBase) {
+    baseLayer.once('load', drop);
+    setTimeout(drop, 1500);   // กันเหนียวถ้าไทล์โหลดไม่สำเร็จ ชั้นเก่าจะได้ไม่ค้างทับกัน
+  }
+  try { localStorage.setItem(BASE_KEY, key); } catch (e) {}
+}
+
+const baseSel = document.getElementById('basemap');
+Object.keys(BASEMAPS).forEach(k => {
+  const o = document.createElement('option');
+  o.value = k; o.textContent = BASEMAPS[k].label;
+  baseSel.appendChild(o);
+});
+baseSel.value = localStorage.getItem(BASE_KEY) || 'street';
+baseSel.onchange = () => setBasemap(baseSel.value);
+setBasemap(baseSel.value);
+
+map.on('moveend zoomend', () => {
+  const c = map.getCenter();
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ lat:c.lat, lng:c.lng, z:map.getZoom() })); } catch (e) {}
+});
+
+/* ============================================================
+   ล้อเมาส์ / แทร็กแพด
+   ------------------------------------------------------------
+   ของ Leaflet เองนับทุก wheel event เป็น "ซูม" ทั้งเลื่อนสองนิ้วและบีบนิ้ว
+   แล้วซูมทีละขั้นแบบมีอนิเมชัน พอหมุนล้อรัว ๆ คำสั่งซูมจะซ้อนกันเป็นสิบ ๆ ครั้ง
+   ภาพเลยกระตุก เราจึงปิดของมันแล้วดักเองที่นี่
+
+   ตอนซูม เรียก setZoom/setZoomAround ทุกจังหวะล้อไม่ได้ เพราะแต่ละครั้งเป็นการ
+   รีเซ็ตมุมมองเต็ม ๆ ไทล์จะถูกทิ้งแล้วขอใหม่ หมุนเร็ว ๆ ทีจะกะพริบ
+   ทางที่ใช้คือ _move พร้อมธง pinch ซึ่งเป็นสิ่งที่ Leaflet ใช้เองตอนบีบนิ้วบนมือถือ
+   มันย่อ/ขยายเฉพาะชั้นไทล์ (GPU) ส่วนหมุดถูกย้ายไปตำแหน่งใหม่จริง ๆ
+   ============================================================ */
+let panRAF = null, pendingDX = 0, pendingDY = 0;
+let zoomAnchor = null, commitTimer = null, lastSettledZoom = 0;
+
+function zoomAroundAnchor(zoom) {
+  const latlng = map.containerPointToLatLng(zoomAnchor);
+  // คณิตเดียวกับที่ setZoomAround ใช้: จุดใต้นิ้ว/เมาส์อยู่กับที่
+  const scale    = map.getZoomScale(zoom),
+        viewHalf = map.getSize().divideBy(2),
+        offset   = map.latLngToContainerPoint(latlng).subtract(viewHalf).multiplyBy(1 - 1 / scale),
+        center   = map.containerPointToLatLng(viewHalf.add(offset));
+
+  map._move(center, zoom, { pinch:true, round:false });
+
+  // หมุดเป็น SVG ที่ Leaflet สเกลทั้งชั้นแทนการวาดใหม่ และสเกลนั้นสะสมไปเรื่อย ๆ
+  // จนกว่าจะมี zoomend เลยเคาะ zoomend ทุก 1 ระดับระหว่างทาง ให้หมุดวาดใหม่ที่ขนาดจริง
+  if (Math.abs(zoom - lastSettledZoom) >= 1) {
+    map._moveEnd(true);
+    lastSettledZoom = zoom;
+  }
+}
+
+function endZoomGesture() {
+  if (!zoomAnchor) return;
+  map._moveEnd(true);   // ปิดท้ายด้วย zoomend ให้หมุดวาดใหม่ที่ขนาดจริง
+  zoomAnchor = null; commitTimer = null; lastSettledZoom = map.getZoom();
+}
+
+// ล้อเมาส์จริงส่งค่าเป็นหน่วย "บรรทัด/หน้า" (deltaMode ไม่ใช่ 0) ต่างจากแทร็กแพด
+// เคสนั้นหมุนล้อ = ซูม ตามที่คนใช้เมาส์คาดหวัง
+// ส่วนแทร็กแพด: เลื่อนสองนิ้ว = เลื่อนแผนที่, บีบนิ้ว = ซูม (Chrome ส่งบีบนิ้วมาเป็น ctrl+wheel)
+const wheelZooms = e => e.ctrlKey || e.deltaMode !== 0;
+
+map.getContainer().addEventListener('wheel', function (e) {
+  e.preventDefault();
+  if (wheelZooms(e)) {
+    if (!zoomAnchor) { zoomAnchor = map.mouseEventToContainerPoint(e); lastSettledZoom = map.getZoom(); }
+    // deltaMode 1 = บรรทัด, 2 = หน้า แปลงเป็นพิกเซลก่อน ไม่งั้นล้อเมาส์หมุนทีได้ซูมนิดเดียว
+    const px = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    const wanted = map.getZoom() - px * 0.015;
+    zoomAroundAnchor(Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), wanted)));
+    clearTimeout(commitTimer);
+    commitTimer = setTimeout(endZoomGesture, 120);
+  } else {
+    clearTimeout(commitTimer); endZoomGesture();
+    pendingDX += e.deltaX;
+    pendingDY += e.deltaY;
+    if (!panRAF) {
+      panRAF = requestAnimationFrame(function () {
+        map.panBy([pendingDX, pendingDY], { animate:false });
+        pendingDX = 0; pendingDY = 0;
+        panRAF = null;
+      });
+    }
+  }
+}, { passive:false });
+
+/* ============================================================
+   หมุด
+   ============================================================ */
+function tipOpts() { return { direction:'top', offset:[0,-10] }; }
+
+function drawPin(p) {
+  const m = L.circleMarker([p.lat, p.lng], {
+    radius:8, color:'#fff', weight:2, opacity:1,
+    fillColor: LV[p.k].color, fillOpacity:1
+  }).addTo(map);
+  // ชี้ค้างแล้วบอกความยาวเลย จะได้ไม่ต้องกวาดตาไปอ่านตารางสีทุกครั้ง
+  m.bindTooltip(LV[p.k].label || '(ไม่มีชื่อ)', tipOpts());
+  m.bindPopup(() => popupHtml(p), { closeButton:false, autoPan:true });
+  layers[p.id] = m;
+}
+
+function popupHtml(p) {
+  const head = `<div class="pp-now"><span class="sw" style="background:${LV[p.k].color}"></span>${esc(LV[p.k].label) || '(ไม่มีชื่อ)'}</div>`;
+  // ดูอย่างเดียว: บอกแค่ว่าหมุดนี้คือความยาวเท่าไหร่ ไม่ต้องมีปุ่มที่กดไม่ได้มาให้รก
+  if (!canEdit) return head + `<div class="pp-lbl">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</div>`;
+  const sw = levels.map(l =>
+    `<button class="pp-c${l.k === p.k ? ' on' : ''}" data-pin="${p.id}" data-k="${l.k}"
+             style="background:${l.color}" title="${escAttr(l.label)}"></button>`).join('');
+  return head + `<div class="pp-lbl">เปลี่ยนสี</div>
+          <div class="pp-row">${sw}</div>
+          <button class="pp-del" data-del="${p.id}">ลบหมุดนี้</button>`;
+}
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+  c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const escAttr = esc;
+
+function redrawAll() {
+  Object.keys(layers).forEach(id => { map.removeLayer(layers[id]); delete layers[id]; });
+  pins.forEach(drawPin);
+  renderLevels();
+}
+
+// เปลี่ยนสี/ชื่อของระดับหนึ่ง แล้วอัปเดตเฉพาะหมุดที่ใช้ระดับนั้น
+// ไม่วาดใหม่ทั้งแผนที่ เพราะตอนพิมพ์ชื่อจะโดนเรียกทุกตัวอักษร
+function applyLevelStyle(k) {
+  const l = LV[k]; if (!l) return;
+  pins.forEach(p => {
+    if (p.k !== k) return;
+    const m = layers[p.id]; if (!m) return;
+    m.setStyle({ fillColor: l.color });
+    m.unbindTooltip().bindTooltip(l.label || '(ไม่มีชื่อ)', tipOpts());
+  });
+}
+
+function refreshCounts() {
+  const n = {};
+  pins.forEach(p => n[p.k] = (n[p.k] || 0) + 1);
+  levels.forEach(l => {
+    const el = document.querySelector('.lv[data-k="' + l.k + '"] .n');
+    if (el) el.textContent = n[l.k] || '';
+  });
+  document.getElementById('count').textContent =
+    pins.length ? 'ทั้งหมด ' + pins.length + ' หมุด' : 'ยังไม่มีหมุด';
+  document.getElementById('clear').disabled = !pins.length;
+}
+
+/* คนจำนวนมากติดนิสัยดับเบิลคลิกเพื่อซูม พอคลิก = ปักหมุด ดับเบิลคลิกเลยได้หมุดซ้อนกันสองอัน
+   (ทดสอบแล้วเป็นจริง: ดับเบิลคลิกครั้งเดียวหมุดเพิ่มจาก 4 เป็น 6)
+   แก้โดยมองข้ามคลิกที่ 2 ถ้ามาภายใน 350 มิลลิวินาที และห่างจากคลิกแรกไม่เกิน 12 พิกเซล
+   เลือกวิธีนี้แทนการหน่วงรอดูว่าจะมีคลิกที่สองมั้ย เพราะการหน่วงจะทำให้หมุดตามมือไม่ทันทุกครั้ง
+   ส่วนการปักสองจุดซ้อนที่เดียวกันในเสี้ยววินาที ไม่ใช่สิ่งที่คนตั้งใจทำอยู่แล้ว */
+let lastClick = { t:0, x:0, y:0 };
+
+// loaded: ก่อนโหลดข้อมูลเสร็จ ห้ามปัก เพราะหมุดที่ปักไว้จะถูกของจากเซิร์ฟเวอร์ทับหายไป
+const canPin = () => loaded && canEdit && legendOpen && !editing;
+
+map.on('click', e => {
+  if (!canPin()) return;
+  const now = Date.now(), pt = e.containerPoint;
+  if (now - lastClick.t < 350 &&
+      Math.abs(pt.x - lastClick.x) < 12 && Math.abs(pt.y - lastClick.y) < 12) return;
+  lastClick = { t:now, x:pt.x, y:pt.y };
+
+  snapshot();
+  const p = { id:uuid(),
+              lat:+e.latlng.lat.toFixed(6), lng:+e.latlng.lng.toFixed(6), k:selected };
+  pins.push(p);
+  drawPin(p);
+  save();
+  refreshCounts();
+});
+
+// ป๊อปอัปถูกสร้างใหม่ทุกครั้งที่เปิด เลยดักคลิกที่ document แทนการผูกปุ่มทีละตัว
+document.addEventListener('click', e => {
+  if (!canEdit) return;
+  const del = e.target.closest('.pp-del');
+  if (del) {
+    snapshot();
+    const id = del.dataset.del;
+    pins = pins.filter(p => p.id !== id);
+    if (layers[id]) { map.removeLayer(layers[id]); delete layers[id]; }
+    save(); refreshCounts(); map.closePopup();
+    return;
+  }
+  const c = e.target.closest('.pp-c');
+  if (c) {
+    snapshot();
+    const p = pins.find(x => x.id === c.dataset.pin);
+    if (!p) return;
+    p.k = c.dataset.k;
+    const m = layers[p.id];
+    m.setStyle({ fillColor: LV[p.k].color });
+    m.unbindTooltip().bindTooltip(LV[p.k].label || '(ไม่มีชื่อ)', tipOpts());
+    save(); refreshCounts(); map.closePopup();
+  }
+});
+
+/* ============================================================
+   ตารางสี: โหมดปกติ = ปุ่มเลือกสี / โหมดตั้งค่า = แก้สีกับความยาว
+   แยกสองโหมดเพราะถ้ารวมกัน คลิกแถวเดียวจะไม่รู้ว่าหมายถึง "เลือกสีนี้"
+   หรือ "กำลังจะแก้สีนี้"
+   ============================================================ */
+const legendEl  = document.getElementById('legend');
+const levelsBox = document.getElementById('levels');
+const openBtn   = document.getElementById('legendOpen');
+const hintEl    = document.getElementById('hint');
+
+function renderLevels() {
+  levelsBox.innerHTML = levels.map((l, i) => editing
+    ? `<div class="lv edit" data-k="${l.k}">
+         <input type="color" class="ec" value="${escAttr(toHex(l.color))}" title="เลือกสี">
+         <input type="text" class="et" value="${escAttr(l.label)}" maxlength="24"
+                placeholder="เช่น 16 – 18 ม." spellcheck="false">
+         <button class="ed" title="ลบสีนี้">&times;</button>
+       </div>`
+    // ดูอย่างเดียว: ไม่ไฮไลต์สีที่ "เลือกอยู่" เพราะมันสื่อว่ากดแล้วจะได้ปักหมุด ซึ่งไม่จริง
+    //               ตารางกลายเป็นคำอธิบายสีเฉย ๆ
+    : `<div class="lv${canEdit && l.k === selected ? ' on' : ''}" data-k="${l.k}"
+            title="${canEdit ? 'กดเลข ' + (i + 1) + ' ก็ได้' : ''}">
+         <span class="sw" style="background:${escAttr(l.color)}"></span>
+         <span class="nm">${esc(l.label) || '(ไม่มีชื่อ)'}</span><span class="n"></span>
+       </div>`).join('');
+  if (!editing) refreshCounts();
+  updateHint();
+}
+
+// input type=color รับได้เฉพาะ #rrggbb ถ้าค่าที่เก็บไว้เป็นรูปแบบอื่นจะเด้งเป็นดำ
+function toHex(c) {
+  return /^#[0-9a-f]{6}$/i.test(c) ? c : '#888888';
+}
+
+function updateHint() {
+  hintEl.innerHTML = !loaded
+    ? 'ยังโหลดข้อมูลไม่ได้ — กดไฟแดงมุมขวาบนเพื่อลองใหม่'
+    : !canEdit
+      ? 'คุณดูได้อย่างเดียว · คลิกหมุดเพื่อดูความยาว'
+      : editing
+        ? 'แก้สีและความยาวได้เลย · ตอนตั้งค่าจะยังไม่ปักหมุด'
+        : 'คลิกแผนที่เพื่อปักหมุด · คลิกหมุดเพื่อแก้/ลบ';
+}
+
+/* ซ่อนทุกปุ่มที่กดแล้วเปลี่ยนข้อมูล ตอนคนเปิดไม่มีสิทธิ์แก้
+   ซ่อนดีกว่าปล่อยให้กดแล้วเด้งว่า "ไม่มีสิทธิ์" เพราะอย่างหลังคือให้ความหวังแล้วปฏิเสธ */
+function applyEditMode() {
+  canEdit = resolveCanEdit();
+  if (!canEdit && editing) {        // ถูกถอดสิทธิ์ระหว่างที่เปิดโหมดตั้งค่าค้างอยู่
+    editing = false;
+    document.getElementById('editToggle').classList.remove('on');
+    legendEl.classList.remove('editing');
+  }
+  // คืนค่าเป็นค่าว่าง ไม่ใช่ inline-block เพื่อให้ CSS เป็นคนตัดสินเหมือนตอนไม่เคยถูกแตะ
+  ['editToggle', 'undo', 'clear', 'addLevel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = canEdit ? '' : 'none';
+  });
+  // ปุ่มตอนหุบเคยเขียนว่า "คลิกแผนที่ไม่ปักหมุด" ซึ่งไม่เกี่ยวอะไรกับคนที่ปักไม่ได้อยู่แล้ว
+  const lbl = openBtn.querySelector('span:last-child');
+  if (lbl) lbl.textContent = canEdit ? 'คลิกแผนที่ไม่ปักหมุด' : 'ดูตารางสี';
+  const col = document.getElementById('collapse');
+  if (col) col.title = canEdit ? 'หุบตาราง (คลิกแผนที่จะไม่ปักหมุด)' : 'หุบตาราง';
+  setSync(syncMode);              // ป้ายมุมขวาเปลี่ยนคำตามสิทธิ์ ต้องเขียนใหม่ด้วย
+  renderLevels();
+  updatePinMode();
+}
+
+function selectLevel(k) {
+  if (!LV[k] || editing || !canEdit) return;
+  selected = k;
+  document.querySelectorAll('.lv').forEach(el => el.classList.toggle('on', el.dataset.k === k));
+}
+
+levelsBox.addEventListener('click', e => {
+  if (editing) {
+    const d = e.target.closest('.ed');
+    if (d) removeLevel(d.closest('.lv').dataset.k);
+    return;
+  }
+  const row = e.target.closest('.lv');
+  if (row) selectLevel(row.dataset.k);
+});
+
+// ใช้ input ไม่ใช่ change เพื่อให้หมุดบนแผนที่เปลี่ยนตามทันทีขณะเลื่อนจานสี
+levelsBox.addEventListener('input', e => {
+  const row = e.target.closest('.lv'); if (!row) return;
+  const l = LV[row.dataset.k]; if (!l) return;
+  if (e.target.classList.contains('ec')) l.color = e.target.value;
+  else if (e.target.classList.contains('et')) l.label = e.target.value;
+  applyLevelStyle(l.k);
+  save();
+});
+// ถ่ายรูปสถานะไว้ตอนเริ่มแก้ครั้งแรกของช่องนั้น ไม่ใช่ทุกตัวอักษร
+// ไม่งั้นกดเลิกทำหนึ่งครั้งจะย้อนได้แค่ตัวอักษรเดียว
+levelsBox.addEventListener('focusin', e => {
+  if (e.target.matches('.ec, .et')) snapshot();
+});
+
+function addLevel() {
+  if (!loaded || !canEdit) return;   // ยังไม่รู้ว่าบนเซิร์ฟเวอร์มีสีอะไรอยู่ เพิ่มไปก็โดนทับตอนโหลดสำเร็จ
+  snapshot();
+  const used = levels.map(l => l.color.toLowerCase());
+  const color = SPARE.find(c => used.indexOf(c) === -1) || '#888888';
+  levels.push({ k:newKey(), color:color, label:'' });
+  indexLevels(); save(); renderLevels();
+  // โฟกัสช่องชื่อของแถวใหม่ทันที จะได้พิมพ์ต่อได้เลยไม่ต้องเล็งเมาส์
+  const last = levelsBox.lastElementChild;
+  if (last) { const t = last.querySelector('.et'); if (t) t.focus(); }
+}
+
+function removeLevel(k) {
+  if (!canEdit) return;
+  if (levels.length <= 1) { toast('ต้องเหลือสีไว้อย่างน้อย 1 สี'); return; }
+  const used = pins.filter(p => p.k === k).length;
+  if (used && !confirm('สีนี้มีหมุดอยู่ ' + used + ' จุด\nลบสีแล้วหมุดเหล่านั้นจะหายไปด้วย\n(กด "เลิกทำ" เอากลับได้)')) return;
+  snapshot();
+  levels = levels.filter(l => l.k !== k);
+  pins = pins.filter(p => p.k !== k);
+  indexLevels();
+  if (!LV[selected]) selected = levels[0].k;
+  save(); redrawAll();
+}
+
+document.getElementById('addLevel').onclick = addLevel;
+
+document.getElementById('editToggle').onclick = function () {
+  if (!canEdit) return;
+  if (!loaded) { toast('ยังโหลดข้อมูลไม่เสร็จ'); return; }
+  editing = !editing;
+  this.classList.toggle('on', editing);
+  legendEl.classList.toggle('editing', editing);
+  this.title = editing ? 'เสร็จแล้ว' : 'ตั้งค่าสีและความยาว';
+  renderLevels();
+  updatePinMode();
+};
+
+/* ---------- หุบ / กาง = สวิตช์เปิดปิดการปักหมุด ---------- */
+function setLegendOpen(v) {
+  legendOpen = v;
+  legendEl.classList.toggle('hidden', !v);
+  openBtn.classList.toggle('show', !v);
+  if (!v && editing) {               // หุบขณะตั้งค่าอยู่ ให้ออกจากโหมดตั้งค่าไปเลย
+    editing = false;
+    document.getElementById('editToggle').classList.remove('on');
+    legendEl.classList.remove('editing');
+    renderLevels();
+  }
+  // ปุ่มตอนหุบโชว์สีที่เลือกไว้ จะได้รู้ว่ากางกลับมาแล้วจะปักด้วยสีอะไร
+  const sw = openBtn.querySelector('.sw');
+  if (sw && LV[selected]) sw.style.background = LV[selected].color;
+  try { localStorage.setItem(OPEN_KEY, v ? '1' : '0'); } catch (e) {}
+  updatePinMode();
+}
+function updatePinMode() {
+  map.getContainer().classList.toggle('pinning', canPin());
+}
+
+document.getElementById('collapse').onclick = () => {
+  setLegendOpen(false);
+  toast('หุบแล้ว — คลิกแผนที่จะไม่ปักหมุด');
+};
+openBtn.onclick = () => setLegendOpen(true);
+
+// กดเลขสลับสีได้ เร็วกว่าเลื่อนเมาส์ไปคลิกตารางตอนปักหลายหมุดติดกัน
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  // อย่าไปแย่งปุ่มตอนกำลังพิมพ์ชื่อความยาวอยู่
+  // ต้องเช็ก nodeType ก่อนเรียก matches เพราะปลายทางของ keydown เป็น document ได้
+  // ซึ่งไม่มีเมธอดนี้ แล้วจะโยน TypeError ทิ้งทั้งตัวจัดการคีย์ (เจอตอนเทสต์)
+  if (e.target && e.target.nodeType === 1 && e.target.matches('input, textarea')) {
+    if (e.key === 'Escape' || e.key === 'Enter') e.target.blur();
+    return;
+  }
+  const i = parseInt(e.key, 10);
+  if (i >= 1 && i <= levels.length) selectLevel(levels[i - 1].k);
+  if (e.key === 'Escape') map.closePopup();
+});
+
+/* ============================================================
+   เลิกทำ / ล้าง
+   ============================================================ */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+document.getElementById('undo').onclick = () => {
+  if (!undoStack.length || !canEdit) return;
+  const prev = JSON.parse(undoStack.pop());
+  pins = prev.pins;
+  levels = prev.levels;
+  indexLevels();
+  if (!LV[selected]) selected = levels[0].k;
+  save(); redrawAll();
+  document.getElementById('undo').disabled = !undoStack.length;
+  toast('ย้อนกลับแล้ว');
+};
+
+document.getElementById('clear').onclick = () => {
+  if (!pins.length || !canEdit) return;
+  if (!confirm('ลบหมุดทั้งหมด ' + pins.length + ' จุด?\n(กด "เลิกทำ" เอากลับได้)')) return;
+  snapshot();
+  pins = [];
+  save(); redrawAll();
+  toast('ล้างหมุดแล้ว — กดเลิกทำเพื่อเอากลับ');
+};
+
+/* ============================================================
+   เริ่มทำงาน
+   ============================================================ */
+// วาดตารางสีด้วยค่าตั้งต้นก่อน ให้หน้าไม่ว่างเปล่าระหว่างรอเน็ต
+// แต่ loaded ยังเป็น false อยู่ คลิกแผนที่จะยังไม่ปักหมุดและไม่มีอะไรถูกส่งขึ้นไป
+levels = DEFAULT_LEVELS.map(l => Object.assign({}, l));
+indexLevels();
+selected = levels[0].k;
+pins = [];
+redrawAll();
+setLegendOpen(localStorage.getItem(OPEN_KEY) !== '0');
+applyEditMode();
+setSync('saving');
+
+loadFromServer().then(() => {
+  renderLevels();
+  if (!canEdit) return;
+  if (!pins.length && legendOpen) toast('คลิกบนแผนที่เพื่อปักหมุดแรก');
+}).catch(err => {
+  lastErr = String(err && err.message || err);
+  setSync('bad');
+  updateHint();
+  toast('โหลดข้อมูลไม่ได้ — กดไฟแดงมุมขวาบนเพื่อลองใหม่');
+});
+
+setInterval(poll, 15000);
+// กลับมาที่แท็บนี้แล้วเห็นของเก่าค้างอยู่ 15 วินาทีมันนาน ดึงใหม่ทันทีเลย
+window.addEventListener('focus', poll);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+
+// ให้เว็บหลักเรียกได้ตอนสลับมาที่แท็บแผนที่
+// Leaflet ที่อยู่ใน div ซ่อนอยู่จะคิดว่าตัวเองกว้าง 0 ไทล์เลยไม่โหลด ต้องบอกให้วัดขนาดใหม่
+// refreshPerm: เรียกตอนรู้สิทธิ์ของคนที่ล็อกอินแล้ว (เว็บหลักรู้ role ช้ากว่าโหลดหน้า)
+window.PILEMAP = {
+  show: function () { map.invalidateSize(); applyEditMode(); poll(); },
+  reload: poll,
+  refreshPerm: applyEditMode
+};
+</script>
+</body>
+</html>

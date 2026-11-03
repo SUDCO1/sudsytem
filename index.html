@@ -3027,6 +3027,8 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
   <div class="nav-tab" id="nav-transport" data-tab="transport" onclick="goTab('transport',this)">🚛 ฝ่ายขนส่ง</div>
   <div class="nav-tab" id="nav-stock" data-tab="stock" onclick="goTab('stock',this)">📦 ฝ่ายสต็อก</div>
   <div class="nav-tab" id="nav-yard" data-tab="yard" onclick="goTab('yard',this)">🗺️ ผังลาน</div>
+  <!-- แผนที่เสาเข็ม — ไม่ซ่อนจากใคร ทุกคนดูได้ สิทธิ์คุมแค่การแก้ (ดู edit_pilemap) -->
+  <div class="nav-tab" id="nav-pilemap" data-tab="pilemap" onclick="goTab('pilemap',this)">📍 แผนที่เสาเข็ม</div>
   <div class="nav-tab" id="nav-customers" data-tab="customers" onclick="goTab('customers',this)">👥 ลูกค้า</div>
   <!-- Dashboard ไม่อยู่บนแถบเมนู — เข้าจากการ์ดที่หน้าแรกอย่างเดียว -->
   <div class="nav-tab" id="nav-dashboard" data-tab="dashboard" onclick="openDashboardPage()" style="display:none !important;">📈 Dashboard ↗</div>
@@ -5962,6 +5964,17 @@ window.YARD = (function(){
   return { renderAll, openOv, closeOv, openPlace, addPlaceRow, syncNums, placeRemain, savePlace, closePlace, openTakeOut, addTakeRow, takeRemain, saveTakeOut, closeTakeOut, openMove, syncMoveNums, moveRemain, saveMove, closeMove, openHist, closeHist, setQCat, applyCloudState, applyCloudLog, addSlot, removeSlot, applyCloudBlocks };
 })();
 </script>
+<!-- ================================================================ SECTION: แผนที่เสาเข็ม ================================================================ -->
+<!-- แผนที่อยู่ในไฟล์ pile_map.html แยกต่างหาก โหลดผ่าน iframe
+     เหตุผลที่ไม่เอาโค้ดมาแปะรวม: ไฟล์นั้นมี id และชื่อตัวแปรชนกับเว็บหลักหลายตัว
+     (id="toast", ตัวแปร map/levels/save/push/rest/selected/esc)
+     ชื่อ let/const ที่ชนกันไม่ได้ทำให้แค่แผนที่เสีย แต่สคริปต์ทั้งบล็อกตาย = เว็บหลักพังทั้งหน้า
+     อยู่ใน iframe แล้วมันคนละโลกกัน แก้ไฟล์แผนที่ได้โดยไม่ต้องกลัวลามมาถึงตรงนี้
+     ไฟล์ pile_map.html ต้องวางข้าง index.html เสมอ (เหมือน dashboard.html) -->
+<div id="sec-pilemap" class="section">
+  <iframe id="pilemapFrame" title="แผนที่เสาเข็ม" style="display:block;width:100%;border:0;"></iframe>
+</div>
+
 <!-- ================================================================ SECTION: ลูกค้า (NEW) ================================================================ -->
 <div id="sec-customers" class="section">
   <div class="app-content stack">
@@ -8530,11 +8543,14 @@ const PERM_SECTIONS = [
   { id:'histAll',     icon:'📚', label:'ประวัติรวม',     type:'toggle' },
   // 🧱 แก้ไขช่องลาน = ปุ่มเพิ่ม/ลบช่องในผังลานสต็อก (เปิด = เห็นปุ่ม +/− ที่แต่ละบล็อก)
   { id:'yardEdit',    icon:'🧱', label:'แก้ไขช่องลาน (เพิ่ม/ลบช่อง)', type:'toggle' },
+  // 📍 แผนที่เสาเข็ม — แท็บนี้ทุกคนเห็นและดูได้เสมอ ติ๊กนี้คุมแค่ "แก้ได้"
+  //    (ปักหมุด / ลบหมุด / เปลี่ยนสีหมุด / แก้ตารางสี)
+  { id:'pilemap',     icon:'📍', label:'แก้แผนที่เสาเข็ม (ปักหมุด/แก้สี)', type:'toggle' },
 ];
 // Stored as arrays of levels (or boolean for toggle).
 // Levels: 'view' | 'edit' | 'delete'
 const DEFAULT_ROLE_PERMS = {
-  admin:   { overview:['view','edit'], dashboard:true, sale:true,  orderstatus:['view','edit','delete'], production:['view','edit','delete'], shipping:['view','edit','delete'], stock:['view','edit','delete'], customer:['view','edit','delete'], settings:['view','edit'], histItem:true, histAll:true, yardEdit:true },
+  admin:   { overview:['view','edit'], dashboard:true, sale:true,  orderstatus:['view','edit','delete'], production:['view','edit','delete'], shipping:['view','edit','delete'], stock:['view','edit','delete'], customer:['view','edit','delete'], settings:['view','edit'], histItem:true, histAll:true, yardEdit:true, pilemap:true },
 };
 // Keep ALL_PERMISSIONS as empty stub so legacy references don't crash
 const ALL_PERMISSIONS = [];
@@ -8602,6 +8618,8 @@ function applyPermissions() {
     view_hist_all:        has('histAll','on'),
     // 🧱 แก้ไขช่องลาน (เพิ่ม/ลบช่องในผังลานสต็อก)
     edit_yard_slots:      has('yardEdit','on'),
+    // 📍 แผนที่เสาเข็ม — ดูได้ทุกคน ไม่มี view_pilemap ตั้งใจ ติ๊กนี้คุมแค่การแก้
+    edit_pilemap:         has('pilemap','on'),
   };
   _applyNav();
 }
@@ -8638,8 +8656,60 @@ function _applyNav() {
   // ปุ่มบันทึกการตั้งค่า — ต้องมีสิทธิ์ "แก้ไข" ของหมวดตั้งค่า
   const _setFooter = document.getElementById('settingsSaveFooter');
   if (_setFooter) _setFooter.style.display = (_currentRole === 'admin' || canDo('edit_settings')) ? '' : 'none';
+  // 📍 แท็บแผนที่ไม่ซ่อนจากใคร (ทุกคนดูได้) แค่ส่งสิทธิ์ "แก้ได้" เข้าไปในกรอบถ้ามันเปิดอยู่
+  // ต้องทำตรงนี้เพราะสิทธิ์มาถึงช้ากว่าโหลดหน้า คนอาจเปิดแท็บแผนที่ค้างไว้ก่อนแล้ว
+  try { pilemapPush(); } catch (e) {}
   if (typeof renderHome === 'function') renderHome();
 }
+
+/* ── 📍 แผนที่เสาเข็ม (ไฟล์แยก pile_map.html ใน iframe) ──────────── */
+
+// ความสูงวัดตอนเปิดจริง ไม่ฮาร์ดโค้ด เพราะหัวเว็บกับแถบเมนูสูงไม่เท่ากันระหว่างจอคอมกับมือถือ
+function pilemapFit() {
+  const f = document.getElementById('pilemapFrame');
+  if (!f) return;
+  const mn  = document.querySelector('.mob-nav');
+  const pad = (mn && getComputedStyle(mn).display !== 'none') ? mn.offsetHeight : 0;
+  f.style.height = Math.max(320, window.innerHeight - f.getBoundingClientRect().top - pad) + 'px';
+}
+
+// โหลดแผนที่ครั้งแรกตอนกดเข้าแท็บ ไม่โหลดพร้อมหน้าเว็บ
+// คนที่ไม่เคยเข้าแท็บนี้ไม่ควรต้องโดนดึงภาพแผนที่กับข้อมูลหมุดทิ้งเปล่าทุกครั้งที่เปิดเว็บ
+function pilemapOpen() {
+  const f = document.getElementById('pilemapFrame');
+  if (!f) return;
+  pilemapFit();
+  if (!f.getAttribute('src')) {
+    f.onload = pilemapPush;      // ต้องรอให้ในกรอบโหลดเสร็จก่อนถึงจะเขียนสิทธิ์เข้าไปได้
+    f.setAttribute('src', 'pile_map.html?edit=' + (canDo('edit_pilemap') ? 1 : 0));
+    return;
+  }
+  pilemapPush();
+  // Leaflet ที่อยู่ในกรอบที่ถูกซ่อนไว้จะคิดว่าตัวเองกว้าง 0 ไทล์เลยไม่โหลด ต้องบอกให้วัดขนาดใหม่
+  try { f.contentWindow.PILEMAP.show(); } catch (e) {}
+}
+
+function pilemapPush() {
+  const f = document.getElementById('pilemapFrame');
+  if (!f || !f.getAttribute('src')) return;
+  const can = canDo('edit_pilemap');
+  try {
+    const w = f.contentWindow;
+    w.PILEMAP_CANEDIT = can;
+    w.PILEMAP_USER = (_currentUser && _currentUser.email) || null;  // บันทึกว่าหมุดไหนใครปัก
+    if (w.PILEMAP) w.PILEMAP.refreshPerm();
+  } catch (e) {
+    // คุยข้ามกรอบไม่ได้ (เบราว์เซอร์กันไว้ตอนเปิดจากไฟล์ในเครื่อง) → บอกสิทธิ์ผ่าน URL แทน
+    // ไม่ส่งอีเมลไปทาง URL ตั้งใจ ข้อมูลคนไม่ควรไปโผล่ในแถบที่อยู่
+    const want = 'pile_map.html?edit=' + (can ? 1 : 0);
+    if (f.getAttribute('src') !== want) f.setAttribute('src', want);
+  }
+}
+
+window.addEventListener('resize', () => {
+  const s = document.getElementById('sec-pilemap');
+  if (s && s.classList.contains('active')) pilemapFit();
+});
 
 function goTab(name, el) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -8660,6 +8730,7 @@ function goTab(name, el) {
   if (name === 'summary')   { renderSummary(); }
   if (name === 'stock')     { renderStockCards(); populateLogPileFilter(); renderStockLog(true); renderStockAudit(); }
   if (name === 'yard')      { try{ if (window.YARD) YARD.renderAll(); }catch(e){} }
+  if (name === 'pilemap')   { pilemapOpen(); }
   if (name === 'customers') { renderCustomers(); }
   if (name === 'settings')  { loadSettingsUI(); if (_currentRole === 'admin') { umRefresh(); loadRolePerms(renderPermUI); } }
   // audit log: attach listener เฉพาะตอนเปิดหน้านี้, detach เมื่อออกจากหน้า (ประหยัด bandwidth)
@@ -16049,6 +16120,7 @@ const _mobMoreConfig = {
   'nav-summary':   { icon:'📊', label:'สรุปภาพรวม',        tab:'summary' },
   'nav-dashboard': { icon:'📈', label:'Dashboard ↗',       tab:'dashboard', ext:true, perm:'view_dashboard' },
   'nav-yard':      { icon:'🗺️', label:'ผังลาน',            tab:'yard' },
+  'nav-pilemap':   { icon:'📍', label:'แผนที่เสาเข็ม',      tab:'pilemap' },
   'nav-customers': { icon:'👥', label:'ลูกค้า',            tab:'customers' },
   'nav-audit':     { icon:'📜', label:'บันทึกการใช้งาน',    tab:'audit' },
   'nav-settings':  { icon:'⚙️', label:'ตั้งค่า',           tab:'settings' },
