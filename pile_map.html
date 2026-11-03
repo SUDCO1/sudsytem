@@ -15,9 +15,28 @@
   }
   .leaflet-container, .leaflet-popup-content { font-family:inherit; }
 
-  /* ---------- แถบบน ---------- */
-  #bar { height:var(--bar-h); display:flex; align-items:center; gap:10px; padding:0 12px;
-         background:var(--ink); color:#fff; font-size:13px; }
+  /* ---------- แถบบน (ซ่อนอัตโนมัติ) ----------
+     ลอยทับแผนที่ ไม่ได้กินพื้นที่ แผนที่เลยได้เต็มจอ
+     ปกติหุบขึ้นไปพ้นจอ เอาเมาส์ชี้ขอบบนถึงจะไหลลงมา เหมือนแถบงานที่ตั้งให้ซ่อนไว้
+     จอสัมผัสไม่มีการ "ชี้" เลยต้องมีหูจับให้แตะเรียก (ดู #barHandle) */
+  #bar { position:fixed; top:0; left:0; right:0; z-index:1200;
+         height:var(--bar-h); display:flex; align-items:center; gap:10px; padding:0 12px;
+         background:var(--ink); color:#fff; font-size:13px;
+         transform:translateY(-100%); transition:transform .18s ease; }
+  #bar.show { transform:none; }
+
+  /* หูจับ: ขีดสั้น ๆ กลางขอบบน สูง 14px กินที่แทบไม่รู้สึก
+     มีไว้เพราะถ้าซ่อนสนิท คนเปิดครั้งแรกจะไม่มีทางรู้ว่ามีแถบซ่อนอยู่ตรงไหน
+     พอแถบเลื่อนลงมา หูจับจะเลื่อนตามไปอยู่ใต้แถบ กลายเป็นปุ่มปิด */
+  #barHandle { position:fixed; top:0; left:50%; margin-left:-23px; z-index:1199;
+               width:46px; height:14px; border-radius:0 0 8px 8px; cursor:pointer;
+               background:rgba(27,58,92,.5); backdrop-filter:blur(2px);
+               display:flex; align-items:center; justify-content:center;
+               transition:top .18s ease, background .18s; }
+  #barHandle::before { content:''; width:18px; height:2px; border-radius:2px;
+                       background:rgba(255,255,255,.85); }
+  #barHandle:hover { background:rgba(27,58,92,.88); }
+  #bar.show ~ #barHandle { top:var(--bar-h); }
   #bar h1 { font-size:14px; font-weight:600; margin:0; white-space:nowrap; }
   #bar .spacer { flex:1; }
   #bar select, #bar button {
@@ -41,13 +60,17 @@
   #sync.bad .dot { background:#ff6b6b; }
 
   /* ---------- แผนที่ ---------- */
-  #map { position:absolute; top:var(--bar-h); left:0; right:0; bottom:0; background:#dfe6ec; }
+  /* top:0 เพราะแถบบนลอยทับแล้ว ไม่ได้เบียดที่ของแผนที่อีกต่อไป */
+  #map { position:absolute; top:0; left:0; right:0; bottom:0; background:#dfe6ec; }
   /* เคอร์เซอร์คือตัวบอกโหมด: กากบาท = คลิกแล้วได้หมุด, มือ = คลิกแล้วไม่ได้อะไร
      ไม่ต้องมีข้อความอธิบาย เห็นจากหางตาได้เลยว่าตอนนี้ปักอยู่หรือเปล่า */
   #map.leaflet-container { cursor:grab; }
   #map.pinning.leaflet-container { cursor:crosshair; }
   #map.leaflet-container.leaflet-drag-target { cursor:grabbing; }
   .leaflet-interactive { cursor:pointer; }
+  /* แผนที่เริ่มที่ขอบบนแล้ว ปุ่มซูมเลยไปอยู่ใต้แถบบนพอดี ตอนแถบไหลลงมาจะทับจนกดปุ่ม + ไม่ได้
+     ดันลงมาเท่าความสูงแถบ ปุ่มเลยอยู่พ้นกันตลอด ไม่ว่าแถบจะหุบหรือกาง */
+  .leaflet-top.leaflet-left { margin-top:var(--bar-h); }
 
   /* ---------- ตารางสี ---------- */
   #legend {
@@ -56,9 +79,10 @@
     box-shadow:0 2px 12px rgba(0,0,0,.22); font-size:13px;
     -webkit-user-select:none; user-select:none;
     /* ตอนนี้เพิ่มสีได้ไม่จำกัด ถ้าไม่กันไว้ ใส่สักสิบกว่าสีตารางจะสูงเลยขอบจอ
-       ไปบังแถบบนจนกดอะไรไม่ได้ จำกัดความสูงแล้วให้เลื่อนในตัวแทน */
+       จำกัดความสูงแล้วให้เลื่อนในตัวแทน
+       ไม่ต้องเผื่อความสูงแถบบนแล้วเพราะมันซ่อนอยู่ แต่ยังเว้นขอบบนไว้ให้พ้นหูจับ */
     display:flex; flex-direction:column;
-    max-height:calc(100vh - var(--bar-h) - 36px);
+    max-height:calc(100vh - 54px);
   }
   #legend.hidden { display:none; }
   #levels { overflow-y:auto; overscroll-behavior:contain; }
@@ -162,10 +186,10 @@
   <span id="count">ยังไม่มีหมุด</span>
   <span class="spacer"></span>
   <span id="sync" title="ข้อมูลเก็บบน Supabase"><span class="dot"></span><span class="tx">กำลังโหลด…</span></span>
-  <select id="basemap" title="เปลี่ยนภาพพื้นหลังแผนที่"></select>
   <button id="undo" disabled title="ย้อนการแก้ไขล่าสุด">เลิกทำ</button>
   <button id="clear" title="ลบหมุดทั้งหมด">ล้างหมุด</button>
 </div>
+<div id="barHandle" title="แถบเครื่องมือ (ชี้ขอบบน หรือแตะตรงนี้)"></div>
 
 <div id="map"></div>
 
@@ -191,10 +215,9 @@
 'use strict';
 
 /* ค่าพวกนี้เป็น "ความชอบของเครื่องนี้" ไม่ใช่ข้อมูลงาน
-   เปิดคอมที่ออฟฟิศอยากเห็นดาวเทียม เปิดที่บ้านอยากเห็นถนน ก็ควรต่างกันได้
+   เปิดคอมที่ออฟฟิศค้างไว้ตรงไซต์งาน เปิดที่บ้านค้างไว้อีกที่ ก็ควรต่างกันได้
    เลยยังเก็บในเครื่องเหมือนเดิม ไม่ต้องขึ้นเซิร์ฟเวอร์ */
 const VIEW_KEY = 'pile_view_v2';
-const BASE_KEY = 'pile_base_v2';
 const OPEN_KEY = 'pile_legend_open_v2';
 
 /* ============================================================
@@ -440,6 +463,9 @@ function setSync(mode) {
     ? 'กดเพื่อลองอีกครั้ง\n' + lastErr
     : canEdit ? 'ข้อมูลเก็บบน Supabase ทุกเครื่องเห็นตรงกัน'
               : 'คุณไม่มีสิทธิ์แก้แผนที่นี้ ดูได้อย่างเดียว';
+  // แถบปกติซ่อนอยู่ ถ้าบันทึกไม่ขึ้นแล้วปล่อยให้ซ่อนต่อ คนปักหมุดจะไม่รู้เลยว่าของไม่ขึ้นเซิร์ฟเวอร์
+  // เลยต้องดันแถบลงมาเอง (try กันไว้เพราะ setSync ถูกเรียกก่อนโค้ดแถบบนจะถูกสร้าง)
+  if (mode === 'bad') { try { showBar(); } catch (e) {} }
 }
 
 function save() {
@@ -551,12 +577,12 @@ function snapshot() {
    แผนที่
    ============================================================ */
 const esri = n => 'https://server.arcgisonline.com/ArcGIS/rest/services/' + n + '/MapServer/tile/{z}/{y}/{x}';
+/* เหลือดาวเทียมอย่างเดียว — งานนี้ต้องเห็นของจริงบนพื้นที่ แผนที่ถนนไม่ได้ช่วยอะไร
+   พอมีตัวเลือกเดียวก็ไม่ต้องมีช่องให้เลือก เลยถอดออกจากแถบบนไปด้วย
+   overlay คือชั้นป้ายชื่อถนน/สถานที่ วางทับภาพถ่ายไว้ให้ยังอ่านออกว่าตรงไหนเป็นตรงไหน */
 const BASEMAPS = {
-  street:    { label:'ถนน',           url: esri('World_Street_Map') },
-  gray:      { label:'เรียบ เทา-ขาว', url: esri('Canvas/World_Light_Gray_Base') },
-  satellite: { label:'ดาวเทียม',      url: esri('World_Imagery'),
-               overlay: esri('Reference/World_Boundaries_and_Places') },
-  topo:      { label:'ภูมิประเทศ',    url: esri('World_Topo_Map') }
+  satellite: { label:'ดาวเทียม', url: esri('World_Imagery'),
+               overlay: esri('Reference/World_Boundaries_and_Places') }
 };
 
 const map = L.map('map', {
@@ -582,7 +608,7 @@ const LABEL_OPTS = { maxZoom:19, maxNativeZoom:18, keepBuffer:2, tileSize:128, z
 let baseLayer = null, baseOverlay = null;
 
 function setBasemap(key) {
-  const bm = BASEMAPS[key] || BASEMAPS.street;
+  const bm = BASEMAPS[key] || BASEMAPS.satellite;
   const oldBase = baseLayer, oldOverlay = baseOverlay;
   baseLayer = L.tileLayer(bm.url, BASE_OPTS).addTo(map);
   baseLayer.bringToBack();
@@ -596,18 +622,45 @@ function setBasemap(key) {
     baseLayer.once('load', drop);
     setTimeout(drop, 1500);   // กันเหนียวถ้าไทล์โหลดไม่สำเร็จ ชั้นเก่าจะได้ไม่ค้างทับกัน
   }
-  try { localStorage.setItem(BASE_KEY, key); } catch (e) {}
 }
 
-const baseSel = document.getElementById('basemap');
-Object.keys(BASEMAPS).forEach(k => {
-  const o = document.createElement('option');
-  o.value = k; o.textContent = BASEMAPS[k].label;
-  baseSel.appendChild(o);
+// เรียกตรง ๆ ไม่ต้องอ่านค่าที่เคยเลือกไว้ในเครื่อง
+// เครื่องที่เคยใช้อยู่ก่อนจะมีค่าเก่าค้างเป็น 'ถนน' ถ้าไปอ่านมาใช้ก็จะได้แผนที่ถนนเหมือนเดิม
+setBasemap('satellite');
+
+/* ============================================================
+   แถบบนแบบซ่อนอัตโนมัติ
+   ชี้ขอบบน = ไหลลงมา เอาเมาส์ออก = หุบกลับ ให้ภาพดาวเทียมได้เต็มจอที่สุด
+   ============================================================ */
+const barEl     = document.getElementById('bar');
+const barHandle = document.getElementById('barHandle');
+let barStuck = false;      // แตะหูจับ = ตรึงไว้ ไม่ให้หุบเอง (นิ้วไม่มีการชี้ค้างแบบเมาส์)
+let barTimer = null;
+
+function showBar() { clearTimeout(barTimer); barEl.classList.add('show'); }
+function hideBar() {
+  // บันทึกไม่ขึ้นแล้วแถบหุบหาย = ไม่มีใครรู้ว่าของยังไม่ขึ้นเซิร์ฟเวอร์ ตอนพังต้องค้างไว้ให้เห็น
+  if (barStuck || syncMode === 'bad') return;
+  barEl.classList.remove('show');
+}
+function hideBarSoon(ms) { clearTimeout(barTimer); barTimer = setTimeout(hideBar, ms || 400); }
+
+/* ไม่วางแถบใส ๆ ดักเมาส์ไว้ที่ขอบบน เพราะมันจะไปกินการลากแผนที่แถวนั้น
+   ใช้วิธีดูตำแหน่งเมาส์เอาแทน แผนที่เลยยังลากได้ทุกจุดเหมือนเดิม */
+addEventListener('mousemove', e => {
+  if (e.clientY <= 4) showBar();
+  else if (!barStuck && barEl.classList.contains('show') && e.clientY > barEl.offsetHeight + 28) hideBarSoon(250);
 });
-baseSel.value = localStorage.getItem(BASE_KEY) || 'street';
-baseSel.onchange = () => setBasemap(baseSel.value);
-setBasemap(baseSel.value);
+addEventListener('mouseleave', () => hideBarSoon(200));
+barEl.addEventListener('mouseenter', showBar);
+barEl.addEventListener('mouseleave', () => hideBarSoon(400));
+
+// จอสัมผัส: แตะหูจับเปิด แตะซ้ำปิด (หูจับเลื่อนลงไปอยู่ใต้แถบ เลยยังกดปิดได้)
+barHandle.addEventListener('click', e => {
+  e.stopPropagation();
+  if (barEl.classList.contains('show')) { barStuck = false; hideBar(); }
+  else { barStuck = true; showBar(); }
+});
 
 map.on('moveend zoomend', () => {
   const c = map.getCenter();
