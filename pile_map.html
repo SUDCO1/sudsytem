@@ -652,8 +652,16 @@ else map.setView([13.70, 100.68], 11);
    แล้วได้ผลลัพธ์ชนิด opaque ที่อ่านเนื้อไม่ได้ เวลาเก็บลงเครื่องเบราว์เซอร์จะกันโควตาเผื่อ
    ก้อนละหลาย MB ทั้งที่ไฟล์จริง 12 KB เก็บไม่กี่ร้อยใบก็เต็มโควตาแล้ว
    Esri ส่ง Access-Control-Allow-Origin: * มาให้อยู่แล้ว (ตรวจแล้ว) ตั้งได้ไม่มีผลข้างเคียง */
+/* updateWhenZooming:false คือตัวที่ทำให้ซูมบนมือถือไม่อืด
+   ปกติ Leaflet จะสั่งโหลดไทล์ชุดใหม่ "ทุกระดับซูมที่ผ่านกลางทาง" ระหว่างที่นิ้วยังบีบอยู่
+   ซูมจาก z11 ไป z19 ทีเดียวจึงยิงคำขอ 455 ใบ (ภาพถ่าย 123 + ป้ายชื่อ 332) ทั้งที่ปลายทางใช้แค่ 16 ใบ
+   อีก 439 ใบคือของที่ขอมาแล้วทิ้งทันทีเพราะซูมผ่านไปแล้ว แต่มันไปกินสายเชื่อมต่อ
+   ที่มีแค่ 6 เส้น ไทล์ปลายทางที่คนรออยู่จริงเลยต้องไปต่อคิวเป็นใบท้าย ๆ
+   ปิดแล้วเหลือ 455 -> 16 ใบ (วัดจริงบนจอ 412x740) ของเดสก์ท็อปก็ลดจาก 472 -> 206
+   ผลข้างเคียงคือระหว่างบีบนิ้วภาพจะเบลอ เพราะใช้ไทล์เดิมยืดไปก่อน แล้วค่อยคมตอนปล่อยนิ้ว
+   แลกกันแล้วคุ้ม เพราะของเดิมก็ไม่ได้คมอยู่ดี มันแค่ขึ้น ๆ หาย ๆ ไม่ครบสักระดับ */
 const BASE_OPTS  = { attribution:'Tiles &copy; Esri', maxZoom:19, maxNativeZoom:19, keepBuffer:2,
-                     crossOrigin:'anonymous' };
+                     updateWhenZooming:false, crossOrigin:'anonymous' };
 // ไทล์ป้ายชื่อดึงจากซูมลึกลงไปหนึ่งระดับแล้วย่อครึ่ง ป้ายเลยไม่ตัวโตบังภาพตอนซูมกว้าง
 /* ชั้นป้ายชื่อเก็บลงเครื่องด้วยเหมือนภาพถ่าย (ที่อยู่มันเข้าเงื่อนไขใน sw.js พอดี)
    แต่ปุ่ม "เก็บภาพลงเครื่อง" โหลดล่วงหน้าให้เฉพาะภาพถ่าย ป้ายจะได้มาตอนเปิดดูเองเท่านั้น
@@ -661,8 +669,9 @@ const BASE_OPTS  = { attribution:'Tiles &copy; Esri', maxZoom:19, maxNativeZoom:
    ถ้าไม่ตั้ง errorTileUrl จะขึ้นเป็นไอคอนรูปแตกเต็มจอ
    ใส่จุดใสแทน ป้ายหายไปเฉย ๆ ภาพถ่ายข้างล่างยังอยู่ครบ */
 const BLANK_PNG  = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+// ชั้นป้ายชื่อยิ่งต้องปิด เพราะมันกินคำขอ 332 จาก 455 ใบ (ไทล์ 128px เลยใช้เยอะกว่าภาพถ่ายเท่าตัว)
 const LABEL_OPTS = { maxZoom:19, maxNativeZoom:18, keepBuffer:2, tileSize:128, zoomOffset:1,
-                     crossOrigin:'anonymous', errorTileUrl:BLANK_PNG };
+                     updateWhenZooming:false, crossOrigin:'anonymous', errorTileUrl:BLANK_PNG };
 let baseLayer = null, baseOverlay = null;
 
 function setBasemap(key) {
