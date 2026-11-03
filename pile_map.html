@@ -195,6 +195,22 @@
   /* วงกลมโชว์สีที่กำลังจะปัก จะได้ไม่ต้องกวาดตาไปดูตารางสีอีกฝั่ง */
   #pinArm .sw { width:15px; height:15px; border-radius:50%;
                 border:2px solid rgba(255,255,255,.9); background:transparent; }
+
+  /* ---------- กล่องความคืบหน้าตอนเก็บภาพลงเครื่อง ----------
+     งานนี้กินเวลาเป็นนาที ถ้าไม่มีอะไรขึ้นเลยคนจะคิดว่าค้างแล้วปิดทิ้งกลางคัน */
+  #dlBox { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:2000;
+           display:none; min-width:260px; max-width:86vw; padding:18px 20px;
+           background:#fff; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3);
+           font-size:14px; color:var(--ink); }
+  #dlBox.show { display:block; }
+  #dlBox .t { font-weight:800; margin-bottom:10px; }
+  #dlBox .s { color:#64748b; font-size:12.5px; margin-bottom:10px; line-height:1.5; }
+  #dlBar { height:8px; border-radius:99px; background:#e8eef4; overflow:hidden; }
+  #dlBar i { display:block; height:100%; width:0; background:#15803d; transition:width .2s; }
+  #dlBox .btns { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+  #dlBox button { font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+                  padding:8px 14px; border-radius:9px; border:1px solid #d7e0ea; background:#fff; }
+  #dlBox button.go { background:#15803d; color:#fff; border-color:#15803d; }
 </style>
 </head>
 <body>
@@ -206,12 +222,20 @@
   <span id="sync" title="ข้อมูลเก็บบน Supabase"><span class="dot"></span><span class="tx">กำลังโหลด…</span></span>
   <button id="undo" disabled title="ย้อนการแก้ไขล่าสุด">เลิกทำ</button>
   <button id="clear" title="ลบหมุดทั้งหมด">ล้างหมุด</button>
+  <button id="dlArea" title="เก็บภาพถ่ายของพื้นที่ที่เห็นอยู่ลงเครื่อง ไว้เปิดตอนสัญญาณไม่ดี">เก็บภาพลงเครื่อง</button>
 </div>
 <div id="barHandle" title="แถบเครื่องมือ (ชี้ขอบบน หรือแตะตรงนี้)"></div>
 
 <button id="pinArm" title="สลับระหว่างเลื่อนแผนที่กับปักหมุด">
   <span class="sw"></span><span class="tx">ปักหมุด</span>
 </button>
+
+<div id="dlBox">
+  <div class="t" id="dlTitle">เก็บภาพพื้นที่นี้ลงเครื่อง</div>
+  <div class="s" id="dlMsg"></div>
+  <div id="dlBar"><i></i></div>
+  <div class="btns" id="dlBtns"></div>
+</div>
 
 <div id="map"></div>
 
@@ -624,15 +648,26 @@ const savedView = (() => { try { return JSON.parse(localStorage.getItem(VIEW_KEY
 if (savedView && isFinite(savedView.lat)) map.setView([savedView.lat, savedView.lng], savedView.z);
 else map.setView([13.70, 100.68], 11);
 
-const BASE_OPTS  = { attribution:'Tiles &copy; Esri', maxZoom:19, maxNativeZoom:19, keepBuffer:2 };
+/* crossOrigin สำคัญกว่าที่เห็น: ถ้าไม่ตั้ง เบราว์เซอร์จะขอภาพแบบ "ไม่มี CORS"
+   แล้วได้ผลลัพธ์ชนิด opaque ที่อ่านเนื้อไม่ได้ เวลาเก็บลงเครื่องเบราว์เซอร์จะกันโควตาเผื่อ
+   ก้อนละหลาย MB ทั้งที่ไฟล์จริง 12 KB เก็บไม่กี่ร้อยใบก็เต็มโควตาแล้ว
+   Esri ส่ง Access-Control-Allow-Origin: * มาให้อยู่แล้ว (ตรวจแล้ว) ตั้งได้ไม่มีผลข้างเคียง */
+const BASE_OPTS  = { attribution:'Tiles &copy; Esri', maxZoom:19, maxNativeZoom:19, keepBuffer:2,
+                     crossOrigin:'anonymous' };
 // ไทล์ป้ายชื่อดึงจากซูมลึกลงไปหนึ่งระดับแล้วย่อครึ่ง ป้ายเลยไม่ตัวโตบังภาพตอนซูมกว้าง
-const LABEL_OPTS = { maxZoom:19, maxNativeZoom:18, keepBuffer:2, tileSize:128, zoomOffset:1 };
+/* ชั้นป้ายชื่อไม่ได้เก็บลงเครื่องด้วย (เก็บแต่ภาพถ่าย เพราะนั่นคือของที่ต้องใช้หาตำแหน่งจริง)
+   ตอนไม่มีเน็ตมันจะโหลดไม่ได้ ถ้าไม่ตั้ง errorTileUrl จะขึ้นเป็นไอคอนรูปแตกเต็มจอ
+   ใส่จุดใสแทน ป้ายหายไปเฉย ๆ ภาพถ่ายข้างล่างยังอยู่ครบ */
+const BLANK_PNG  = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+const LABEL_OPTS = { maxZoom:19, maxNativeZoom:18, keepBuffer:2, tileSize:128, zoomOffset:1,
+                     crossOrigin:'anonymous', errorTileUrl:BLANK_PNG };
 let baseLayer = null, baseOverlay = null;
 
 function setBasemap(key) {
   const bm = BASEMAPS[key] || BASEMAPS.satellite;
   const oldBase = baseLayer, oldOverlay = baseOverlay;
   baseLayer = L.tileLayer(bm.url, BASE_OPTS).addTo(map);
+  attachRetry(baseLayer);
   baseLayer.bringToBack();
   baseOverlay = bm.overlay ? L.tileLayer(bm.overlay, LABEL_OPTS).addTo(map) : null;
   // ถอดชั้นเก่าหลังชั้นใหม่โหลดเสร็จ ไม่งั้นจอขาววาบระหว่างรอไทล์
@@ -644,6 +679,36 @@ function setBasemap(key) {
     baseLayer.once('load', drop);
     setTimeout(drop, 1500);   // กันเหนียวถ้าไทล์โหลดไม่สำเร็จ ชั้นเก่าจะได้ไม่ค้างทับกัน
   }
+}
+
+/* ============================================================
+   สัญญาณอ่อนที่หน้างาน
+   Leaflet ไม่ลองโหลดไทล์ซ้ำให้ ใบไหนพลาดก็ค้างเป็นช่องเทาถาวร
+   เต็มจอมีตั้ง 20-80 ใบ สัญญาณกระตุกนิดเดียวก็แหว่งแล้ว ต้องลองใหม่ให้เอง
+   ============================================================ */
+let tileFailSeen = 0, tileFailToldAt = 0;
+
+function attachRetry(layer) {
+  layer.on('tileerror', e => {
+    const img = e.tile;
+    if (!img) return;
+    const n = (img._try || 0) + 1;
+    if (n > 3) {
+      // ยอมแพ้ใบนี้แล้ว นับไว้เพื่อบอกคนใช้ว่าทำไมภาพแหว่ง
+      // ไม่บอกเลยคนจะนึกว่าเว็บพัง ทั้งที่เป็นเรื่องสัญญาณ
+      tileFailSeen++;
+      if (tileFailSeen >= 4 && Date.now() - tileFailToldAt > 20000) {
+        tileFailToldAt = Date.now();
+        toast('ภาพบางส่วนโหลดไม่ได้ — สัญญาณอ่อน (กด "เก็บภาพลงเครื่อง" ตอนมี WiFi ไว้ก่อนได้)');
+      }
+      return;
+    }
+    img._try = n;
+    const base = img.src.split('?')[0];
+    // ต่อ ?r= ท้ายที่อยู่ ไม่งั้นเบราว์เซอร์จะคืนผลที่พลาดไปแล้วมาให้ทันทีโดยไม่ลองจริง
+    // (ฝั่ง service worker ตัดท้ายนี้ออกก่อนเก็บ ไทล์ใบเดียวจึงไม่ถูกเก็บซ้ำหลายก้อน)
+    setTimeout(() => { img.src = base + '?r=' + n; }, 600 * n);  // ถอยห่างขึ้นเรื่อย ๆ ไม่รัวซ้ำตอนสัญญาณแย่
+  });
 }
 
 // เรียกตรง ๆ ไม่ต้องอ่านค่าที่เคยเลือกไว้ในเครื่อง
@@ -1056,6 +1121,156 @@ if (pinArmBtn) pinArmBtn.addEventListener('click', e => {
   updatePinMode();
   toast(pinArmed ? 'แตะแผนที่เพื่อปักหมุด' : 'ปิดการปักแล้ว — เลื่อนแผนที่ได้ตามสบาย');
 });
+
+/* ============================================================
+   เก็บภาพถ่ายลงเครื่อง
+   ที่หน้างานสัญญาณมักไม่พอ ภาพ 20-80 ชิ้นต่อจอจึงโหลดไม่ครบหรือไม่มาเลย
+   กดปุ่มนี้ตอนยังมี WiFi เพื่อดึงภาพของพื้นที่ที่เห็นอยู่เก็บไว้ก่อน
+   ของที่เก็บแล้วจะถูกหยิบจากเครื่องตรง ๆ (ดู sw.js) ไม่แตะเน็ตอีก
+   ============================================================ */
+const TILE_CACHE = 'sudco-tiles-v1';   // ต้องตรงกับใน sw.js
+const haveCache  = typeof caches !== 'undefined' && !!navigator.serviceWorker;
+
+// ขอให้ service worker ทำงาน เผื่อมีคนเปิดไฟล์แผนที่ตรง ๆ ไม่ได้ผ่านหน้าเว็บหลัก
+// ถ้าไม่มีตัวนี้คุม ของที่เก็บไว้จะไม่ถูกหยิบมาใช้ เก็บไปก็เท่านั้น
+if (navigator.serviceWorker && !navigator.serviceWorker.controller) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// แปลงพิกัดเป็นเลขช่องไทล์ตามมาตรฐาน Web Mercator
+function tileX(lng, z) { return Math.floor((lng + 180) / 360 * Math.pow(2, z)); }
+function tileY(lat, z) {
+  const r = lat * Math.PI / 180;
+  return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z));
+}
+
+/* รายชื่อภาพที่ต้องเก็บ: เอาเฉพาะกรอบที่เห็นอยู่ ตั้งแต่ซูมปัจจุบันลงไปจนลึกสุด
+   เก็บทุกระดับเพราะคนที่หน้างานจะซูมเข้าออก ถ้าเก็บแค่ระดับเดียวพอซูมปุ๊บก็เทาอีก
+   เอาเฉพาะภาพถ่าย ไม่เอาชั้นป้ายชื่อ ป้ายหายแค่ไม่รู้ชื่อถนน แต่ภาพถ่ายคือของที่ต้องใช้จริง */
+function tilesForView() {
+  const b = map.getBounds(), urls = [];
+  const z0 = Math.max(1, Math.round(map.getZoom()));
+  const tpl = BASEMAPS.satellite.url;
+  for (let z = z0; z <= 19; z++) {
+    const x1 = tileX(b.getWest(), z),  x2 = tileX(b.getEast(), z);
+    const y1 = tileY(b.getNorth(), z), y2 = tileY(b.getSouth(), z);
+    for (let x = x1; x <= x2; x++)
+      for (let y = y1; y <= y2; y++)
+        urls.push(tpl.replace('{z}', z).replace('{y}', y).replace('{x}', x));
+  }
+  return urls;
+}
+
+const dlBox = document.getElementById('dlBox');
+const dlMsg = document.getElementById('dlMsg');
+const dlTitle = document.getElementById('dlTitle');
+const dlBtns = document.getElementById('dlBtns');
+const dlFill = document.querySelector('#dlBar i');
+let dlCancel = false, dlBusy = false;
+
+function dlShow(on) { dlBox.classList.toggle('show', on); }
+function dlSetBtns(list) {
+  dlBtns.innerHTML = '';
+  list.forEach(([label, cls, fn]) => {
+    const b = document.createElement('button');
+    b.textContent = label; if (cls) b.className = cls; b.onclick = fn;
+    dlBtns.appendChild(b);
+  });
+}
+const mb = n => (n / 1048576).toFixed(1) + ' MB';
+
+async function storedSize() {
+  // นับจากจำนวนที่เก็บจริง ไม่ใช้ storage.estimate เพราะมันรวมของอย่างอื่นในเว็บมาด้วย
+  try {
+    const c = await caches.open(TILE_CACHE);
+    const keys = await c.keys();
+    return { n: keys.length, bytes: keys.length * 12600 };   // เฉลี่ยใบละ ~12.6 KB (วัดจากของจริง)
+  } catch (e) { return { n: 0, bytes: 0 }; }
+}
+
+async function runDownload(urls) {
+  dlBusy = true; dlCancel = false;
+  const cache = await caches.open(TILE_CACHE);
+  let done = 0, failed = 0, saved = 0;
+  const queue = urls.slice();
+
+  const tick = () => {
+    dlFill.style.width = Math.round(done / urls.length * 100) + '%';
+    dlMsg.textContent = 'เก็บแล้ว ' + done + ' / ' + urls.length + ' ชิ้น'
+                      + (failed ? '  (พลาด ' + failed + ')' : '');
+  };
+
+  // ดึงทีละ 6 เส้นพร้อมกัน เท่าที่เบราว์เซอร์เปิดให้ต่อหนึ่งเซิร์ฟเวอร์
+  // มากกว่านี้ไม่ได้เร็วขึ้นเพราะมันไปรอคิวอยู่ดี
+  async function worker() {
+    while (queue.length && !dlCancel) {
+      const u = queue.shift();
+      try {
+        if (!(await cache.match(u))) {
+          const res = await fetch(u, { mode:'cors' });
+          if (res.ok) { await cache.put(u, res.clone()); saved++; }
+          else failed++;
+        }
+      } catch (err) { failed++; }
+      done++; tick();
+    }
+  }
+  await Promise.all(Array.from({ length: 6 }, worker));
+  dlBusy = false;
+
+  const tot = await storedSize();
+  dlTitle.textContent = dlCancel ? 'หยุดแล้ว' : 'เก็บเสร็จแล้ว';
+  // กดหยุดกลางคันต้องบอกตรง ๆ ว่ายังไม่ครบ
+  // ถ้าขึ้น "เปิดได้โดยไม่ต้องใช้เน็ตแล้ว" ทั้งที่เก็บไปแค่ครึ่งเดียว
+  // คนจะเชื่อแล้วออกหน้างานโดยไม่โหลดเพิ่ม พอถึงที่จริงภาพก็หายเป็นช่องเทาอยู่ดี
+  dlMsg.innerHTML = (dlCancel
+                      ? 'เก็บไปแล้ว ' + done + ' จาก ' + urls.length + ' ชิ้น — ยังไม่ครบทั้งพื้นที่<br>'
+                        + 'กดใหม่เพื่อเก็บต่อได้ ของที่เก็บแล้วจะไม่โหลดซ้ำ<br>'
+                      : 'พื้นที่นี้เปิดได้โดยไม่ต้องใช้เน็ตแล้ว<br>')
+                  + 'ในเครื่องมีทั้งหมด ' + tot.n + ' ชิ้น (~' + mb(tot.bytes) + ')'
+                  + (failed ? '<br>พลาด ' + failed + ' ชิ้น — กดซ้ำได้ ของที่เก็บแล้วจะไม่โหลดใหม่' : '');
+  dlSetBtns([['ปิด', 'go', () => dlShow(false)]]);
+}
+
+document.getElementById('dlArea').onclick = async () => {
+  if (dlBusy) return;
+  if (!haveCache) { toast('เบราว์เซอร์นี้เก็บภาพลงเครื่องไม่ได้'); return; }
+
+  const urls = tilesForView();
+  const tot  = await storedSize();
+  dlFill.style.width = '0%';
+  dlTitle.textContent = 'เก็บภาพพื้นที่นี้ลงเครื่อง';
+
+  // เก็บทุกระดับซูมจากที่เห็นอยู่ลงไปจนลึกสุด ถ้ามองกว้างไปจำนวนจะบานปลาย
+  // กันไว้ ไม่งั้นคนกดตอนเห็นทั้งจังหวัดแล้วรอเป็นชั่วโมงจนเต็มเครื่อง
+  if (urls.length > 4000) {
+    dlMsg.innerHTML = 'พื้นที่กว้างเกินไป (ต้องเก็บ ' + urls.length.toLocaleString() + ' ชิ้น)<br>'
+                    + 'ซูมเข้าให้เห็นเฉพาะบริเวณหน้างานก่อน แล้วค่อยกดใหม่';
+    dlSetBtns([['เข้าใจแล้ว', 'go', () => dlShow(false)]]);
+    dlShow(true);
+    return;
+  }
+
+  const secs = Math.round(urls.length / 6 * 0.5);
+  dlMsg.innerHTML = 'จะเก็บ ' + urls.length.toLocaleString() + ' ชิ้น (~' + mb(urls.length * 12600) + ')'
+                  + ' ใช้เวลาราว ' + (secs < 60 ? secs + ' วินาที' : Math.ceil(secs / 60) + ' นาที') + '<br>'
+                  + '<b>ควรทำตอนอยู่ใน WiFi</b> จากนั้นที่หน้างานจะเปิดได้ทันทีแม้สัญญาณไม่ดี'
+                  + (tot.n ? '<br><span style="color:#94a3b8">ตอนนี้เก็บไว้แล้ว ' + tot.n + ' ชิ้น (~' + mb(tot.bytes) + ')</span>' : '');
+
+  const btns = [['ยกเลิก', '', () => dlShow(false)],
+                ['เริ่มเก็บ', 'go', () => {
+                   dlTitle.textContent = 'กำลังเก็บ…';
+                   dlSetBtns([['หยุด', '', () => { dlCancel = true; }]]);
+                   runDownload(urls);
+                 }]];
+  if (tot.n) btns.unshift(['ล้างที่เก็บไว้', '', async () => {
+    await caches.delete(TILE_CACHE);
+    dlMsg.textContent = 'ล้างแล้ว';
+    dlSetBtns([['ปิด', 'go', () => dlShow(false)]]);
+  }]);
+  dlSetBtns(btns);
+  dlShow(true);
+};
 
 document.getElementById('collapse').onclick = () => {
   setLegendOpen(false);
