@@ -3068,6 +3068,11 @@ input:disabled+.perm-slider:before{transform:translateX(20px);}
         <div class="home-card" id="home-yard"      onclick="homeGo('yard')">
           <div class="home-card-ic">🗺️</div><div class="home-card-title">ผังลาน</div><div class="home-card-desc">ตำแหน่งกองเสาเข็ม</div>
         </div>
+        <!-- แผนที่เสาเข็ม — ไม่ใส่ใน HOME_CARD_PERM เพราะทุกคนดูได้
+             สิทธิ์คุมแค่การแก้ (ดู edit_pilemap) การ์ดเลยไม่ต้องจาง เหมือนการ์ดผังลาน -->
+        <div class="home-card" id="home-pilemap"   onclick="homeGo('pilemap')">
+          <div class="home-card-ic">📍</div><div class="home-card-title">แผนที่เสาเข็ม</div><div class="home-card-desc">หมุดความยาวเสาเข็มหน้างาน</div>
+        </div>
         <div class="home-card" id="home-customers" onclick="homeGo('customers','view_customers')">
           <div class="home-card-ic">👥</div><div class="home-card-title">ลูกค้า</div><div class="home-card-desc">ข้อมูลลูกค้า</div>
         </div>
