@@ -655,8 +655,10 @@ else map.setView([13.70, 100.68], 11);
 const BASE_OPTS  = { attribution:'Tiles &copy; Esri', maxZoom:19, maxNativeZoom:19, keepBuffer:2,
                      crossOrigin:'anonymous' };
 // ไทล์ป้ายชื่อดึงจากซูมลึกลงไปหนึ่งระดับแล้วย่อครึ่ง ป้ายเลยไม่ตัวโตบังภาพตอนซูมกว้าง
-/* ชั้นป้ายชื่อไม่ได้เก็บลงเครื่องด้วย (เก็บแต่ภาพถ่าย เพราะนั่นคือของที่ต้องใช้หาตำแหน่งจริง)
-   ตอนไม่มีเน็ตมันจะโหลดไม่ได้ ถ้าไม่ตั้ง errorTileUrl จะขึ้นเป็นไอคอนรูปแตกเต็มจอ
+/* ชั้นป้ายชื่อเก็บลงเครื่องด้วยเหมือนภาพถ่าย (ที่อยู่มันเข้าเงื่อนไขใน sw.js พอดี)
+   แต่ปุ่ม "เก็บภาพลงเครื่อง" โหลดล่วงหน้าให้เฉพาะภาพถ่าย ป้ายจะได้มาตอนเปิดดูเองเท่านั้น
+   พื้นที่ไหนยังไม่เคยเปิด ป้ายจึงยังโหลดไม่ได้ตอนไม่มีเน็ต
+   ถ้าไม่ตั้ง errorTileUrl จะขึ้นเป็นไอคอนรูปแตกเต็มจอ
    ใส่จุดใสแทน ป้ายหายไปเฉย ๆ ภาพถ่ายข้างล่างยังอยู่ครบ */
 const BLANK_PNG  = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 const LABEL_OPTS = { maxZoom:19, maxNativeZoom:18, keepBuffer:2, tileSize:128, zoomOffset:1,
@@ -669,7 +671,26 @@ function setBasemap(key) {
   baseLayer = L.tileLayer(bm.url, BASE_OPTS).addTo(map);
   attachRetry(baseLayer);
   baseLayer.bringToBack();
-  baseOverlay = bm.overlay ? L.tileLayer(bm.overlay, LABEL_OPTS).addTo(map) : null;
+
+  /* ชั้นป้ายชื่อต้องรอให้ภาพถ่ายขึ้นก่อน ห้ามปล่อยพร้อมกัน
+     หนึ่งหน้าจอมือถือใช้ภาพถ่าย 12 ใบ แต่ใช้ป้ายชื่อถึง 28 ใบ (ป้ายเป็นไทล์ 128px เลยเยอะกว่าเท่าตัว)
+     เบราว์เซอร์ต่อเซิร์ฟเวอร์เดียวกันได้ทีละ 6 เส้นเท่านั้น ปล่อยพร้อมกันภาพถ่ายต้องไปต่อคิวหลังป้าย
+     วัดบนเน็ตเร็ว ๆ แล้วภาพถ่ายขึ้นช้าลงจาก 296 เป็น 431 มิลลิวินาที
+     ที่หน้างานสัญญาณอ่อนช่องว่างนี้จะถ่างกว่านี้มาก เพราะแต่ละรอบใช้เวลาเป็นวินาที
+     ป้ายชื่อมาช้าหน่อยไม่เป็นไร คนหาตำแหน่งจากภาพพื้นที่ ไม่ได้หาจากชื่อถนน */
+  baseOverlay = null;
+  if (bm.overlay) {
+    let labelsAdded = false;
+    const addLabels = () => {
+      if (labelsAdded || !map.hasLayer(baseLayer)) return;
+      labelsAdded = true;
+      baseOverlay = L.tileLayer(bm.overlay, LABEL_OPTS).addTo(map);
+    };
+    baseLayer.once('load', addLabels);
+    // กันเหนียว: ถ้าภาพถ่ายบางใบโหลดไม่สำเร็จจน load ไม่ยิงสักที ป้ายจะได้ไม่หายถาวร
+    setTimeout(addLabels, 4000);
+  }
+
   // ถอดชั้นเก่าหลังชั้นใหม่โหลดเสร็จ ไม่งั้นจอขาววาบระหว่างรอไทล์
   const drop = () => {
     if (oldBase) map.removeLayer(oldBase);
@@ -896,6 +917,9 @@ let lastClick = { t:0, x:0, y:0 };
 /* จอสัมผัสต้องกดสวิตช์ก่อนถึงจะปักได้ เมาส์ปักได้เลยเหมือนเดิม
    เช็คที่ "ชนิดตัวชี้" ไม่ใช่ความกว้างจอ เพราะแท็บเล็ตจอใหญ่ก็ใช้นิ้วเหมือนกัน */
 const IS_TOUCH  = matchMedia('(pointer: coarse)').matches;
+// คำที่ใช้เรียกการกดหน้าจอ ต้องพูดให้ตรงกับของที่อยู่ในมือ
+// บอกคนถือมือถือว่า "คลิก" มันสะดุด และทำให้ลังเลว่าต้องทำอะไรกันแน่
+const TAP       = IS_TOUCH ? 'แตะ' : 'คลิก';
 let   pinArmed  = !IS_TOUCH;
 const pinArmBtn = document.getElementById('pinArm');
 
@@ -980,7 +1004,7 @@ function updateHint() {
   hintEl.innerHTML = !loaded
     ? 'ยังโหลดข้อมูลไม่ได้ — กดไฟแดงมุมขวาบนเพื่อลองใหม่'
     : !canEdit
-      ? 'คุณดูได้อย่างเดียว · คลิกหมุดเพื่อดูความยาว'
+      ? 'คุณดูได้อย่างเดียว · ' + TAP + 'หมุดเพื่อดูความยาว'
       : editing
         ? 'แก้สีและความยาวได้เลย · ตอนตั้งค่าจะยังไม่ปักหมุด'
         // จอสัมผัสต้องกดสวิตช์มุมขวาล่างก่อน บอกให้ตรงกับที่กดได้จริงตอนนั้น
@@ -1007,7 +1031,7 @@ function applyEditMode() {
   });
   // ปุ่มตอนหุบเคยเขียนว่า "คลิกแผนที่ไม่ปักหมุด" ซึ่งไม่เกี่ยวอะไรกับคนที่ปักไม่ได้อยู่แล้ว
   const lbl = openBtn.querySelector('span:last-child');
-  if (lbl) lbl.textContent = canEdit ? 'คลิกแผนที่ไม่ปักหมุด' : 'ดูตารางสี';
+  if (lbl) lbl.textContent = canEdit ? TAP + 'แผนที่ไม่ปักหมุด' : 'ดูตารางสี';
   const col = document.getElementById('collapse');
   if (col) col.title = canEdit ? 'หุบตาราง (คลิกแผนที่จะไม่ปักหมุด)' : 'หุบตาราง';
   setSync(syncMode);              // ป้ายมุมขวาเปลี่ยนคำตามสิทธิ์ ต้องเขียนใหม่ด้วย
@@ -1274,7 +1298,7 @@ document.getElementById('dlArea').onclick = async () => {
 
 document.getElementById('collapse').onclick = () => {
   setLegendOpen(false);
-  toast('หุบแล้ว — คลิกแผนที่จะไม่ปักหมุด');
+  toast('หุบแล้ว — ' + TAP + 'แผนที่จะไม่ปักหมุด');
 };
 openBtn.onclick = () => setLegendOpen(true);
 
@@ -1341,7 +1365,7 @@ setSync('saving');
 loadFromServer().then(() => {
   renderLevels();
   if (!canEdit) return;
-  if (!pins.length && legendOpen) toast('คลิกบนแผนที่เพื่อปักหมุดแรก');
+  if (!pins.length && legendOpen) toast(TAP + 'บนแผนที่เพื่อปักหมุดแรก');
 }).catch(err => {
   lastErr = String(err && err.message || err);
   setSync('bad');
