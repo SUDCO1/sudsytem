@@ -8675,13 +8675,25 @@ function pilemapFit() {
 
 // โหลดแผนที่ครั้งแรกตอนกดเข้าแท็บ ไม่โหลดพร้อมหน้าเว็บ
 // คนที่ไม่เคยเข้าแท็บนี้ไม่ควรต้องโดนดึงภาพแผนที่กับข้อมูลหมุดทิ้งเปล่าทุกครั้งที่เปิดเว็บ
+// ค่าสิทธิ์ที่กรอบโหลดไปแล้ว เก็บไว้เทียบว่าต้องสั่งโหลดใหม่ไหม
+let _pilemapEdit = null;
+
+// เติมเวลาต่อท้าย URL ทุกครั้งที่สั่งโหลด เพื่อให้ได้ไฟล์แผนที่สดจากเซิร์ฟเวอร์เสมอ
+// ไม่งั้นเบราว์เซอร์จะจำไฟล์เก่าไว้ 10 นาที (GitHub Pages ส่ง cache-control: max-age=600)
+// อัปแผนที่เวอร์ชันใหม่แล้วคนใช้จะไม่เห็น จนกว่าจะครบเวลา หรือต้องกด hard refresh เองซึ่งไม่มีใครทำ
+// ไฟล์แผนที่ส่งจริงแค่ ~21 KB เทียบกับไทล์ดาวเทียมเต็มจอ ~700 KB ถือว่าแทบไม่มีต้นทุน
+function pilemapSrc(can) {
+  _pilemapEdit = can ? 1 : 0;
+  return 'pile_map.html?edit=' + _pilemapEdit + '&t=' + Date.now();
+}
+
 function pilemapOpen() {
   const f = document.getElementById('pilemapFrame');
   if (!f) return;
   pilemapFit();
   if (!f.getAttribute('src')) {
     f.onload = pilemapPush;      // ต้องรอให้ในกรอบโหลดเสร็จก่อนถึงจะเขียนสิทธิ์เข้าไปได้
-    f.setAttribute('src', 'pile_map.html?edit=' + (canDo('edit_pilemap') ? 1 : 0));
+    f.setAttribute('src', pilemapSrc(canDo('edit_pilemap')));
     return;
   }
   pilemapPush();
@@ -8701,8 +8713,9 @@ function pilemapPush() {
   } catch (e) {
     // คุยข้ามกรอบไม่ได้ (เบราว์เซอร์กันไว้ตอนเปิดจากไฟล์ในเครื่อง) → บอกสิทธิ์ผ่าน URL แทน
     // ไม่ส่งอีเมลไปทาง URL ตั้งใจ ข้อมูลคนไม่ควรไปโผล่ในแถบที่อยู่
-    const want = 'pile_map.html?edit=' + (can ? 1 : 0);
-    if (f.getAttribute('src') !== want) f.setAttribute('src', want);
+    // เทียบเฉพาะค่าสิทธิ์ ไม่เทียบทั้งเส้น URL เพราะมีเวลาต่อท้ายอยู่
+    // ถ้าเทียบทั้งเส้นมันจะไม่มีวันตรงกัน แล้วสั่งโหลดกรอบวนไม่จบ
+    if (_pilemapEdit !== (can ? 1 : 0)) f.setAttribute('src', pilemapSrc(can));
   }
 }
 
