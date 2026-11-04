@@ -631,11 +631,22 @@ const BASEMAPS = {
                overlay: esri('Reference/World_Boundaries_and_Places') }
 };
 
+/* ขอบเขตแผนที่: จำกัดไว้แค่ไทยกับเพื่อนบ้าน ไม่ปล่อยให้ซูมออกไปเห็นทั้งโลก
+   ของเดิมไม่ได้จำกัดอะไรเลย ซูมออกสุดแล้วเห็นโลกทั้งใบเรียงซ้ำกันหลายอัน
+   ซึ่งนอกจากไม่มีประโยชน์กับงานเสาเข็ม ยังทำให้ "ซูมจากสุดบนลงสุดล่าง" ต้องไต่ตั้ง 19 ระดับ
+   ทุกระดับที่หยุดพักคือการสั่งโหลดภาพชุดใหม่หนึ่งรอบเต็ม จำกัดเหลือ z5 แล้วเหลือ 14 ระดับ
+   กล่องนี้กว้างพอครอบไทยทั้งประเทศและประเทศรอบ ๆ เผื่องานที่อยู่ชายแดนไว้แล้ว */
+const TH_BOUNDS = L.latLngBounds([4, 94], [23, 110]);
+
 const map = L.map('map', {
   // zoomSnap 0 = ซูมละเอียดเป็นทศนิยม ล้อเลยไหลลื่นแทนที่จะกระโดดทีละขั้น
   zoomSnap: 0,
   zoomDelta: 1,
   maxZoom: 19,
+  minZoom: 5,
+  maxBounds: TH_BOUNDS,
+  // 1.0 = ชนขอบแล้วหยุดสนิท ไม่เด้งกลับให้งง
+  maxBoundsViscosity: 1.0,
   attributionControl: false,
   // ปิดของ Leaflet เพราะข้างล่างเราดัก wheel เองแล้ว ถ้าเปิดทิ้งไว้สองตัวจะแย่งกันซูม
   // แล้วภาพจะกระตุก (Leaflet แทรกซูมเป็นขั้น ๆ กลางคันระหว่างที่เราซูมลื่น ๆ อยู่)
@@ -644,9 +655,18 @@ const map = L.map('map', {
   doubleClickZoom: false
 });
 
+/* ตำแหน่งที่จำไว้จากครั้งก่อนอาจอยู่นอกขอบเขตใหม่ หรือซูมออกกว้างกว่าที่อนุญาตแล้ว
+   (คนที่เคยซูมออกไปเห็นทั้งโลกก่อนหน้านี้จะมีค่าแบบนั้นค้างอยู่ในเครื่อง)
+   ถ้าส่งค่านอกขอบเข้าไปตรง ๆ แผนที่จะกระตุกเด้งกลับตอนเปิด เลยต้องดึงเข้ากรอบก่อน */
+const HOME = L.latLng(13.70, 100.68);
 const savedView = (() => { try { return JSON.parse(localStorage.getItem(VIEW_KEY)); } catch (e) { return null; } })();
-if (savedView && isFinite(savedView.lat)) map.setView([savedView.lat, savedView.lng], savedView.z);
-else map.setView([13.70, 100.68], 11);
+if (savedView && isFinite(savedView.lat) && isFinite(savedView.lng)) {
+  const p = L.latLng(savedView.lat, savedView.lng);
+  const z = Math.min(19, Math.max(5, isFinite(savedView.z) ? savedView.z : 11));
+  map.setView(TH_BOUNDS.contains(p) ? p : HOME, z);
+} else {
+  map.setView(HOME, 11);
+}
 
 /* crossOrigin สำคัญกว่าที่เห็น: ถ้าไม่ตั้ง เบราว์เซอร์จะขอภาพแบบ "ไม่มี CORS"
    แล้วได้ผลลัพธ์ชนิด opaque ที่อ่านเนื้อไม่ได้ เวลาเก็บลงเครื่องเบราว์เซอร์จะกันโควตาเผื่อ
@@ -660,8 +680,11 @@ else map.setView([13.70, 100.68], 11);
    ปิดแล้วเหลือ 455 -> 16 ใบ (วัดจริงบนจอ 412x740) ของเดสก์ท็อปก็ลดจาก 472 -> 206
    ผลข้างเคียงคือระหว่างบีบนิ้วภาพจะเบลอ เพราะใช้ไทล์เดิมยืดไปก่อน แล้วค่อยคมตอนปล่อยนิ้ว
    แลกกันแล้วคุ้ม เพราะของเดิมก็ไม่ได้คมอยู่ดี มันแค่ขึ้น ๆ หาย ๆ ไม่ครบสักระดับ */
+/* noWrap:true = ไม่วาดโลกซ้ำซ้าย-ขวา
+   ของเดิมพอซูมออกสุดบนจอกว้าง ๆ จะเห็นโลกเรียงกัน 8 อัน และทุกอันคือภาพที่สั่งโหลดจริง
+   ทั้งที่เป็นภาพเดียวกันซ้ำ ๆ บนมือถือจอแคบแทบไม่ต่าง แต่บนคอมช่วยได้ชัด */
 const BASE_OPTS  = { attribution:'Tiles &copy; Esri', maxZoom:19, maxNativeZoom:19, keepBuffer:2,
-                     updateWhenZooming:false, crossOrigin:'anonymous' };
+                     updateWhenZooming:false, noWrap:true, crossOrigin:'anonymous' };
 // ไทล์ป้ายชื่อดึงจากซูมลึกลงไปหนึ่งระดับแล้วย่อครึ่ง ป้ายเลยไม่ตัวโตบังภาพตอนซูมกว้าง
 /* ชั้นป้ายชื่อเก็บลงเครื่องด้วยเหมือนภาพถ่าย (ที่อยู่มันเข้าเงื่อนไขใน sw.js พอดี)
    แต่ปุ่ม "เก็บภาพลงเครื่อง" โหลดล่วงหน้าให้เฉพาะภาพถ่าย ป้ายจะได้มาตอนเปิดดูเองเท่านั้น
@@ -671,7 +694,27 @@ const BASE_OPTS  = { attribution:'Tiles &copy; Esri', maxZoom:19, maxNativeZoom:
 const BLANK_PNG  = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 // ชั้นป้ายชื่อยิ่งต้องปิด เพราะมันกินคำขอ 332 จาก 455 ใบ (ไทล์ 128px เลยใช้เยอะกว่าภาพถ่ายเท่าตัว)
 const LABEL_OPTS = { maxZoom:19, maxNativeZoom:18, keepBuffer:2, tileSize:128, zoomOffset:1,
-                     updateWhenZooming:false, crossOrigin:'anonymous', errorTileUrl:BLANK_PNG };
+                     updateWhenZooming:false, noWrap:true, crossOrigin:'anonymous', errorTileUrl:BLANK_PNG };
+
+/* หน่วงชั้นป้ายชื่อไว้ จนกว่าคนจะหยุดขยับแผนที่จริง ๆ
+   ตอนซูมลงไปหาจุดงาน คนไม่ได้บีบนิ้วทีเดียวถึง แต่บีบแล้วปล่อย บีบแล้วปล่อย หลายรอบติดกัน
+   ทุกครั้งที่ปล่อยนิ้ว Leaflet สั่งโหลดป้ายชุดใหม่ทั้งจอ ทั้งที่อีกครึ่งวินาทีก็จะซูมต่อแล้ว
+   ป้ายใช้ไทล์ 128px เลยกินใบเยอะกว่าภาพถ่าย 4 เท่า มันจึงไปแย่งสายเชื่อมต่อที่มีแค่ 6 เส้น
+   จากภาพถ่ายซึ่งเป็นของที่คนรอดูจริง ๆ
+   หน่วงแล้ววัดได้ ป้ายลดจาก 509 ใบเหลือ 16 ใบ รวมทุกชั้น 681 -> 116 ใบ (จอ 412x740)
+   ภาพถ่ายไม่หน่วงด้วย เพราะนั่นคือสิ่งที่ต้องขึ้นให้ไวที่สุด
+   ผลข้างเคียง: ป้ายจะตามมาทีหลังภาพประมาณครึ่งวินาที ระหว่างนั้นใช้ป้ายเดิมยืดไปก่อน */
+const LABEL_DELAY = 500;
+function deferLabelUpdates(layer) {
+  const real = layer._update.bind(layer);
+  let t = null;
+  layer._update = function (center) {
+    clearTimeout(t);
+    t = setTimeout(() => real(center), LABEL_DELAY);
+  };
+  // ต้องยกเลิกตัวตั้งเวลาตอนถอดชั้นออก ไม่งั้นมันไปวาดชั้นที่ไม่ได้อยู่บนแผนที่แล้ว
+  layer.on('remove', () => clearTimeout(t));
+}
 let baseLayer = null, baseOverlay = null;
 
 function setBasemap(key) {
@@ -694,6 +737,8 @@ function setBasemap(key) {
       if (labelsAdded || !map.hasLayer(baseLayer)) return;
       labelsAdded = true;
       baseOverlay = L.tileLayer(bm.overlay, LABEL_OPTS).addTo(map);
+      // ครอบ _update หลัง addTo เพื่อให้รอบแรกวาดทันที แล้วค่อยหน่วงเฉพาะรอบที่ตามมาตอนซูม/เลื่อน
+      deferLabelUpdates(baseOverlay);
     };
     baseLayer.once('load', addLabels);
     // กันเหนียว: ถ้าภาพถ่ายบางใบโหลดไม่สำเร็จจน load ไม่ยิงสักที ป้ายจะได้ไม่หายถาวร
