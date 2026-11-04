@@ -159,12 +159,63 @@
   .pp-now { display:flex; align-items:center; gap:7px; font-weight:600; margin-bottom:8px; }
   .pp-lbl { font-size:11px; color:#8a96a3; margin-bottom:4px; }
   .pp-row { display:flex; gap:5px; margin-bottom:9px; flex-wrap:wrap; max-width:190px; }
+  /* ชื่อไซต์งานของหมุด */
+  .pp-nm  { font-weight:700; font-size:13.5px; margin-bottom:6px; }
+  .pp-nin { font:inherit; font-size:13px; width:100%; box-sizing:border-box; margin-bottom:9px;
+            padding:6px 8px; border:1px solid #d7e0ea; border-radius:7px; outline:none; }
+  .pp-nin:focus { border-color:#15803d; }
   .pp-c { width:22px; height:22px; border-radius:50%; border:2px solid #fff; cursor:pointer;
           box-shadow:0 0 0 1px rgba(0,0,0,.3); padding:0; }
   .pp-c.on { box-shadow:0 0 0 2px var(--ink); }
   .pp-del { font:inherit; font-size:12px; width:100%; padding:5px; cursor:pointer;
             border:1px solid #e3b4b4; background:#fff6f6; color:#b03030; border-radius:6px; }
   .pp-del:hover { background:#fdeaea; }
+
+  /* ---------- ช่องค้นหา ----------
+     วางขวาบน เพราะซ้ายบนเป็นปุ่มซูม ล่างซ้ายเป็นตารางสี ล่างขวาเป็นสวิตช์ปักหมุด
+     ดันลงมาเท่าความสูงแถบบนเหมือนปุ่มซูม จะได้ไม่โดนแถบทับตอนมันไหลลงมา */
+  #find { position:absolute; top:calc(var(--bar-h) + 10px); right:12px; z-index:1000; width:272px; }
+  #find .fbox { display:flex; align-items:center; background:rgba(255,255,255,.96);
+                border-radius:10px; box-shadow:0 2px 12px rgba(0,0,0,.22); overflow:hidden; }
+  #findQ { flex:1; min-width:0; font:inherit; font-size:13px; color:#222;
+           border:0; outline:none; background:none; padding:10px 4px 10px 12px; }
+  #findQ::placeholder { color:#9aa7b4; }
+  #find .fbtn { flex:none; font:inherit; font-size:14px; line-height:1; cursor:pointer;
+                border:0; background:none; color:#5a6b7c; padding:10px 11px; }
+  #find .fbtn:hover { color:var(--ink); }
+  #find .fbtn[hidden] { display:none; }
+  #findRes { display:none; margin-top:6px; background:rgba(255,255,255,.97);
+             border-radius:10px; box-shadow:0 2px 12px rgba(0,0,0,.22);
+             max-height:46vh; overflow-y:auto; overscroll-behavior:contain; }
+  #findRes.show { display:block; }
+  .fr { padding:9px 12px; font-size:13px; line-height:1.45; cursor:pointer;
+        border-bottom:1px solid #eef2f6; }
+  .fr:last-child { border-bottom:0; }
+  .fr:hover { background:#eef2f6; }
+  .fr .d { font-size:11px; color:#8a96a3; margin-top:2px; }
+  /* บรรทัดบอกสถานะ (กำลังค้น / ไม่เจอ / ไม่มีเน็ต) ใช้กล่องเดียวกับผลลัพธ์
+     ไม่ใช้ #toast เพราะ toast ลอยอยู่กลางบน ทับกล่องนี้พอดีตอนจอแคบ */
+  .fr.msg { cursor:default; color:#64748b; font-size:12.5px; }
+  /* หมุดของเรากับสถานที่จากแผนที่โลกอยู่ในรายการเดียวกัน ต้องดูออกว่าอันไหนเป็นอันไหน
+     ของเราเชื่อได้เพราะคนของเราปักเอง ส่วนของแผนที่โลกเป็นการเดาที่อาจผิด */
+  .fr.pin { background:#f2f9f4; border-left:3px solid #15803d; }
+  .fr .tag { display:inline-block; font-size:10.5px; font-weight:700; color:#15803d;
+             background:#dcf0e3; border-radius:4px; padding:1px 5px; margin-right:6px;
+             vertical-align:1px; }
+  .fr.msg:hover { background:none; }
+  .fr.msg b { color:var(--ink); font-weight:600; }
+  /* บรรทัดบอกว่าผลมาจากใคร — ไม่ใช่ของประดับ เงื่อนไขการใช้ฟรีของ OpenStreetMap
+     บังคับให้แสดงที่มาเมื่อเอาข้อมูลเขามาใช้ ตัวเล็กได้ แต่ซ่อนไม่ได้ */
+  .fr.cred { cursor:default; color:#a3adb8; font-size:10.5px; padding:5px 12px 7px;
+             background:#fafbfc; }
+  .fr.cred:hover { background:#fafbfc; }
+
+  /* หมุดของผลค้นหาทำเป็นหยดน้ำ ไม่ใช่วงกลม
+     เพราะหมุดเสาเข็มเป็นวงกลมสีหมดแล้ว ถ้าใช้วงกลมด้วยจะแยกไม่ออกว่าอันไหนของจริง
+     อันนี้เป็นแค่ที่หมายชั่วคราว ไม่ได้บันทึกขึ้นเซิร์ฟเวอร์ */
+  .fmk { width:19px; height:19px; background:#111827; border:3px solid #fff;
+         border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+         box-shadow:0 2px 7px rgba(0,0,0,.45); }
 
   /* ---------- ข้อความแจ้งชั่วคราว ---------- */
   #toast { position:absolute; left:50%; transform:translateX(-50%); top:calc(var(--bar-h) + 12px);
@@ -176,6 +227,9 @@
   @media (max-width:640px) {
     #bar h1 { display:none; }
     #legend, #legendOpen { bottom:12px; left:8px; }
+    /* กว้างเต็มจอไม่ได้ ปุ่มซูมอยู่ซ้ายบนระดับเดียวกัน กว้างราว 34px เริ่มที่ขอบ 10px
+       เริ่มที่ 54px เลยพ้นปุ่มซูมพอดีโดยไม่ต้องย้ายปุ่มซูมหนีไปไหน */
+    #find { left:54px; right:8px; width:auto; }
   }
 
   /* ---------- สวิตช์ปักหมุด (โผล่เฉพาะจอสัมผัส) ----------
@@ -196,21 +250,6 @@
   #pinArm .sw { width:15px; height:15px; border-radius:50%;
                 border:2px solid rgba(255,255,255,.9); background:transparent; }
 
-  /* ---------- กล่องความคืบหน้าตอนเก็บภาพลงเครื่อง ----------
-     งานนี้กินเวลาเป็นนาที ถ้าไม่มีอะไรขึ้นเลยคนจะคิดว่าค้างแล้วปิดทิ้งกลางคัน */
-  #dlBox { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:2000;
-           display:none; min-width:260px; max-width:86vw; padding:18px 20px;
-           background:#fff; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3);
-           font-size:14px; color:var(--ink); }
-  #dlBox.show { display:block; }
-  #dlBox .t { font-weight:800; margin-bottom:10px; }
-  #dlBox .s { color:#64748b; font-size:12.5px; margin-bottom:10px; line-height:1.5; }
-  #dlBar { height:8px; border-radius:99px; background:#e8eef4; overflow:hidden; }
-  #dlBar i { display:block; height:100%; width:0; background:#15803d; transition:width .2s; }
-  #dlBox .btns { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
-  #dlBox button { font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
-                  padding:8px 14px; border-radius:9px; border:1px solid #d7e0ea; background:#fff; }
-  #dlBox button.go { background:#15803d; color:#fff; border-color:#15803d; }
 </style>
 </head>
 <body>
@@ -222,7 +261,6 @@
   <span id="sync" title="ข้อมูลเก็บบน Supabase"><span class="dot"></span><span class="tx">กำลังโหลด…</span></span>
   <button id="undo" disabled title="ย้อนการแก้ไขล่าสุด">เลิกทำ</button>
   <button id="clear" title="ลบหมุดทั้งหมด">ล้างหมุด</button>
-  <button id="dlArea" title="เก็บภาพถ่ายของพื้นที่ที่เห็นอยู่ลงเครื่อง ไว้เปิดตอนสัญญาณไม่ดี">เก็บภาพลงเครื่อง</button>
 </div>
 <div id="barHandle" title="แถบเครื่องมือ (ชี้ขอบบน หรือแตะตรงนี้)"></div>
 
@@ -230,14 +268,17 @@
   <span class="sw"></span><span class="tx">ปักหมุด</span>
 </button>
 
-<div id="dlBox">
-  <div class="t" id="dlTitle">เก็บภาพพื้นที่นี้ลงเครื่อง</div>
-  <div class="s" id="dlMsg"></div>
-  <div id="dlBar"><i></i></div>
-  <div class="btns" id="dlBtns"></div>
-</div>
-
 <div id="map"></div>
+
+<div id="find">
+  <div class="fbox">
+    <input id="findQ" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
+           enterkeyhint="search" placeholder="ค้นหา: ชื่อที่ พิกัด หรือลิงก์แผนที่">
+    <button id="findClear" class="fbtn" title="ล้างคำค้น" hidden>&#10005;</button>
+    <button id="findGo" class="fbtn" title="ค้นหา">&#128269;</button>
+  </div>
+  <div id="findRes"></div>
+</div>
 
 <div id="legend">
   <div class="lgd-head">
@@ -341,17 +382,24 @@ function whoami() {
   } catch (e) { return null; }
 }
 
+/* ชื่อหมุด เก็บลงคอลัมน์ note ที่มีอยู่แล้วในตาราง ไม่ต้องแก้โครงฐานข้อมูล
+   ทำให้เป็นข้อความเสมอ ห้ามปล่อยเป็น null — เพราะตัวเทียบว่า "มีอะไรเปลี่ยนไหม"
+   ใช้ JSON.stringify เทียบกันตรง ๆ ถ้าบางรอบเป็น null บางรอบเป็น "" มันจะนับว่าต่าง
+   แล้วจะยิงบันทึกขึ้นเซิร์ฟเวอร์วนไม่จบทั้งที่ไม่มีใครแก้อะไรเลย
+   ตัดที่ 80 ตัวอักษร ยาวกว่านี้ป้ายบนแผนที่จะบังหมุดตัวอื่น */
+const pinName = v => String(v == null ? '' : v).trim().slice(0, 80);
+
 async function fetchServer() {
   const [lv, pn] = await Promise.all([
     rest('pile_map_levels?select=k,color,label,sort&deleted_at=is.null&order=sort.asc,k.asc'),
-    rest('pile_map_pins?select=id,lat,lng,level_key&deleted_at=is.null'
+    rest('pile_map_pins?select=id,lat,lng,level_key,note&deleted_at=is.null'
          + '&group_key=eq.' + encodeURIComponent(SUPA.group) + '&order=created_at.asc')
   ]);
   // ลำดับคีย์ต้องเป็น pins ก่อน levels ให้ตรงกับ stateNow()
   // เพราะเราเทียบสองสถานะด้วย JSON.stringify ซึ่งคีย์สลับที่แล้วข้อความก็ไม่ตรงกันทันที
   return {
     pins:   pn.filter(p => isFinite(p.lat) && isFinite(p.lng))
-              .map(p => ({ id:p.id, lat:p.lat, lng:p.lng, k:p.level_key })),
+              .map(p => ({ id:p.id, lat:p.lat, lng:p.lng, k:p.level_key, n:pinName(p.note) })),
     levels: lv.map(l => ({ k:l.k, color:l.color, label:String(l.label == null ? '' : l.label) }))
   };
 }
@@ -393,7 +441,7 @@ async function push(before, after) {
   // หมุดที่ id ยังไม่เคยขึ้นไป = ปักใหม่ หรือ "เลิกทำ" การลบ
   // ใช้ upsert ตัวเดียวครอบทั้งสองกรณี แถวที่ถูกลบนิ่มไว้จะถูกปลด deleted_at กลับมา
   const addPin = after.pins.filter(p => !bPin[p.id]).map(p => ({
-    id:p.id, lat:p.lat, lng:p.lng, level_key:p.k, group_key:SUPA.group,
+    id:p.id, lat:p.lat, lng:p.lng, level_key:p.k, note:p.n || null, group_key:SUPA.group,
     created_by:whoami(), deleted_at:null, updated_at:nowISO()
   }));
   if (addPin.length) {
@@ -411,6 +459,15 @@ async function push(before, after) {
   Object.keys(byLevel).forEach(k => {
     jobs.push(rest('pile_map_pins?id=' + encodeURIComponent(inList(byLevel[k])),
       { method:'PATCH', body:{ level_key:k, updated_at:nowISO() }, prefer:'return=minimal' }));
+  });
+
+  // หมุดเดิมที่เปลี่ยนชื่อ — รวมกลุ่มแบบเดียวกับสีไม่ได้ เพราะชื่อแต่ละหมุดไม่ซ้ำกัน
+  // ต้องยิงทีละหมุด แต่ปกติคนแก้ชื่อทีละตัวอยู่แล้ว จึงไม่ใช่การยิงรัว
+  after.pins.forEach(p => {
+    const o = bPin[p.id];
+    if (!o || o.n === p.n) return;
+    jobs.push(rest('pile_map_pins?id=eq.' + encodeURIComponent(p.id),
+      { method:'PATCH', body:{ note:p.n || null, updated_at:nowISO() }, prefer:'return=minimal' }));
   });
 
   // ลบ = ลงเวลา deleted_at ไม่ได้ลบแถวจริง (สิทธิ์ลบจริงไม่ได้เปิดให้ด้วย)
@@ -487,7 +544,7 @@ let pushing = false;
 let syncTimer = null, retryWait = 0, lastErr = '';
 
 const stateNow = () => ({
-  pins:   pins.map(p => ({ id:p.id, lat:p.lat, lng:p.lng, k:p.k })),
+  pins:   pins.map(p => ({ id:p.id, lat:p.lat, lng:p.lng, k:p.k, n:pinName(p.n) })),
   levels: levels.map(l => ({ k:l.k, color:l.color, label:l.label }))
 });
 const sig   = s => JSON.stringify(s);
@@ -551,7 +608,7 @@ async function flush() {
 
 /* เอาสถานะจากเซิร์ฟเวอร์มาใส่จอ */
 function applyServer(s) {
-  serverMirror = { pins:s.pins.map(p => ({ id:p.id, lat:p.lat, lng:p.lng, k:p.k })),
+  serverMirror = { pins:s.pins.map(p => ({ id:p.id, lat:p.lat, lng:p.lng, k:p.k, n:pinName(p.n) })),
                    levels:s.levels.map(l => ({ k:l.k, color:l.color, label:l.label })) };
   levels = serverMirror.levels.map(l => Object.assign({}, l));
   // ตารางว่าง = เพิ่งสร้างฐานข้อมูล ใส่ชุดตั้งต้นให้แล้วปล่อยให้ตัวซิงค์ส่งขึ้นไปเอง
@@ -705,8 +762,7 @@ const BASE_OPTS  = { attribution:'Tiles &copy; Esri', maxZoom:19, maxNativeZoom:
                      updateWhenZooming:false, noWrap:true, crossOrigin:'anonymous' };
 // ไทล์ป้ายชื่อดึงจากซูมลึกลงไปหนึ่งระดับแล้วย่อครึ่ง ป้ายเลยไม่ตัวโตบังภาพตอนซูมกว้าง
 /* ชั้นป้ายชื่อเก็บลงเครื่องด้วยเหมือนภาพถ่าย (ที่อยู่มันเข้าเงื่อนไขใน sw.js พอดี)
-   แต่ปุ่ม "เก็บภาพลงเครื่อง" โหลดล่วงหน้าให้เฉพาะภาพถ่าย ป้ายจะได้มาตอนเปิดดูเองเท่านั้น
-   พื้นที่ไหนยังไม่เคยเปิด ป้ายจึงยังโหลดไม่ได้ตอนไม่มีเน็ต
+   แต่เก็บได้เฉพาะที่เคยเปิดดูแล้ว พื้นที่ไหนยังไม่เคยเปิด ป้ายจึงยังโหลดไม่ได้ตอนไม่มีเน็ต
    ถ้าไม่ตั้ง errorTileUrl จะขึ้นเป็นไอคอนรูปแตกเต็มจอ
    ใส่จุดใสแทน ป้ายหายไปเฉย ๆ ภาพถ่ายข้างล่างยังอยู่ครบ */
 const BLANK_PNG  = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
@@ -843,7 +899,7 @@ function attachRetry(layer) {
       tileFailSeen++;
       if (tileFailSeen >= 4 && Date.now() - tileFailToldAt > 20000) {
         tileFailToldAt = Date.now();
-        toast('ภาพบางส่วนโหลดไม่ได้ — สัญญาณอ่อน (กด "เก็บภาพลงเครื่อง" ตอนมี WiFi ไว้ก่อนได้)');
+        toast('ภาพบางส่วนโหลดไม่ได้ — สัญญาณอ่อน ลองเลื่อนแผนที่ไปมาหรือรอสักครู่');
       }
       return;
     }
@@ -977,19 +1033,33 @@ function drawPin(p) {
     fillColor: LV[p.k].color, fillOpacity:1
   }).addTo(map);
   // ชี้ค้างแล้วบอกความยาวเลย จะได้ไม่ต้องกวาดตาไปอ่านตารางสีทุกครั้ง
-  m.bindTooltip(LV[p.k].label || '(ไม่มีชื่อ)', tipOpts());
+  m.bindTooltip(pinTip(p), tipOpts());
   m.bindPopup(() => popupHtml(p), { closeButton:false, autoPan:true });
   layers[p.id] = m;
+}
+
+/* ข้อความตอนชี้ค้างบนหมุด
+   ถ้าตั้งชื่อไว้ให้ขึ้นชื่อนำ แล้วค่อยต่อด้วยความยาว
+   เพราะพอหมุดเยอะ ๆ สิ่งที่คนมองหาคือ "อันไหนคืองานไหน" ไม่ใช่ความยาวซึ่งดูจากสีก็รู้แล้ว */
+function pinTip(p) {
+  const len = LV[p.k].label || '(ไม่มีชื่อ)';
+  return p.n ? p.n + ' · ' + len : len;
 }
 
 function popupHtml(p) {
   const head = `<div class="pp-now"><span class="sw" style="background:${LV[p.k].color}"></span>${esc(LV[p.k].label) || '(ไม่มีชื่อ)'}</div>`;
   // ดูอย่างเดียว: บอกแค่ว่าหมุดนี้คือความยาวเท่าไหร่ ไม่ต้องมีปุ่มที่กดไม่ได้มาให้รก
-  if (!canEdit) return head + `<div class="pp-lbl">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</div>`;
+  // แต่ถ้ามีชื่อไซต์งานต้องให้เห็นด้วย เพราะคนดูอย่างเดียวคือคนที่ต้องการรู้ว่านี่งานอะไรมากที่สุด
+  if (!canEdit) return head
+    + (p.n ? `<div class="pp-nm">${esc(p.n)}</div>` : '')
+    + `<div class="pp-lbl">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</div>`;
   const sw = levels.map(l =>
     `<button class="pp-c${l.k === p.k ? ' on' : ''}" data-pin="${p.id}" data-k="${l.k}"
              style="background:${l.color}" title="${escAttr(l.label)}"></button>`).join('');
-  return head + `<div class="pp-lbl">เปลี่ยนสี</div>
+  return head + `<div class="pp-lbl">ชื่อไซต์งาน (ไว้ใช้ค้นหา)</div>
+          <input class="pp-nin" data-name="${p.id}" type="text" maxlength="80"
+                 value="${escAttr(p.n || '')}" placeholder="เช่น บ้านคุณสมชาย">
+          <div class="pp-lbl">เปลี่ยนสี</div>
           <div class="pp-row">${sw}</div>
           <button class="pp-del" data-del="${p.id}">ลบหมุดนี้</button>`;
 }
@@ -1056,7 +1126,7 @@ map.on('click', e => {
   lastClick = { t:now, x:pt.x, y:pt.y };
 
   snapshot();
-  const p = { id:uuid(),
+  const p = { id:uuid(), n:'',
               lat:+e.latlng.lat.toFixed(6), lng:+e.latlng.lng.toFixed(6), k:selected };
   pins.push(p);
   drawPin(p);
@@ -1084,10 +1154,30 @@ document.addEventListener('click', e => {
     p.k = c.dataset.k;
     const m = layers[p.id];
     m.setStyle({ fillColor: LV[p.k].color });
-    m.unbindTooltip().bindTooltip(LV[p.k].label || '(ไม่มีชื่อ)', tipOpts());
+    m.unbindTooltip().bindTooltip(pinTip(p), tipOpts());
     save(); refreshCounts(); map.closePopup();
   }
 });
+
+/* พิมพ์ชื่อไซต์งานในป๊อปอัป
+   ไม่เก็บ snapshot ให้ "เลิกทำ" ทุกตัวอักษร ไม่งั้นกดเลิกทำหนึ่งครั้งจะถอยได้แค่อักษรเดียว
+   เก็บครั้งเดียวตอนเริ่มแก้ชื่อหมุดตัวนั้น กดเลิกทำจึงได้ชื่อเดิมกลับมาทั้งคำ
+   save() มีหน่วง 400 ms อยู่แล้ว การพิมพ์รัวจึงไม่กลายเป็นยิงเซิร์ฟเวอร์ทุกตัวอักษร */
+let nameEditing = null;
+document.addEventListener('input', e => {
+  if (!canEdit) return;
+  const box = e.target.closest('.pp-nin');
+  if (!box) return;
+  const p = pins.find(x => x.id === box.dataset.name);
+  if (!p) return;
+  if (nameEditing !== p.id) { snapshot(); nameEditing = p.id; }
+  p.n = pinName(box.value);
+  const m = layers[p.id];
+  if (m) m.unbindTooltip().bindTooltip(pinTip(p), tipOpts());
+  save();
+});
+// ปิดป๊อปอัปแล้วถือว่าจบการแก้ชื่อรอบนี้ รอบหน้าจึงเก็บ snapshot ใหม่
+map.on('popupclose', () => { nameEditing = null; });
 
 /* ============================================================
    ตารางสี: โหมดปกติ = ปุ่มเลือกสี / โหมดตั้งค่า = แก้สีกับความยาว
@@ -1270,154 +1360,17 @@ if (pinArmBtn) pinArmBtn.addEventListener('click', e => {
 });
 
 /* ============================================================
-   เก็บภาพถ่ายลงเครื่อง
-   ที่หน้างานสัญญาณมักไม่พอ ภาพ 20-80 ชิ้นต่อจอจึงโหลดไม่ครบหรือไม่มาเลย
-   กดปุ่มนี้ตอนยังมี WiFi เพื่อดึงภาพของพื้นที่ที่เห็นอยู่เก็บไว้ก่อน
-   ของที่เก็บแล้วจะถูกหยิบจากเครื่องตรง ๆ (ดู sw.js) ไม่แตะเน็ตอีก
-   ============================================================ */
-const TILE_CACHE = 'sudco-tiles-v1';   // ต้องตรงกับใน sw.js
-const haveCache  = typeof caches !== 'undefined' && !!navigator.serviceWorker;
+   ภาพถ่ายที่เคยเปิดแล้วจะถูกเก็บไว้ในเครื่องให้เอง
+   ไม่มีปุ่มให้กด ไม่ต้องสั่ง — เปิดดูตรงไหน ตรงนั้นก็ถูกเก็บไว้เอง (ตัวจัดการอยู่ใน sw.js)
+   กลับมาดูที่เดิมอีกครั้งจึงขึ้นทันทีแม้สัญญาณไม่ดี แต่ที่ที่ไม่เคยเปิดยังต้องใช้เน็ตอยู่
 
+   ของเดิมมีปุ่ม "เก็บภาพลงเครื่อง" ไว้สั่งโหลดล่วงหน้าทั้งพื้นที่ ถอดออกไปแล้ว
+   ============================================================ */
 // ขอให้ service worker ทำงาน เผื่อมีคนเปิดไฟล์แผนที่ตรง ๆ ไม่ได้ผ่านหน้าเว็บหลัก
 // ถ้าไม่มีตัวนี้คุม ของที่เก็บไว้จะไม่ถูกหยิบมาใช้ เก็บไปก็เท่านั้น
 if (navigator.serviceWorker && !navigator.serviceWorker.controller) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
-
-// แปลงพิกัดเป็นเลขช่องไทล์ตามมาตรฐาน Web Mercator
-function tileX(lng, z) { return Math.floor((lng + 180) / 360 * Math.pow(2, z)); }
-function tileY(lat, z) {
-  const r = lat * Math.PI / 180;
-  return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z));
-}
-
-/* รายชื่อภาพที่ต้องเก็บ: เอาเฉพาะกรอบที่เห็นอยู่ ตั้งแต่ซูมปัจจุบันลงไปจนลึกสุด
-   เก็บทุกระดับเพราะคนที่หน้างานจะซูมเข้าออก ถ้าเก็บแค่ระดับเดียวพอซูมปุ๊บก็เทาอีก
-   เอาเฉพาะภาพถ่าย ไม่เอาชั้นป้ายชื่อ ป้ายหายแค่ไม่รู้ชื่อถนน แต่ภาพถ่ายคือของที่ต้องใช้จริง */
-function tilesForView() {
-  const b = map.getBounds(), urls = [];
-  const z0 = Math.max(1, Math.round(map.getZoom()));
-  const tpl = BASEMAPS.satellite.url;
-  for (let z = z0; z <= 19; z++) {
-    const x1 = tileX(b.getWest(), z),  x2 = tileX(b.getEast(), z);
-    const y1 = tileY(b.getNorth(), z), y2 = tileY(b.getSouth(), z);
-    for (let x = x1; x <= x2; x++)
-      for (let y = y1; y <= y2; y++)
-        urls.push(tpl.replace('{z}', z).replace('{y}', y).replace('{x}', x));
-  }
-  return urls;
-}
-
-const dlBox = document.getElementById('dlBox');
-const dlMsg = document.getElementById('dlMsg');
-const dlTitle = document.getElementById('dlTitle');
-const dlBtns = document.getElementById('dlBtns');
-const dlFill = document.querySelector('#dlBar i');
-let dlCancel = false, dlBusy = false;
-
-function dlShow(on) { dlBox.classList.toggle('show', on); }
-function dlSetBtns(list) {
-  dlBtns.innerHTML = '';
-  list.forEach(([label, cls, fn]) => {
-    const b = document.createElement('button');
-    b.textContent = label; if (cls) b.className = cls; b.onclick = fn;
-    dlBtns.appendChild(b);
-  });
-}
-const mb = n => (n / 1048576).toFixed(1) + ' MB';
-
-async function storedSize() {
-  // นับจากจำนวนที่เก็บจริง ไม่ใช้ storage.estimate เพราะมันรวมของอย่างอื่นในเว็บมาด้วย
-  try {
-    const c = await caches.open(TILE_CACHE);
-    const keys = await c.keys();
-    return { n: keys.length, bytes: keys.length * 12600 };   // เฉลี่ยใบละ ~12.6 KB (วัดจากของจริง)
-  } catch (e) { return { n: 0, bytes: 0 }; }
-}
-
-async function runDownload(urls) {
-  dlBusy = true; dlCancel = false;
-  const cache = await caches.open(TILE_CACHE);
-  let done = 0, failed = 0, saved = 0;
-  const queue = urls.slice();
-
-  const tick = () => {
-    dlFill.style.width = Math.round(done / urls.length * 100) + '%';
-    dlMsg.textContent = 'เก็บแล้ว ' + done + ' / ' + urls.length + ' ชิ้น'
-                      + (failed ? '  (พลาด ' + failed + ')' : '');
-  };
-
-  // ดึงทีละ 6 เส้นพร้อมกัน เท่าที่เบราว์เซอร์เปิดให้ต่อหนึ่งเซิร์ฟเวอร์
-  // มากกว่านี้ไม่ได้เร็วขึ้นเพราะมันไปรอคิวอยู่ดี
-  async function worker() {
-    while (queue.length && !dlCancel) {
-      const u = queue.shift();
-      try {
-        if (!(await cache.match(u))) {
-          const res = await fetch(u, { mode:'cors' });
-          if (res.ok) { await cache.put(u, res.clone()); saved++; }
-          else failed++;
-        }
-      } catch (err) { failed++; }
-      done++; tick();
-    }
-  }
-  await Promise.all(Array.from({ length: 6 }, worker));
-  dlBusy = false;
-
-  const tot = await storedSize();
-  dlTitle.textContent = dlCancel ? 'หยุดแล้ว' : 'เก็บเสร็จแล้ว';
-  // กดหยุดกลางคันต้องบอกตรง ๆ ว่ายังไม่ครบ
-  // ถ้าขึ้น "เปิดได้โดยไม่ต้องใช้เน็ตแล้ว" ทั้งที่เก็บไปแค่ครึ่งเดียว
-  // คนจะเชื่อแล้วออกหน้างานโดยไม่โหลดเพิ่ม พอถึงที่จริงภาพก็หายเป็นช่องเทาอยู่ดี
-  dlMsg.innerHTML = (dlCancel
-                      ? 'เก็บไปแล้ว ' + done + ' จาก ' + urls.length + ' ชิ้น — ยังไม่ครบทั้งพื้นที่<br>'
-                        + 'กดใหม่เพื่อเก็บต่อได้ ของที่เก็บแล้วจะไม่โหลดซ้ำ<br>'
-                      : 'พื้นที่นี้เปิดได้โดยไม่ต้องใช้เน็ตแล้ว<br>')
-                  + 'ในเครื่องมีทั้งหมด ' + tot.n + ' ชิ้น (~' + mb(tot.bytes) + ')'
-                  + (failed ? '<br>พลาด ' + failed + ' ชิ้น — กดซ้ำได้ ของที่เก็บแล้วจะไม่โหลดใหม่' : '');
-  dlSetBtns([['ปิด', 'go', () => dlShow(false)]]);
-}
-
-document.getElementById('dlArea').onclick = async () => {
-  if (dlBusy) return;
-  if (!haveCache) { toast('เบราว์เซอร์นี้เก็บภาพลงเครื่องไม่ได้'); return; }
-
-  const urls = tilesForView();
-  const tot  = await storedSize();
-  dlFill.style.width = '0%';
-  dlTitle.textContent = 'เก็บภาพพื้นที่นี้ลงเครื่อง';
-
-  // เก็บทุกระดับซูมจากที่เห็นอยู่ลงไปจนลึกสุด ถ้ามองกว้างไปจำนวนจะบานปลาย
-  // กันไว้ ไม่งั้นคนกดตอนเห็นทั้งจังหวัดแล้วรอเป็นชั่วโมงจนเต็มเครื่อง
-  if (urls.length > 4000) {
-    dlMsg.innerHTML = 'พื้นที่กว้างเกินไป (ต้องเก็บ ' + urls.length.toLocaleString() + ' ชิ้น)<br>'
-                    + 'ซูมเข้าให้เห็นเฉพาะบริเวณหน้างานก่อน แล้วค่อยกดใหม่';
-    dlSetBtns([['เข้าใจแล้ว', 'go', () => dlShow(false)]]);
-    dlShow(true);
-    return;
-  }
-
-  const secs = Math.round(urls.length / 6 * 0.5);
-  dlMsg.innerHTML = 'จะเก็บ ' + urls.length.toLocaleString() + ' ชิ้น (~' + mb(urls.length * 12600) + ')'
-                  + ' ใช้เวลาราว ' + (secs < 60 ? secs + ' วินาที' : Math.ceil(secs / 60) + ' นาที') + '<br>'
-                  + '<b>ควรทำตอนอยู่ใน WiFi</b> จากนั้นที่หน้างานจะเปิดได้ทันทีแม้สัญญาณไม่ดี'
-                  + (tot.n ? '<br><span style="color:#94a3b8">ตอนนี้เก็บไว้แล้ว ' + tot.n + ' ชิ้น (~' + mb(tot.bytes) + ')</span>' : '');
-
-  const btns = [['ยกเลิก', '', () => dlShow(false)],
-                ['เริ่มเก็บ', 'go', () => {
-                   dlTitle.textContent = 'กำลังเก็บ…';
-                   dlSetBtns([['หยุด', '', () => { dlCancel = true; }]]);
-                   runDownload(urls);
-                 }]];
-  if (tot.n) btns.unshift(['ล้างที่เก็บไว้', '', async () => {
-    await caches.delete(TILE_CACHE);
-    dlMsg.textContent = 'ล้างแล้ว';
-    dlSetBtns([['ปิด', 'go', () => dlShow(false)]]);
-  }]);
-  dlSetBtns(btns);
-  dlShow(true);
-};
 
 document.getElementById('collapse').onclick = () => {
   setLegendOpen(false);
@@ -1495,6 +1448,451 @@ loadFromServer().then(() => {
   updateHint();
   toast('โหลดข้อมูลไม่ได้ — กดไฟแดงมุมขวาบนเพื่อลองใหม่');
 });
+
+/* ============================================================
+   ช่องค้นหา
+   ------------------------------------------------------------
+   ช่องเดียว รับสามอย่าง แยกเองว่าคนพิมพ์อะไรมา
+     1) พิกัด       13.70, 100.68     -> เด้งไปเลย ไม่ยิงเน็ต
+     2) ลิงก์แผนที่  วางจากไลน์ได้เลย   -> แกะพิกัดออกมา ไม่ยิงเน็ต
+     3) ชื่อที่      ตำบลบางพลีใหญ่     -> ถาม Esri แล้วขึ้นรายการให้เลือก
+
+   สองอย่างแรกทำงานตอนไม่มีเน็ตด้วย ซึ่งคือสภาพที่หน้างานจริง
+   และเป็นทางที่ใช้บ่อยสุด เพราะคนหน้างานส่งโลเคชันมาทางไลน์
+
+   ทำไมไม่เด้งไปผลอันดับหนึ่งอัตโนมัติ
+   ลองค้น "99 หมู่ 5 ตำบลคลองสวน อำเภอบางบ่อ" อันดับหนึ่งได้คะแนน 97.1
+   แต่เป็น "ตำบลคลองด่าน" คนละตำบล ห่างจากที่ถาม 18 กิโล
+   ส่วนอันที่ถูกได้ 96.7 ตกไปอันดับสอง — เด้งอัตโนมัติคือพาคนขับรถไปผิดที่โดยไม่รู้ตัว
+   เลยต้องขึ้นรายการพร้อมตำบล/อำเภอ/จังหวัดเต็ม ๆ ให้คนยืนยันเอง
+
+   และเรียงตาม "ใกล้จุดที่กำลังดูอยู่" ไม่ใช่เรียงตามคะแนนของ Esri
+   เพราะปกติคนเลื่อนแผนที่ไปแถวที่จะไปอยู่แล้ว ตัวที่ใกล้จึงมักเป็นตัวที่ตั้งใจ
+   ============================================================ */
+/* ใช้สองเจ้า ไม่ใช่เพราะเผื่อเหนียว แต่เพราะวัดแล้วเก่งคนละเรื่องกันจริง ๆ
+   ------------------------------------------------------------
+   OpenStreetMap (Nominatim) และ Esri ถามพร้อมกันทุกครั้ง ทั้งคู่ไม่ต้องสมัคร ไม่ต้องใช้คีย์
+
+   ที่วัดได้จากคำค้นแบบที่คนของเราใช้จริง
+     "แยกรัชโยธิน"                    OSM ถูก              Esri ไม่เจอเลย
+     "ศูนย์ประชุมแห่งชาติสิริกิติ์"      OSM ถูก              Esri ได้ 74.1 ตกเกณฑ์
+     "ตำบลคลองสวน อำเภอบางบ่อ"      OSM ถูกตั้งแต่อันแรก   Esri อันดับ 1 ผิดตำบล ห่าง 18 กม.
+     "หมู่บ้านนันทวัน พระราม 9"        OSM ผิด ได้นนทบุรี     Esri ถูก ได้สะพานสูง
+     "999 ถนนพระราม 1"               OSM ได้ 999/9 ใกล้ ๆ   Esri ได้ 999 ตรงเลขที่
+   สามข้อแรก OSM ชนะ สองข้อหลัง Esri ชนะ ไม่มีเจ้าไหนดีกว่าอีกเจ้าในทุกกรณี
+   จึงไม่เลือกข้าง ถามทั้งคู่แล้วเอามารวมกัน (ดูเหตุผลเต็มที่ runFind)
+
+   ข้อแม้ของการใช้ Nominatim ฟรี ที่ของเราทำตามอยู่แล้ว
+     ยิงได้ไม่เกินวินาทีละครั้ง  — ค้นตอนกด Enter เท่านั้น หนึ่งครั้งที่กดคือหนึ่งคำขอ
+     ห้ามยิงรัวเป็นชุด        — ไม่มีการค้นอัตโนมัติที่ไหนในหน้านี้เลย
+     ต้องแสดงที่มา            — ใส่ไว้ท้ายรายการผลแล้ว (.fr.cred)
+     ต้องย้ายเจ้าได้ถ้าเขาขอ    — ลบ askOSM ออกจาก Promise.allSettled บรรทัดเดียว Esri รับไปต่อได้ทันที */
+const OSM_URL     = 'https://nominatim.openstreetmap.org/search';
+const GEOCODE_URL = 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates';
+/* เส้นแบ่งระหว่าง "เจอจริง" กับ "เดาสุ่ม" ของฝั่ง Esri
+   วัดจากคำค้นเดียวกันคือ "ซอยลาดพร้าว 101"
+     ถนนลาดพร้าว 101 ที่ถูกต้อง ได้ 81.9
+     ซันนี่ลาดพร้าว ที่คนละที่   ได้ 70.7
+   75 เลยอยู่ตรงกลางพอดี รับของจริงไว้ ตัดของเดาออก
+   ของที่ต่ำกว่านี้ถ้าปล่อยผ่านจะดูเหมือนเจอทั้งที่ผิด บอกว่าไม่เจอตรงไปตรงมากว่า
+
+   ที่ทำให้ฝั่งถูกต้องขึ้นมาถึง 81.9 ได้คือพารามิเตอร์ location ที่ส่งจุดกลางจอไปถ่วงน้ำหนัก
+   ถ้าไม่ส่ง คำค้นเดิมเหลือแต่ 70.7 คือตกเกณฑ์หมด กลายเป็นค้นซอยไม่เจอเลย */
+const FIND_MIN_SCORE = 75;
+const FIND_MAX = 6;
+
+const fQ     = document.getElementById('findQ');
+const fRes   = document.getElementById('findRes');
+const fClear = document.getElementById('findClear');
+const fGo    = document.getElementById('findGo');
+
+let findMarker = null, findAbort = null, findHits = [];
+
+const fHide = () => { fRes.classList.remove('show'); fRes.innerHTML = ''; };
+const fMsg  = html => { fRes.innerHTML = '<div class="fr msg">' + html + '</div>'; fRes.classList.add('show'); };
+
+/* ---------- แกะพิกัดจากข้อความ ---------- */
+// ยอมรับ "13.7,100.6" และ "13.7 100.6" — ต้องมีแค่ตัวเลขสองตัวเท่านั้น ไม่งั้นไปตีกับชื่อที่มีเลข
+const COORD_RE = /^\s*(-?\d{1,2}(?:\.\d+)?)\s*[, ]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/;
+function pickCoord(s) {
+  const m = COORD_RE.exec(s);
+  if (!m) return null;
+  const lat = +m[1], lng = +m[2];
+  if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return L.latLng(lat, lng);
+}
+
+/* ลิงก์แผนที่มีตัวเลขหลายชุดและความหมายไม่เหมือนกัน ต้องไล่ให้ถูกลำดับ
+     !3d!4d  = ตัวหมุดจริง            <- อันนี้ตรงที่สุด เอาก่อน
+     q=/ll=  = จุดที่ลิงก์ชี้ไป
+     @       = กล้องเล็งอยู่ตรงไหน      <- มักเยื้องจากหมุด เอาเป็นทางเลือกสุดท้าย */
+function pickFromUrl(s) {
+  let m = s.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+  if (m) return L.latLng(+m[1], +m[2]);
+  m = s.match(/[?&](?:q|query|ll|sll|daddr|center)=(?:loc:)?(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
+  if (m) return L.latLng(+m[1], +m[2]);
+  m = s.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+  if (m) return L.latLng(+m[1], +m[2]);
+  return null;
+}
+const IS_URL     = /https?:\/\//i;
+const SHORT_LINK = /(maps\.app\.goo\.gl|goo\.gl|bit\.ly|g\.co|lin\.ee)\//i;
+
+/* ---------- พาไปที่หมาย ---------- */
+function clearFindMarker() {
+  if (findMarker) { map.removeLayer(findMarker); findMarker = null; }
+}
+function goTo(ll, label, ext) {
+  // เช็กก่อนลบที่หมายเดิม — ค้นพลาดแล้วของเก่าหายไปด้วยคือเสียของที่ยังใช้อยู่
+  if (!TH_BOUNDS.contains(ll)) {
+    fMsg('พิกัดนี้อยู่นอกประเทศไทย (' + ll.lat.toFixed(4) + ', ' + ll.lng.toFixed(4) + ')<br>แผนที่นี้ดูได้เฉพาะในไทย');
+    return;
+  }
+  clearFindMarker();
+  fHide();
+  findMarker = L.marker(ll, {
+    // จุดแหลมของหยดน้ำอยู่ล่างกลาง หลังหมุน 45 องศาแล้วเลยพ้นกล่อง 19px ลงไปอีกราว 4px
+    icon: L.divIcon({ className:'', html:'<div class="fmk"></div>', iconSize:[19,19], iconAnchor:[10,23] }),
+    keyboard:false, zIndexOffset:1000
+  }).addTo(map);
+  if (label) {
+    // ติดชื่อค้างไว้เลย ไม่ต้องให้ไปกดดู — ตอนนี้ป้ายชื่อนอกกรุงเทพถูกตัดไปแล้ว
+    // ที่หมายที่ค้นเจอจึงเป็นตัวหนังสือชิ้นเดียวบนจอที่บอกได้ว่านี่คือที่ไหน
+    findMarker.bindTooltip(label, { permanent:true, direction:'right', offset:[11,-9] }).openTooltip();
+  }
+  // แตะหมุดที่หมายเพื่อเอาออก ไม่ต้องหาปุ่มปิด
+  findMarker.on('click', clearFindMarker);
+
+  // Esri ส่งขอบเขตมาด้วย ตำบลทั้งตำบลกับบ้านเลขที่เดียวควรได้ระยะซูมคนละแบบ
+  const box = (ext && isFinite(ext.ymin) && isFinite(ext.xmin))
+            ? L.latLngBounds([ext.ymin, ext.xmin], [ext.ymax, ext.xmax]) : null;
+  flyAndLand(ll, box);
+}
+
+/* บินไปแบบมีประกันว่าถึงที่หมายจริง
+   ------------------------------------------------------------
+   ใช้ flyTo เพราะมันถูกกว่า ไม่ใช่แค่สวยกว่า — ระหว่างบินมันนับเป็นการซูม
+   ซึ่งเราตั้ง updateWhenZooming:false ไว้แล้ว ไทล์ของระดับที่บินผ่านเลยไม่ถูกสั่งโหลด
+   วัดจริง: บินจาก z11 ไป z16 ใช้ 11 ใบ ส่วนกระโดดทันทีใช้ 29 ใบ
+
+   แต่ flyTo พึ่งจังหวะวาดภาพของเบราว์เซอร์ ซึ่งไม่ได้การันตีว่าจะมาตรงเวลา
+   ทดสอบ 10 ครั้ง ไปถึง 9 ครั้ง อีกครั้งคือ "ไม่ขยับเลย" แผนที่ค้างอยู่ที่เดิมเงียบ ๆ
+   สำหรับปุ่มพาไปที่หมาย การเงียบแล้วไม่ไปไหนคือพังแบบที่คนใช้ไม่รู้ว่าพัง
+   เลยตั้งเวลาเช็กไว้ ถ้าเลยเวลาบินแล้วยังไม่ถึง ก็กระโดดไปให้เลย
+   ช้ากว่าเล็กน้อยแต่ไปถึงแน่นอน */
+let flyGuard = null;
+function flyAndLand(ll, box) {
+  const target = box ? box.getCenter() : ll;
+  const zoom   = Math.max(map.getZoom(), 16);
+  if (box) map.flyToBounds(box, { maxZoom: 17, duration: 0.8 });
+  else     map.flyTo(ll, zoom, { duration: 0.8 });
+
+  clearTimeout(flyGuard);
+  flyGuard = setTimeout(() => {
+    if (map.distance(map.getCenter(), target) < 200) return;   // ถึงแล้ว ไม่ต้องทำอะไร
+    if (box) map.fitBounds(box, { maxZoom: 17, animate: false });
+    else     map.setView(ll, zoom, { animate: false });
+  }, 1200);
+}
+/* ถ้าคนลากแผนที่เองระหว่างบิน แปลว่าเขาเปลี่ยนใจแล้ว ต้องยกเลิกตัวประกัน
+   ไม่งั้นมันจะกระชากแผนที่กลับไปที่หมายเดิมทั้งที่คนกำลังเลื่อนดูที่อื่นอยู่ */
+map.on('dragstart', () => clearTimeout(flyGuard));
+
+const distTxt = m =>
+  m < 1000   ? 'ห่างจากจุดที่ดูอยู่ ' + (Math.round(m / 10) * 10) + ' ม.'
+: m < 100000 ? 'ห่างจากจุดที่ดูอยู่ ' + (m / 1000).toFixed(1) + ' กม.'
+             : 'ห่างจากจุดที่ดูอยู่ ' + Math.round(m / 1000) + ' กม.';
+
+/* ---------- ตัวหลัก ---------- */
+async function runFind() {
+  const s = fQ.value.trim();
+  if (!s) { fHide(); return; }
+
+  if (SHORT_LINK.test(s)) {
+    /* ลิงก์ย่อต้องวิ่งไปถามเซิร์ฟเวอร์ต้นทางว่าย่อมาจากอะไร
+       ซึ่งเบราว์เซอร์ห้ามเว็บเราทำกับเว็บคนอื่น (CORS) ทำฝั่งหน้าเว็บไม่ได้จริง ๆ
+       ไม่ใช่ขี้เกียจทำ — บอกทางออกที่ใช้ได้จริงแทน */
+    fMsg('ลิงก์แบบย่อยังอ่านไม่ได้ครับ<br>' +
+         '<b>วิธีแก้:</b> เปิดลิงก์นั้นหนึ่งครั้งให้มันกลายเป็นลิงก์ยาว แล้วคัดลอกจากช่องที่อยู่มาวางใหม่<br>' +
+         'หรือกดค้างบนแผนที่ในแอป แล้วเลือก "คัดลอกพิกัด" มาวางตรงนี้เลยก็ได้');
+    return;
+  }
+
+  const isUrl = IS_URL.test(s);
+  const ll = isUrl ? pickFromUrl(s) : pickCoord(s);
+  if (ll) { goTo(ll, isUrl ? 'จากลิงก์ที่วาง' : 'พิกัดที่ค้นหา'); return; }
+  if (isUrl) { fMsg('ลิงก์นี้ไม่มีพิกัดอยู่ข้างใน<br>ลองใช้ "คัดลอกพิกัด" จากแอปแผนที่มาวางแทน'); return; }
+
+  /* ค้นชื่อไซต์งานของเราเองก่อนเสมอ
+     ของพวกนี้อยู่ในเครื่องอยู่แล้ว จึงได้ผลทันทีและใช้ได้ตอนไม่มีเน็ต
+     และต้องมาก่อนผลจากแผนที่โลกด้วย เพราะถ้ามีคนตั้งชื่อหมุดว่า "บ้านคุณสมชาย"
+     แล้วพิมพ์คำนี้มา เขาหมายถึงหมุดนั้นแน่นอน ไม่ใช่สถานที่สาธารณะที่ชื่อคล้ายกัน */
+  const c = map.getCenter();
+  const pinHits = findPins(s, c);
+
+  if (!navigator.onLine) {
+    // ออฟไลน์แต่ชื่อไซต์งานยังค้นได้ ถ้าเจอก็แสดงไปเลย อย่าเพิ่งบอกว่าทำไม่ได้
+    if (pinHits.length) { showHits(pinHits, 'ไม่มีเน็ต — ค้นได้เฉพาะหมุดในแผนที่'); return; }
+    fMsg('ตอนนี้ไม่มีเน็ต ค้นชื่อสถานที่ไม่ได้<br>' +
+         'แต่วาง<b>พิกัด</b> <b>ลิงก์แผนที่</b> หรือค้น<b>ชื่อไซต์งานที่ตั้งไว้</b> ยังใช้ได้ตามปกติ');
+    return;
+  }
+
+  // พิมพ์คำใหม่ทับระหว่างที่คำเก่ายังค้นไม่เสร็จ ต้องยกเลิกคำเก่า ไม่งั้นผลเก่ามาทับผลใหม่
+  if (findAbort) findAbort.abort();
+  findAbort = new AbortController();
+  const sig = findAbort.signal;
+
+  // เจอหมุดแล้วก็โชว์ไปก่อนเลย ไม่ต้องให้คนนั่งดู "กำลังค้น…" ทั้งที่ของที่เขาอยากได้พร้อมแล้ว
+  if (pinHits.length) showHits(pinHits, 'กำลังค้นสถานที่เพิ่ม…');
+  else fMsg('กำลังค้น…');
+
+  /* ถามทั้งสองเจ้าพร้อมกัน แล้วเอาผลมารวมกัน
+     ตอนแรกผมจะทำเป็น "ถาม OSM ก่อน ไม่เจอค่อยถาม Esri" แต่วัดแล้วใช้ไม่ได้
+     เพราะคำที่ OSM ตอบผิด มันไม่ได้ตอบว่าง มันตอบผิดแบบมั่นใจ แล้ว Esri ก็ไม่ได้ถูกถามเลย
+       "หมู่บ้านนันทวัน พระราม 9"  OSM ได้หมู่บ้านคนละชื่อที่นนทบุรี   Esri ได้ถูกที่สะพานสูง
+       "999 ถนนพระราม 1"          OSM ได้ 999/9 ที่ใกล้ ๆ            Esri ได้ 999 ตรงเลขที่
+     ถ้าถอยเฉพาะตอนว่าง สองคำนี้คนจะได้คำตอบผิดทั้งที่อีกเจ้ามีคำตอบถูกรออยู่
+
+     แล้วทำไมไม่คัดด้วยคะแนนของ OSM — เพราะคัดไม่ได้จริง
+     ค่า importance ของอันที่ถูก (แยกรัชโยธิน) ได้ 0.0001
+     ส่วนอันที่ผิด (นันทวัน) ได้ 0.0534 คือสูงกว่า ตั้งเส้นแบ่งตรงไหนก็ตัดของถูกทิ้ง
+
+     จึงเอามารวมกันแล้วให้คนเลือกเอง ซึ่งหน้านี้ออกแบบมาให้เลือกเองตั้งแต่ต้นอยู่แล้ว
+     ไม่เคยเด้งไปอันดับหนึ่งอัตโนมัติ และขึ้นตำบล/อำเภอ/จังหวัดเต็ม ๆ ให้ดูทุกอัน
+     คนเห็น "นนทบุรี" ก็รู้ทันทีว่าไม่ใช่ นี่คือสิ่งที่กันเรื่อง "ไม่กล้าเชื่อ" ได้จริง ไม่ใช่การคัดคะแนน
+
+     ยิงพร้อมกันไม่ขัดเงื่อนไขของ OSM เพราะหนึ่งครั้งที่กด Enter คือหนึ่งคำขอต่อเจ้า
+     ไม่ได้ยิงรัว และยังค้นตอนกด Enter เท่านั้นเหมือนเดิม */
+  const [rOsm, rEsri] = await Promise.allSettled([
+    askOSM(s, c, sig), askEsri(s, c, sig)
+  ]);
+  // ยกเลิกเพราะมีคำค้นใหม่มาทับ — ตัวที่ยกเลิกทำให้ sig.aborted เป็นจริง ไม่ต้องดู reason แยก
+  if (sig.aborted) return;
+
+  const okOsm  = rOsm.status  === 'fulfilled';
+  const okEsri = rEsri.status === 'fulfilled';
+  const failed = !okOsm && !okEsri;
+
+  const credit = [okOsm  ? 'OpenStreetMap (ODbL)' : '', okEsri ? 'Esri' : '']
+                   .filter(Boolean).join(' · ');
+  const placeHits = mergePlaces(
+    (okOsm  ? rOsm.value  : []),
+    (okEsri ? rEsri.value : []),
+    s
+  );
+
+  // ยิงไม่ออกทั้งสองเจ้าแต่มีหมุดที่ตรงอยู่แล้ว อย่าทิ้งของดีไปขึ้นข้อความผิดพลาด
+  if (failed) {
+    if (pinHits.length) { showHits(pinHits, 'ค้นสถานที่ไม่สำเร็จ — แสดงเฉพาะหมุดในแผนที่'); return; }
+    fMsg('ค้นไม่สำเร็จ — เน็ตอาจหลุด ลองกดค้นอีกที');
+    return;
+  }
+
+  if (!pinHits.length && !placeHits.length) {
+    fMsg('ไม่เจอ "<b>' + esc(s) + '</b>"<br>' +
+         'ลองใส่อำเภอหรือจังหวัดต่อท้าย เช่น "บางพลีใหญ่ สมุทรปราการ"<br>' +
+         'ถ้าเป็นไซต์งานของเรา ให้ไปตั้งชื่อที่หมุดก่อน แล้วค้นด้วยชื่อนั้นจะเจอแน่นอน');
+    return;
+  }
+  /* ได้ของมาแต่ไม่มีคำไหนที่พิมพ์ตรงกับชื่อที่ได้เลย — ต้องบอกตามจริงว่าไม่ใช่ของที่ตรง
+     ลองพิมพ์มั่ว "กกกกกกกกกก" แล้วมันคืนมา 6 อันหน้าตาน่าเชื่อถือ ทั้งที่ไม่ได้เกี่ยวอะไรเลย
+     ปล่อยให้ขึ้นเฉย ๆ คือหลอกคน ขึ้นคำเตือนคั่นไว้ให้เห็นก่อนจะกดอันไหน
+     ถ้ามีหมุดของเราตรงอยู่แล้วก็ไม่ต้องเตือน เพราะของที่เขาอยากได้อยู่บนสุดให้แล้ว */
+  const weak = placeHits.length && !pinHits.length && placeHits.every(p => !p.h);
+  showHits(pinHits.concat(placeHits),
+           weak ? 'ไม่เจอชื่อที่พิมพ์ตรง ๆ — ข้างล่างเป็นที่ใกล้เคียง ตรวจชื่อก่อนกด' : '',
+           placeHits.length ? 'ผลค้นสถานที่จาก ' + credit : '');
+}
+
+/* รวมผลสองเจ้าเข้าด้วยกัน
+   ------------------------------------------------------------
+   สองเจ้ามักได้ที่เดียวกันแต่เขียนชื่อไม่เหมือนกัน เทียบชื่อเป็นข้อความจึงจับคู่ไม่ได้
+     Esri: "ถนนพระรามที่ 1 เขตปทุมวัน กรุงเทพมหานคร 10330"
+     OSM : "ถนนพระรามที่ 1, สยาม, แขวงปทุมวัน, เขตปทุมวัน, กรุงเทพมหานคร, 10330, ประเทศไทย"
+   เลยเทียบด้วยระยะห่างแทน ใกล้กันกว่า 60 เมตรถือว่าที่เดียวกัน เอาอันเดียว
+   60 เมตรมาจากขนาดหัวมุมถนนหนึ่งแห่ง แคบกว่านี้จะเหลือสองอันซ้ำ กว้างกว่านี้จะกินตึกข้างเคียง
+
+   สลับเอาทีละเจ้า ไม่ใช่เรียงเจ้าหนึ่งให้หมดก่อน
+   เพราะถ้าเอา OSM ให้หมดก่อน คำที่ OSM ตอบผิดจะดันของถูกจาก Esri ตกขอบหกอันดับไป
+
+   แล้วเรียงด้วย "ตรงกับที่พิมพ์กี่คำ" ก่อน ค่อยเรียงด้วยระยะ
+   เดิมเรียงด้วยระยะอย่างเดียว แล้วเจอปัญหาจริงสองข้อ
+     ค้น "หมู่บ้านนันทวัน พระราม 9" — อันดับ 1 เป็น "หมู่บ้านกัสโต้ ราชพฤกษ์-พระราม 5" ที่นนทบุรี
+       มันขึ้นก่อนเพราะมันใกล้กว่า 11.6 กม. ส่วนนันทวันตัวจริงที่สะพานสูงอยู่ 12.9 กม.
+       คือของผิดชนะเพราะบังเอิญอยู่ใกล้ ซึ่งเป็นเรื่องที่คนบ่นว่า "ไม่กล้าเชื่อ" ตรง ๆ
+     ค้น "999 ถนนพระราม 1" — "999 ถนนพระรามที่ 1" ที่ตรงเลขที่ตกไปอันดับ 5
+       เพราะถนนพระราม 1 ช่วงอื่นที่ไม่มีเลขที่ 999 อยู่ใกล้จุดที่ดูกว่า
+   นับคำที่ตรงช่วยทั้งสองข้อ เพราะ "นันทวัน" ไม่มีอยู่ในชื่อหมู่บ้านกัสโต้เลย
+   และ "999" ไม่มีอยู่ในชื่อถนนเปล่า ๆ ระยะจึงถูกลดชั้นไปเป็นตัวตัดสินรอบสองแทน */
+function mergePlaces(a, b, s) {
+  const out = [];
+  const far = p => out.every(q => map.distance(p.ll, q.ll) > 60);
+  for (let i = 0; out.length < FIND_MAX && (i < a.length || i < b.length); i++) {
+    if (i < a.length && far(a[i])) out.push(a[i]);
+    if (out.length >= FIND_MAX) break;
+    if (i < b.length && far(b[i])) out.push(b[i]);
+  }
+
+  /* ตัดคำด้วยช่องว่าง ไม่ได้ตัดคำไทยจริงจัง เพราะคนพิมพ์ค้นมักเว้นวรรคอยู่แล้ว
+     เช่น "หมู่บ้านนันทวัน พระราม 9" ซึ่งเว้นตรงที่ควรเว้นพอดี
+     ตัวตัดคำไทยจริงต้องมีพจนานุกรมเป็นร้อยกิโล ไม่คุ้มกับที่ได้เพิ่ม
+     ทิ้งคำที่สั้นกว่า 2 ตัวอักษร เพราะ "1" หรือ "ก" ไปตรงกับอะไรก็ได้ จะกลายเป็นคะแนนลอย ๆ */
+  const words = s.toLowerCase().split(/[\s,]+/).filter(w => w.length >= 2);
+  const hit = p => {
+    const t = (p.title || '').toLowerCase();
+    return words.filter(w => t.includes(w)).length;
+  };
+  /* ติดจำนวนคำที่ตรงไว้กับผลแต่ละอันด้วย ไม่ได้ใช้แค่เรียงแล้วทิ้ง
+     เพราะถ้าทุกอันได้ 0 แปลว่าไม่มีคำไหนที่พิมพ์ไปตรงกับชื่อที่ได้มาเลย
+     runFind เอาไปขึ้นคำเตือนว่าเป็นของใกล้เคียง ไม่ใช่ของที่ตรง
+
+     ไม่ตัดของที่ได้ 0 ทิ้ง เพราะบางทีมันถูกจริง ๆ แต่เขาใช้ชื่อใหม่
+     เช่นค้น "ถนนบางนา-ตราด" OSM คืน "ถนนเทพรัตน" ซึ่งคือถนนเส้นเดียวกันที่เปลี่ยนชื่อ
+     ตัดทิ้งคือทิ้งคำตอบที่ถูก บอกว่าไม่แน่ใจแล้วให้คนดูเองปลอดภัยกว่า */
+  return out
+    .map(p => Object.assign(p, { h: hit(p) }))
+    .sort((x, y) => y.h - x.h || x.m - y.m);
+}
+
+/* ถาม OpenStreetMap
+   ------------------------------------------------------------
+   สามตัวนี้ขาดไม่ได้ ตอนแรกผมทดสอบโดยไม่ใส่แล้วสรุปผิดว่า OSM ใช้กับภาษาไทยไม่ได้
+     countrycodes=th    ตัดผลนอกประเทศออก ไม่ใส่แล้วชื่อซ้ำกับที่อื่นในโลกจะแย่งอันดับ
+     accept-language=th คืนชื่อเป็นไทย ไม่ใส่แล้วได้ชื่อโรมันที่คนอ่านไม่ออกว่าที่ไหน
+     viewbox            ถ่วงน้ำหนักไปทางที่กำลังดูอยู่ แบบเดียวกับ location ของ Esri
+   viewbox ไม่ได้ใส่ bounded=1 ด้วย — ถ่วงน้ำหนักพอ ไม่ใช่บังคับตัด
+   ถ้าบังคับตัด คนที่ดูกรุงเทพแล้วค้นที่ระยองจะหาไม่เจอทั้งที่มีอยู่ */
+async function askOSM(s, c, sig) {
+  const b = map.getBounds();
+  const url = OSM_URL + '?format=jsonv2&limit=10&countrycodes=th&accept-language=th'
+            + '&viewbox=' + [b.getWest(), b.getNorth(), b.getEast(), b.getSouth()]
+                              .map(n => n.toFixed(4)).join(',')
+            + '&q=' + encodeURIComponent(s);
+  const r = await fetch(url, { signal: sig });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const d = await r.json();
+
+  const seen = new Set();
+  return (Array.isArray(d) ? d : [])
+    .filter(x => x && isFinite(+x.lat) && isFinite(+x.lon))
+    .filter(x => { const k = x.display_name || ''; if (seen.has(k)) return false; seen.add(k); return true; })
+    .map(x => ({
+      kind:  'place',
+      ll:    L.latLng(+x.lat, +x.lon),
+      /* OSM ต่อท้ายทุกชื่อด้วย ", ประเทศไทย" ซึ่งไม่ได้บอกอะไรเลย
+         เพราะ countrycodes=th กรองให้เหลือแต่ในไทยอยู่แล้ว ทุกบรรทัดจึงลงท้ายเหมือนกันหมด
+         ตัดออกให้ชื่อสั้นลง รายการหกอันจะได้ไม่ยาวจนต้องเลื่อนดู */
+      title: String(x.display_name || '').replace(/,\s*ประเทศไทย\s*$/, ''),
+      /* OSM ส่งขอบเขตมาเป็น [ใต้, เหนือ, ตก, ออก] เป็นข้อความ
+         แปลงให้เป็นรูปเดียวกับที่ Esri ส่ง เพื่อให้ goTo ใช้ตัวเดิมได้ไม่ต้องแยกทาง */
+      ext:   Array.isArray(x.boundingbox) && x.boundingbox.length === 4
+               ? { ymin:+x.boundingbox[0], ymax:+x.boundingbox[1],
+                   xmin:+x.boundingbox[2], xmax:+x.boundingbox[3] } : null,
+      m:     map.distance(c, L.latLng(+x.lat, +x.lon))
+    }))
+    .sort((a, b2) => a.m - b2.m)
+    .slice(0, FIND_MAX);
+}
+
+/* ถาม Esri — เก่งเรื่องบ้านเลขที่ตรง ๆ และชื่อหมู่บ้านจัดสรร ซึ่งเป็นจุดอ่อนของ OSM */
+async function askEsri(s, c, sig) {
+  const url = GEOCODE_URL + '?f=json&countryCode=THA&maxLocations=10'
+            + '&location=' + c.lng.toFixed(4) + ',' + c.lat.toFixed(4)
+            + '&SingleLine=' + encodeURIComponent(s);
+  const r = await fetch(url, { signal: sig });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const d = await r.json();
+
+  const seen = new Set();
+  return (d.candidates || [])
+    .filter(x => x && x.location && isFinite(x.location.y) && x.score >= FIND_MIN_SCORE)
+    .filter(x => { const k = x.address || ''; if (seen.has(k)) return false; seen.add(k); return true; })
+    .map(x => ({
+      kind:  'place',
+      ll:    L.latLng(x.location.y, x.location.x),
+      title: x.address,
+      ext:   x.extent,
+      m:     map.distance(c, L.latLng(x.location.y, x.location.x))
+    }))
+    .sort((a, b2) => a.m - b2.m)
+    .slice(0, FIND_MAX);
+}
+
+/* ค้นชื่อไซต์งานที่ตั้งไว้ที่หมุด
+   ใช้วิธีดูว่าคำที่พิมพ์อยู่ในชื่อหรือเปล่าแบบตรง ๆ ไม่ได้ทำให้ฉลาดกว่านั้น
+   เพราะชื่อพวกนี้คนของเราตั้งเอง เขาจำได้อยู่แล้วว่าตั้งว่าอะไร
+   ตัวที่ขึ้นต้นด้วยคำที่พิมพ์ให้มาก่อน แล้วค่อยเรียงตามระยะใกล้จุดที่กำลังดู */
+function findPins(s, c) {
+  const q = s.toLowerCase();
+  return pins
+    .filter(p => p.n && p.n.toLowerCase().includes(q))
+    .map(p => ({
+      kind:  'pin',
+      id:    p.id,
+      ll:    L.latLng(p.lat, p.lng),
+      title: p.n,
+      sub:   LV[p.k] ? LV[p.k].label : '',
+      head:  p.n.toLowerCase().startsWith(q) ? 0 : 1,
+      m:     map.distance(c, L.latLng(p.lat, p.lng))
+    }))
+    .sort((a, b) => a.head - b.head || a.m - b.m)
+    .slice(0, FIND_MAX);
+}
+
+/* วาดรายการผล — หมุดของเรากับสถานที่สาธารณะใช้กล่องเดียวกันแต่ต้องแยกออกด้วยตา
+   ไม่งั้นคนจะไม่รู้ว่าอันไหนคือของที่เราบันทึกไว้เอง (เชื่อได้) อันไหนคือของที่เดามาจากแผนที่โลก */
+function showHits(list, note, credit) {
+  findHits = list;
+  fRes.innerHTML =
+    (note ? '<div class="fr msg">' + note + '</div>' : '') +
+    list.map((r, i) =>
+      '<div class="fr' + (r.kind === 'pin' ? ' pin' : '') + '" data-i="' + i + '">' +
+        (r.kind === 'pin' ? '<span class="tag">หมุด</span>' : '') + esc(r.title) +
+        '<div class="d">' + esc([r.sub, distTxt(r.m)].filter(Boolean).join(' · ')) + '</div>' +
+      '</div>').join('') +
+    (credit ? '<div class="fr cred">' + esc(credit) + '</div>' : '');
+  fRes.classList.add('show');
+}
+
+/* ---------- ต่อสายปุ่มต่าง ๆ ---------- */
+fRes.addEventListener('click', e => {
+  const row = e.target.closest('.fr[data-i]');
+  if (!row) return;
+  const r = findHits[+row.dataset.i];
+  if (!r) return;
+  /* ผลที่เป็นหมุดของเราไม่ต้องปักหมุดดำทับ ตัวหมุดจริงอยู่ตรงนั้นอยู่แล้ว
+     ปักทับจะได้หมุดสองอันซ้อนกันและบังหมุดจริงที่เป็นตัวบอกความยาว
+     เปิดป๊อปอัปของมันแทน คนจะได้เห็นทั้งชื่อ ความยาว และปุ่มแก้ไขในครั้งเดียว */
+  if (r.kind === 'pin') {
+    clearFindMarker();
+    fHide();
+    flyAndLand(r.ll, null);
+    const m = layers[r.id];
+    if (m) setTimeout(() => m.openPopup(), 900);
+    return;
+  }
+  goTo(r.ll, r.title, r.ext);
+});
+
+// ค้นตอนกด Enter หรือกดแว่นขยายเท่านั้น ไม่ค้นทุกตัวอักษรที่พิมพ์
+// หน้านี้ทั้งหน้าเป็นงานลดจำนวนคำขอ จะมาเพิ่มคำขอทุกการกดแป้นก็ขัดกันเอง
+fQ.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); fQ.blur(); runFind(); }
+  else if (e.key === 'Escape') { fQ.value = ''; fClear.hidden = true; fHide(); fQ.blur(); }
+});
+fQ.addEventListener('input', () => { fClear.hidden = !fQ.value; });
+fGo.addEventListener('click', () => { fQ.blur(); runFind(); });
+fClear.addEventListener('click', () => {
+  fQ.value = ''; fClear.hidden = true; fHide(); clearFindMarker(); fQ.focus();
+});
+
+/* กล่องค้นหาลอยอยู่บนแผนที่ ถ้าไม่กั้นไว้ การคลิก/ลาก/หมุนล้อในกล่องจะทะลุไปถึงแผนที่
+   ผลคือเลื่อนตัวหนังสือในช่องแล้วแผนที่เลื่อนตาม หรือแย่กว่านั้นคือได้หมุดที่ไม่ได้ตั้งใจ */
+L.DomEvent.disableClickPropagation(document.getElementById('find'));
+L.DomEvent.disableScrollPropagation(document.getElementById('find'));
+// แตะที่แผนที่ = ปิดรายการผล แต่ไม่ลบที่หมายทิ้ง คนยังต้องใช้มันเล็งอยู่
+map.on('click', fHide);
 
 setInterval(poll, 15000);
 // กลับมาที่แท็บนี้แล้วเห็นของเก่าค้างอยู่ 15 วินาทีมันนาน ดึงใหม่ทันทีเลย
