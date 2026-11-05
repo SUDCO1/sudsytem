@@ -69,8 +69,10 @@
   #map.leaflet-container.leaflet-drag-target { cursor:grabbing; }
   .leaflet-interactive { cursor:pointer; }
   /* แผนที่เริ่มที่ขอบบนแล้ว ปุ่มซูมเลยไปอยู่ใต้แถบบนพอดี ตอนแถบไหลลงมาจะทับจนกดปุ่ม + ไม่ได้
-     ดันลงมาเท่าความสูงแถบ ปุ่มเลยอยู่พ้นกันตลอด ไม่ว่าแถบจะหุบหรือกาง */
-  .leaflet-top.leaflet-left { margin-top:var(--bar-h); }
+     แต่ไม่จองที่ไว้ตลอด เพราะแถบหุบอยู่เกือบตลอดเวลา ที่จองไว้จะกลายเป็นช่องว่างค้างให้เห็น
+     ขยับลงเฉพาะตอนแถบกางออก ใช้จังหวะ .18s เท่าที่แถบใช้เลื่อน จะได้ไหลลงมาพร้อมกัน */
+  .leaflet-top.leaflet-left { margin-top:0; transition:margin-top .18s ease; }
+  #bar.show ~ #map .leaflet-top.leaflet-left { margin-top:var(--bar-h); }
 
   /* ---------- ตารางสี ---------- */
   #legend {
@@ -173,8 +175,10 @@
 
   /* ---------- ช่องค้นหา ----------
      วางขวาบน เพราะซ้ายบนเป็นปุ่มซูม ล่างซ้ายเป็นตารางสี ล่างขวาเป็นสวิตช์ปักหมุด
-     ดันลงมาเท่าความสูงแถบบนเหมือนปุ่มซูม จะได้ไม่โดนแถบทับตอนมันไหลลงมา */
-  #find { position:absolute; top:calc(var(--bar-h) + 10px); right:12px; z-index:1000; width:272px; }
+     ชิดขอบบนตอนแถบหุบ แล้วไหลลงมาพร้อมแถบตอนมันกางออก เหมือนปุ่มซูม */
+  #find { position:absolute; top:10px; right:12px; z-index:1000; width:272px;
+          transition:top .18s ease; }
+  #bar.show ~ #find { top:calc(var(--bar-h) + 10px); }
   #find .fbox { display:flex; align-items:center; background:rgba(255,255,255,.96);
                 border-radius:10px; box-shadow:0 2px 12px rgba(0,0,0,.22); overflow:hidden; }
   #findQ { flex:1; min-width:0; font:inherit; font-size:13px; color:#222;
