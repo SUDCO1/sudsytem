@@ -16868,14 +16868,15 @@ document.addEventListener('DOMContentLoaded',()=>{
     div.innerHTML='<div class="cal-section-hdr"><div><div class="cal-section-title">'+title+'</div><div class="cal-section-sub">'+sub+'</div></div></div>'+_calCard(prefix)+(prepend?'<hr class="cal-divider" style="margin-bottom:0;"/>':'<hr class="cal-divider"/>');
     if(prepend)wrap.insertBefore(div,wrap.firstChild);else wrap.appendChild(div);
   }
-  injectCal('status','oc','📋 ปฏิทิน Order','กำหนดส่งของแต่ละ Order · คลิกวันเพื่อดูรายละเอียด', true);
-  injectCal('proderr','pc','🏭 ปฏิทินผลิต','บันทึกการผลิตตามวันที่ · คลิกวันเพื่อดูรายละเอียด', true);
+  // ปฏิทินหน้าสถานะ(oc) และหน้าผลิต(pc): ปิดการใช้งานตามคำขอ (ไม่ได้ใช้)
+  // injectCal('status','oc','📋 ปฏิทิน Order','กำหนดส่งของแต่ละ Order · คลิกวันเพื่อดูรายละเอียด', true);
+  // injectCal('proderr','pc','🏭 ปฏิทินผลิต','บันทึกการผลิตตามวันที่ · คลิกวันเพื่อดูรายละเอียด', true);
   // ปฏิทินสต็อก: ปิดการใช้งานตามคำขอ (ไม่ได้ใช้)
   // ── Init calendars immediately after injection (don't wait for goTab) ──
-  setTimeout(()=>{
-    try{ocInit();}catch(e){}
-    try{pcInit();}catch(e){}
-  }, 200);
+  // setTimeout(()=>{
+  //   try{ocInit();}catch(e){}
+  //   try{pcInit();}catch(e){}
+  // }, 200);
 
   // ── Wrap goTab for re-render on tab switch ──
   const _g=window.goTab;
