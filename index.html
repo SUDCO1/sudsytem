@@ -2696,6 +2696,11 @@ body.role-sale .manager-only{display:none!important;}
 body.role-sale .admin-manager-only{display:none!important;}
 body.role-manager .admin-only{display:none!important;}
 body.role-manager .sale-only{display:none!important;}
+/* ยังไม่ได้กำหนดตำแหน่ง (role-none) — ซ่อนการ์ด/ปุ่มเฉพาะตำแหน่งทั้งหมด กันหลุดตอนถูกบังคับเข้าหน้าตั้งค่า */
+body.role-none .admin-only,
+body.role-none .manager-only,
+body.role-none .sale-only,
+body.role-none .admin-manager-only{display:none!important;}
 body.role-manager .manager-readonly .btn{display:none!important;}
 /* Manager ดูได้อย่างเดียว — ซ่อนปุ่มแก้ไขและ dropdown status */
 body.role-manager .act-edit{display:none!important;}
